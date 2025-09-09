@@ -1,64 +1,49 @@
-﻿using Raylib_cs.BleedingEdge;
-using System.Numerics;
+﻿using System.Numerics;
+using Raylib_cs.BleedingEdge;
 using static Raylib_cs.BleedingEdge.Raylib;
-using static Raylib_cs.BleedingEdge.Raymath;
 
-static IVector2 DirectionToIVector2(Direction direction)
+World world = new();
+
+world.TileMap = new int[,]
 {
-    switch (direction)
-    {
-    case Direction.North:
-        return new(0, -1);
-    case Direction.East:
-        return new(-1, 0);
-    case Direction.South:
-        return new(0, 1);
-    case Direction.West:
-        return new(1, 0);
-    }
-
-    return new(0, 0);
-}
-
-var world = new World
-{
-    Player = new(),
-    TileMap = new int[,] {
-        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1 },
-        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
+    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
 };
 
-world.Player.Position = new(5, 5);
+world.Player.X = 5;
+world.Player.Y = 5;
 
 Camera3D camera = new()
 {
     FovY = 90,
     Projection = CameraProjection.Perspective,
-    Up = new(0, 1, 0),
+    Up = Vector3.UnitY,
 };
 
-camera.Position = new(world.Player.Position.X, 0, world.Player.Position.Y);
-Vector3 cameraDirection = Vector3RotateByAxisAngle(new(0, 0, -1), Vector3.UnitY, Pi * (int)world.Player.Direction / 2);
+Image testTextureImage;
+Texture2D testTexture;
+Material tileMaterial;
+Mesh tileMesh;
+Model tileModel;
 
 SetConfigFlags(ConfigFlags.WindowResizable);
-InitWindow(640, 480, "Buster Impulse");
+
+InitWindow(1024, 768, "Buster Impulse");
 {
-    Mesh tileMesh = GenMeshCube(1, 1, 1);
-    Image testImage = LoadImage("static/textures/test.png");
-
-    ImageFlipVertical(ref testImage);
-
-    Texture2D testTexture = LoadTextureFromImage(testImage);
-    Model tileModel = LoadModelFromMesh(tileMesh);
+    testTextureImage = LoadImage("static/textures/test.png");
+    ImageFlipVertical(ref testTextureImage);
+    testTexture = LoadTextureFromImage(testTextureImage);
+    tileMaterial = LoadMaterialDefault();
+    tileMesh = GenMeshCube(1, 1, 1);
+    tileModel = LoadModelFromMesh(tileMesh);
 
     unsafe
     {
@@ -74,21 +59,62 @@ InitWindow(640, 480, "Buster Impulse");
 
         oldTime = newTime;
 
-        Update(delta);
+        //
+        // update
+        //
 
-        //
+        if (IsKeyPressed(KeyboardKey.Right))
+        {
+            world.Player.Direction--;
+        }
+        else if (IsKeyPressed(KeyboardKey.Left))
+        {
+            world.Player.Direction++;
+        }
+
+        world.Player.Direction = Direction.Clamped(world.Player.Direction);
+
+        int? moveDirection = null;
+
+        if (IsKeyPressed(KeyboardKey.W))
+        {
+            moveDirection = Direction.Clamped(world.Player.Direction);
+        }
+        else if (IsKeyPressed(KeyboardKey.S))
+        {
+            moveDirection = Direction.Clamped(world.Player.Direction + 2);
+        }
+        else if (IsKeyPressed(KeyboardKey.A))
+        {
+            moveDirection = Direction.Clamped(world.Player.Direction + 1);
+        }
+        else if (IsKeyPressed(KeyboardKey.D))
+        {
+            moveDirection = Direction.Clamped(world.Player.Direction + 3);
+        }
+
+        if (moveDirection is not null)
+        {
+            world.TryMove(ref world.Player, (int)moveDirection);
+        }
+
         // render
-        //
 
         BeginDrawing();
         {
             ClearBackground(Color.Black);
 
-            var cameraPosition = Vector3.Lerp(camera.Position, new(world.Player.Position.X, 0, world.Player.Position.Y), 10 * (float)delta);
-            var cameraYaw = Vector3SignedAngle(cameraDirection, Vector3RotateByAxisAngle(new(0, 0, -1), Vector3.UnitY, Pi * (int)world.Player.Direction / 2), Vector3.UnitY) * 5 * (float)delta;
+            var cameraDirection = world.Player.Direction switch
+            {
+                Direction.North => new Vector3(0, 0, -1),
+                Direction.East => new Vector3(-1, 0, 0),
+                Direction.South => new Vector3(0, 0, 1),
+                Direction.West => new Vector3(1, 0, 0),
+                _ => Vector3.Zero,
+            };
 
-            cameraDirection = Vector3RotateByQuaternion(cameraDirection, Quaternion.CreateFromYawPitchRoll(cameraYaw, 0, 0));
-            camera.Position = cameraPosition;
+            //                   vvv fuck this shit*
+            camera.Position = new(-world.Player.X, 0, world.Player.Y);
             camera.Target = camera.Position + cameraDirection;
 
             BeginMode3D(camera);
@@ -97,9 +123,10 @@ InitWindow(640, 480, "Buster Impulse");
                 {
                     for (var x = 0; x < world.TileMap.GetLength(1); x++)
                     {
-                        if (world.TileMap[x, y] != 0)
+                        if (world.TileMap[y, x] != 0)
                         {
-                            DrawModel(tileModel, new(x, 0, y), 1, Color.White);
+                            // *ditto
+                            DrawModel(tileModel, new(-x, 0, y), 1, Color.White);
                         }
                     }
                 }
@@ -109,140 +136,63 @@ InitWindow(640, 480, "Buster Impulse");
         EndDrawing();
     }
 
+    UnloadImage(testTextureImage);
     UnloadModel(tileModel);
-    UnloadImage(testImage);
 }
 CloseWindow();
 
-static float Vector3SignedAngle(Vector3 Va, Vector3 Vb, Vector3 Vn)
+static class Direction
 {
-    var angle = MathF.Acos(Vector3.Dot(Vector3.Normalize(Va), Vector3.Normalize(Vb)));
-    var cross = Vector3.Cross(Va, Vb);
+    public const int North = 0;
+    public const int East = 1;
+    public const int South = 2;
+    public const int West = 3;
 
-    angle = angle * MathF.Sign(Vector3.Dot(Vn, cross));
-
-    return angle;
-}
-
-void Update(double delta)
-{
-    var forwardIsPressed = false;
-    var backwardIsPressed = false;
-    var strafeLeftIsPressed = false;
-    var strafeRightIsPressed = false;
-    var lookRightIsPressed = false;
-    var lookLeftIsPressed = false;
-
-    for (int intKey = (int)GetKeyPressed(); intKey != 0; intKey = (int)GetKeyPressed())
+    public static int Clamped(int direction)
     {
-        KeyboardKey key = (KeyboardKey)intKey;
-
-        forwardIsPressed |= key == KeyboardKey.W;
-        backwardIsPressed |= key == KeyboardKey.S;
-        strafeLeftIsPressed |= key == KeyboardKey.A;
-        strafeRightIsPressed |= key == KeyboardKey.D;
-        lookRightIsPressed |= key == KeyboardKey.Right;
-        lookLeftIsPressed |= key == KeyboardKey.Left;
-    }
-
-    var turnAxis = Convert.ToInt32(lookRightIsPressed) - Convert.ToInt32(lookLeftIsPressed);
-    var desiredDirection = ((int)world.Player.Direction) - turnAxis;
-
-    desiredDirection %= Enum.GetValues<Direction>().Length;
-
-    world.Player.Direction = (Direction)desiredDirection;
-
-    var hasMoved = forwardIsPressed || backwardIsPressed || strafeLeftIsPressed || strafeRightIsPressed;
-    var forwardAxis = Convert.ToInt32(forwardIsPressed) - Convert.ToInt32(backwardIsPressed);
-    var strafeAxis = Convert.ToInt32(strafeRightIsPressed) - Convert.ToInt32(strafeLeftIsPressed);
-    IVector2 move;
-
-    move = DirectionToIVector2(world.Player.Direction) * forwardAxis;
-    // move += new Vector2(-world.Player.Direction.Y, world.Player.Direction.X) * strafeAxis;
-
-    var desiredPosition = world.Player.Position + move;
-
-    if (world.TileMap[((int)desiredPosition.X), ((int)desiredPosition.Y)] == 0)
-    {
-        world.Player.Position = desiredPosition;
-    }
-
-    //
-    // world state queue (remove later)
-    //
-
-    do
-    {
-        var shouldDequeue = false;
-
-        do
+        if (direction < 0)
         {
-            if (world.TaskQueue.TryPeek(out var node))
-            {
-                if (!node.WasEntered)
-                {
-                    node.WasEntered = node.Enter?.Invoke() ?? false;
-                }
-
-                if (!node.WasEntered)
-                {
-                    shouldDequeue = true;
-                    break;
-                }
-
-                if (node.Update.Invoke(delta))
-                {
-                    shouldDequeue = true;
-                    break;
-                }
-            }
-        } while (false);
-
-        if (shouldDequeue)
-        {
-            world.TaskQueue.Dequeue().Exit?.Invoke();
+            direction += 4;
         }
-    } while (false);
+
+        return direction % 4;
+    }
 }
 
-struct IVector2(int x, int y)
+struct Entity
 {
-    public int X = x;
-    public int Y = y;
-
-    public static IVector2 operator +(IVector2 v1, IVector2 v2) => new(v1.X + v2.X, v1.Y + v2.Y);
-    public static IVector2 operator -(IVector2 v1, IVector2 v2) => new(v1.X - v2.X, v1.Y - v2.Y);
-    public static IVector2 operator *(IVector2 v1, IVector2 v2) => new(v1.X * v2.X, v1.Y * v2.Y);
-    public static IVector2 operator /(IVector2 v1, IVector2 v2) => new(v1.X / v2.X, v1.Y / v2.Y);
-    public static IVector2 operator *(IVector2 v2, int v) => new(v2.X * v, v2.Y * v);
-    public static IVector2 operator /(IVector2 v2, int v) => new(v2.X / v, v2.Y / v);
-}
-
-public enum Direction
-{
-    North,
-    East,
-    South,
-    West,
-}
-
-struct Entity()
-{
-    public IVector2 Position;
-    public Direction Direction;
+    public int X;
+    public int Y;
+    public int Direction;
 }
 
 struct World()
 {
-    public class TaskQueueNode
-    {
-        public required Func<double, bool> Update;
-        public Func<bool>? Enter;
-        public Func<bool>? Exit;
-        public bool WasEntered;
-    }
-
-    public Entity Player;
     public int[,] TileMap;
-    public Queue<TaskQueueNode> TaskQueue = [];
+    public Entity Player = new();
+
+    public readonly bool TryMove(ref Entity entity, int direction)
+    {
+        (int X, int Y) = direction switch
+        {
+            Direction.North => (0, -1),
+            Direction.East => (1, 0),
+            Direction.South => (0, 1),
+            Direction.West => (-1, 0),
+            _ => (0, 0),
+        };
+
+        var desiredX = entity.X + X;
+        var desiredY = entity.Y + Y;
+
+        if (TileMap[entity.Y, desiredX] != 0 || TileMap[desiredY, entity.X] != 0)
+        {
+            return false;
+        }
+
+        entity.X = desiredX;
+        entity.Y = desiredY;
+
+        return true;
+    }
 }
