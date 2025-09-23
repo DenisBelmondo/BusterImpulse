@@ -21,8 +21,8 @@ world.TileMap = new int[,]
     { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
 };
 
-world.Player.X = 5;
-world.Player.Y = 5;
+world.Player.Entity.X = 5;
+world.Player.Entity.Y = 5;
 
 Camera3D camera = new()
 {
@@ -31,13 +31,56 @@ Camera3D camera = new()
     Up = Vector3.UnitY,
 };
 
-camera.Position.X = world.Player.X;
-camera.Position.Z = world.Player.Y;
+camera.Position.X = world.Player.Entity.X;
+camera.Position.Z = world.Player.Entity.Y;
 
 Vector3 cameraDirection;
 
+void Update(double delta)
 {
-    var (X, Y) = Direction.ToInt32Tuple(world.Player.Direction);
+    if (IsKeyPressed(KeyboardKey.Right))
+    {
+        world.Player.Entity.Direction++;
+    }
+    else if (IsKeyPressed(KeyboardKey.Left))
+    {
+        world.Player.Entity.Direction--;
+    }
+
+    world.Player.Entity.Direction = Direction.Clamped(world.Player.Entity.Direction);
+
+    int? moveDirection = null;
+
+    if (IsKeyDown(KeyboardKey.W))
+    {
+        moveDirection = Direction.Clamped(world.Player.Entity.Direction);
+    }
+    else if (IsKeyDown(KeyboardKey.S))
+    {
+        moveDirection = Direction.Clamped(world.Player.Entity.Direction + 2);
+    }
+    else if (IsKeyDown(KeyboardKey.A))
+    {
+        moveDirection = Direction.Clamped(world.Player.Entity.Direction + 3);
+    }
+    else if (IsKeyDown(KeyboardKey.D))
+    {
+        moveDirection = Direction.Clamped(world.Player.Entity.Direction + 1);
+    }
+
+    if (moveDirection is not null && world.Player.Current.WalkCooldown == 0)
+    {
+        PlaySound(Resources.StepSound);
+        world.Player.Current.WalkCooldown = 1 / 4.0;
+        world.TryMove(ref world.Player.Entity, (int)moveDirection);
+    }
+
+    world.Player.Current.WalkCooldown = Math.Max(world.Player.Current.WalkCooldown - delta, 0);
+    // Console.WriteLine(world.Player.Current.WalkCooldown);
+}
+
+{
+    var (X, Y) = Direction.ToInt32Tuple(world.Player.Entity.Direction);
     cameraDirection = new(X, 0, Y);
 }
 
@@ -61,44 +104,7 @@ Resources.CacheAndInitializeAll();
 
         oldTime = newTime;
 
-        //
-        // update
-        //
-
-        if (IsKeyPressed(KeyboardKey.Right))
-        {
-            world.Player.Direction++;
-        }
-        else if (IsKeyPressed(KeyboardKey.Left))
-        {
-            world.Player.Direction--;
-        }
-
-        world.Player.Direction = Direction.Clamped(world.Player.Direction);
-
-        int? moveDirection = null;
-
-        if (IsKeyPressed(KeyboardKey.W))
-        {
-            moveDirection = Direction.Clamped(world.Player.Direction);
-        }
-        else if (IsKeyPressed(KeyboardKey.S))
-        {
-            moveDirection = Direction.Clamped(world.Player.Direction + 2);
-        }
-        else if (IsKeyPressed(KeyboardKey.A))
-        {
-            moveDirection = Direction.Clamped(world.Player.Direction + 3);
-        }
-        else if (IsKeyPressed(KeyboardKey.D))
-        {
-            moveDirection = Direction.Clamped(world.Player.Direction + 1);
-        }
-
-        if (moveDirection is not null)
-        {
-            world.TryMove(ref world.Player, (int)moveDirection);
-        }
+        Update(delta);
 
         // render
 
@@ -109,11 +115,11 @@ Resources.CacheAndInitializeAll();
             Vector3 playerDirection3d;
 
             {
-                var (X, Y) = Direction.ToInt32Tuple(world.Player.Direction);
+                var (X, Y) = Direction.ToInt32Tuple(world.Player.Entity.Direction);
                 playerDirection3d = new(X, 0, Y);
             }
 
-            camera.Position = Vector3Lerp(camera.Position, new(world.Player.X, 0, world.Player.Y), 10 * (float)delta);
+            camera.Position = Vector3Lerp(camera.Position, new(world.Player.Entity.X, 0, world.Player.Entity.Y), 5 * (float)delta);
 
             Quaternion cameraRotation = QuaternionFromAxisAngle(Vector3.UnitY, cameraDirection.SignedAngleTo(playerDirection3d, Vector3.UnitY) * 10 * (float)delta);
 
@@ -142,7 +148,11 @@ Resources.CacheAndInitializeAll();
             }
             EndMode3D();
 
-            DrawText("100+", 16, 16, 40, Color.White);
+            var asdf = GetScreenHeight() / 240;
+
+            DrawTextEx(Resources.Font, "100+", new(16 + asdf, 16 + asdf), 15 * asdf, asdf, Color.DarkBlue);
+            DrawTextEx(Resources.Font, "100+", new(16, 16), 15 * asdf, asdf, Color.White);
+            DrawBillboardRec(camera, Resources.ChestAtlas, new(0, 0, 32, 28), new(4, 0, 4), Vector2.One, Color.White);
         }
         EndDrawing();
     }
@@ -241,6 +251,24 @@ class Tween<TValue> where TValue : struct
     }
 }
 
+class TaskQueue
+{
+    public class Task
+    {
+        public Action? Enter;
+        public Action? Update;
+        public Action? Exit;
+    }
+
+    public List<Task> Tasks = [];
+
+    public TaskQueue Then(Task task)
+    {
+        Tasks.Add(task);
+        return this;
+    }
+}
+
 struct Entity
 {
     public int X;
@@ -248,11 +276,23 @@ struct Entity
     public int Direction;
 }
 
+struct Player
+{
+    public struct Defaults
+    {
+        public double WalkCooldown;
+    }
+
+    public Entity Entity;
+    public Defaults Default;
+    public Defaults Current;
+}
+
 struct World()
 {
-    public int[,] TileMap;
+    public int[,]? TileMap;
     public Dictionary<Position, HashSet<int>> BroadPhaseCollisionMap = [];
-    public Entity Player = new();
+    public Player Player = new();
 
     public readonly void Spawn(int what, Position at) => BroadPhaseCollisionMap[at].Add(what);
 
@@ -263,7 +303,7 @@ struct World()
         int desiredX = entity.X + X;
         int desiredY = entity.Y + Y;
 
-        if (TileMap[entity.Y, desiredX] != 0 || TileMap[desiredY, entity.X] != 0)
+        if (TileMap is not null && (TileMap[entity.Y, desiredX] != 0 || TileMap[desiredY, entity.X] != 0))
         {
             return false;
         }
@@ -385,6 +425,7 @@ static class Resources
     public static Texture2D TileTexture;
     public static Texture2D FloorTexture;
     public static Texture2D CeilingTexture;
+    public static Texture2D ChestAtlas;
     public static Material TileMaterial;
     public static Material FloorMaterial;
     public static Mesh TileMesh;
@@ -404,6 +445,7 @@ static class Resources
         TileTexture = LoadTextureFromImage(TileTextureImage);
         FloorTexture = LoadTexture("static/textures/cobolt-stone-1-floor-0.png");
         CeilingTexture = LoadTexture("static/textures/cobolt-stone-0-floor-0.png");
+        ChestAtlas = LoadTexture("static/textures/chest-wooden-0.png");
         TileMaterial = LoadMaterialDefault();
         FloorMaterial = LoadMaterialDefault();
         TileMesh = GenMeshCube(1, 1, 1);
@@ -411,8 +453,9 @@ static class Resources
         PlaneMesh = GenMeshPlane(1000, 1000, 1, 1);
         FloorModel = LoadModelFromMesh(PlaneMesh);
         CeilingModel = LoadModelFromMesh(PlaneMesh);
-        Music = LoadMusicStream("static/music/black-dawn.mp3");
-        Font = LoadFont("static/fonts/proggy-clean.ttf");
+        Music = LoadMusicStream("static/music/ronde.mp3");
+        Font = LoadFont("static/fonts/pixel-font-15.png");
+        StepSound = LoadSound("static/sounds/step.wav");
 
         unsafe
         {
@@ -430,6 +473,7 @@ static class Resources
         UnloadFont(Font);
         UnloadSound(StepSound);
         UnloadMusicStream(Music);
+        UnloadTexture(ChestAtlas);
         UnloadImage(TileTextureImage);
         UnloadModel(TileModel);
         UnloadModel(FloorModel);
