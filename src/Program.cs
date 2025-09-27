@@ -24,6 +24,12 @@ world.TileMap = new int[,]
 world.Player.Entity.X = 5;
 world.Player.Entity.Y = 5;
 
+float oldPlayerX = 0;
+float oldPlayerY = 0;
+int oldPlayerDirection = 0;
+float cameraPositionLerpT = 0;
+float cameraDirectionLerpT = 0;
+
 Camera3D camera = new()
 {
     FovY = 90,
@@ -40,14 +46,19 @@ void Update(double delta)
 {
     if (IsKeyPressed(KeyboardKey.Right))
     {
+        oldPlayerDirection = world.Player.Entity.Direction;
+        cameraDirectionLerpT = 0;
         world.Player.Entity.Direction++;
     }
     else if (IsKeyPressed(KeyboardKey.Left))
     {
+        oldPlayerDirection = world.Player.Entity.Direction;
+        cameraDirectionLerpT = 0;
         world.Player.Entity.Direction--;
     }
 
     world.Player.Entity.Direction = Direction.Clamped(world.Player.Entity.Direction);
+    cameraDirectionLerpT = MathF.Min(cameraDirectionLerpT + (float)delta, 1);
 
     int? moveDirection = null;
 
@@ -70,13 +81,16 @@ void Update(double delta)
 
     if (moveDirection is not null && world.Player.Current.WalkCooldown == 0)
     {
+        cameraPositionLerpT = 0;
+        oldPlayerX = world.Player.Entity.X;
+        oldPlayerY = world.Player.Entity.Y;
         PlaySound(Resources.StepSound);
-        world.Player.Current.WalkCooldown = 1 / 4.0;
+        world.Player.Current.WalkCooldown = world.Player.Default.WalkCooldown;
         world.TryMove(ref world.Player.Entity, (int)moveDirection);
     }
 
     world.Player.Current.WalkCooldown = Math.Max(world.Player.Current.WalkCooldown - delta, 0);
-    // Console.WriteLine(world.Player.Current.WalkCooldown);
+    cameraPositionLerpT = MathF.Min(cameraPositionLerpT + ((1.0F / (float)world.Player.Default.WalkCooldown) * (float)delta), 1);
 }
 
 {
@@ -119,7 +133,7 @@ Resources.CacheAndInitializeAll();
                 playerDirection3d = new(X, 0, Y);
             }
 
-            camera.Position = Vector3Lerp(camera.Position, new(world.Player.Entity.X, 0, world.Player.Entity.Y), 5 * (float)delta);
+            camera.Position = Vector3.Lerp(new(oldPlayerX, 0, oldPlayerY), new(world.Player.Entity.X, 0, world.Player.Entity.Y), cameraPositionLerpT);
 
             Quaternion cameraRotation = QuaternionFromAxisAngle(Vector3.UnitY, cameraDirection.SignedAngleTo(playerDirection3d, Vector3.UnitY) * 10 * (float)delta);
 
@@ -251,24 +265,6 @@ class Tween<TValue> where TValue : struct
     }
 }
 
-class TaskQueue
-{
-    public class Task
-    {
-        public Action? Enter;
-        public Action? Update;
-        public Action? Exit;
-    }
-
-    public List<Task> Tasks = [];
-
-    public TaskQueue Then(Task task)
-    {
-        Tasks.Add(task);
-        return this;
-    }
-}
-
 struct Entity
 {
     public int X;
@@ -276,16 +272,16 @@ struct Entity
     public int Direction;
 }
 
-struct Player
+struct Player()
 {
-    public struct Defaults
+    public struct Defaults()
     {
-        public double WalkCooldown;
+        public double WalkCooldown = 1 / 4.0;
     }
 
     public Entity Entity;
-    public Defaults Default;
-    public Defaults Current;
+    public Defaults Default = new();
+    public Defaults Current = new();
 }
 
 struct World()
@@ -379,7 +375,7 @@ static class Resources
     // Output fragment color
     out vec4 finalColor;
 
-    // All components are in the range [0…1], including hue.
+    // All components are in the range [0...1], including hue.
     vec3 rgb2hsv(vec3 c)
     {
         vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
