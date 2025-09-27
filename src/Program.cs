@@ -162,10 +162,10 @@ Resources.CacheAndInitializeAll();
             }
             EndMode3D();
 
-            var asdf = GetScreenHeight() / 240;
+            var halfScreenHeight = GetScreenHeight() / 240;
 
-            DrawTextEx(Resources.Font, "100+", new(16 + asdf, 16 + asdf), 15 * asdf, asdf, Color.DarkBlue);
-            DrawTextEx(Resources.Font, "100+", new(16, 16), 15 * asdf, asdf, Color.White);
+            DrawTextEx(Resources.Font, "100+", new(16 + halfScreenHeight, 16 + halfScreenHeight), 15 * halfScreenHeight, halfScreenHeight, Color.DarkBlue);
+            DrawTextEx(Resources.Font, "100+", new(16, 16), 15 * halfScreenHeight, halfScreenHeight, Color.White);
             DrawBillboardRec(camera, Resources.ChestAtlas, new(0, 0, 32, 28), new(4, 0, 4), Vector2.One, Color.White);
         }
         EndDrawing();
