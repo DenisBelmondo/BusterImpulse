@@ -45,6 +45,12 @@ camera.Position.Z = world.Player.Entity.Y;
 
 Vector3 cameraDirection;
 
+static void DrawText(Font font, string text, Vector2 position)
+{
+    DrawTextEx(font, text, position + Vector2.One, 15, 1, Color.DarkBlue);
+    DrawTextEx(font, text, position, 15, 1, Color.DarkBlue);
+}
+
 void Update(double delta)
 {
     if (IsKeyPressed(KeyboardKey.Right))
@@ -169,8 +175,8 @@ Resources.CacheAndInitializeAll();
 
             var halfScreenHeight = GetScreenHeight() / 240;
 
-            DrawTextEx(Resources.Font, "100+", new(16 + halfScreenHeight, 16 + halfScreenHeight), 15 * halfScreenHeight, halfScreenHeight, Color.DarkBlue);
-            DrawTextEx(Resources.Font, "100+", new(16, 16), 15 * halfScreenHeight, halfScreenHeight, Color.White);
+            // DrawTextEx(Resources.Font, "100+", new(16 + halfScreenHeight, 16 + halfScreenHeight), 15 * halfScreenHeight, halfScreenHeight, Color.DarkBlue);
+            // DrawTextEx(Resources.Font, "100+", new(16, 16), 15 * halfScreenHeight, halfScreenHeight, Color.White);
         }
         EndDrawing();
     }
