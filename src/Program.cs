@@ -5,6 +5,9 @@ using static Raylib_cs.BleedingEdge.Raymath;
 
 using Position = (int X, int Y);
 
+static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
+static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
+
 World world = new();
 
 world.TileMap = new int[,]
@@ -155,10 +158,12 @@ Resources.CacheAndInitializeAll();
                     {
                         if (world.TileMap[y, x] != 0)
                         {
-                            DrawModel(Resources.TileModel, new(x, 0, y), 1, Color.White);
+                            DrawModel(Resources.TileModel, Make3D(new(x, y)), 1, Color.White);
                         }
                     }
                 }
+
+                DrawBillboard(camera, Resources.EnemyTexture, Make3D(new(5, 5)), 1, Color.White);
             }
             EndMode3D();
 
@@ -166,7 +171,6 @@ Resources.CacheAndInitializeAll();
 
             DrawTextEx(Resources.Font, "100+", new(16 + halfScreenHeight, 16 + halfScreenHeight), 15 * halfScreenHeight, halfScreenHeight, Color.DarkBlue);
             DrawTextEx(Resources.Font, "100+", new(16, 16), 15 * halfScreenHeight, halfScreenHeight, Color.White);
-            DrawBillboardRec(camera, Resources.ChestAtlas, new(0, 0, 32, 28), new(4, 0, 4), Vector2.One, Color.White);
         }
         EndDrawing();
     }
@@ -267,6 +271,7 @@ class Tween<TValue> where TValue : struct
 
 struct Entity
 {
+    public int Type;
     public int X;
     public int Y;
     public int Direction;
@@ -289,8 +294,12 @@ struct World()
     public int[,]? TileMap;
     public Dictionary<Position, HashSet<int>> BroadPhaseCollisionMap = [];
     public Player Player = new();
+    public Dictionary<int, Entity> Entities = [];
 
-    public readonly void Spawn(int what, Position at) => BroadPhaseCollisionMap[at].Add(what);
+    public void Spawn(int what, Position at) 
+    {
+        BroadPhaseCollisionMap[at].Add(what);
+    }
 
     public readonly bool TryMove(ref Entity entity, int direction)
     {
@@ -422,6 +431,7 @@ static class Resources
     public static Texture2D FloorTexture;
     public static Texture2D CeilingTexture;
     public static Texture2D ChestAtlas;
+    public static Texture2D EnemyTexture;
     public static Material TileMaterial;
     public static Material FloorMaterial;
     public static Mesh TileMesh;
@@ -442,6 +452,7 @@ static class Resources
         FloorTexture = LoadTexture("static/textures/cobolt-stone-1-floor-0.png");
         CeilingTexture = LoadTexture("static/textures/cobolt-stone-0-floor-0.png");
         ChestAtlas = LoadTexture("static/textures/chest-wooden-0.png");
+        EnemyTexture = LoadTexture("static/textures/enemy.png");
         TileMaterial = LoadMaterialDefault();
         FloorMaterial = LoadMaterialDefault();
         TileMesh = GenMeshCube(1, 1, 1);
@@ -469,10 +480,21 @@ static class Resources
         UnloadFont(Font);
         UnloadSound(StepSound);
         UnloadMusicStream(Music);
+        UnloadTexture(EnemyTexture);
         UnloadTexture(ChestAtlas);
         UnloadImage(TileTextureImage);
         UnloadModel(TileModel);
         UnloadModel(FloorModel);
         UnloadShader(SurfaceShader);
+    }
+}
+
+namespace FightFightDanger
+{
+    public enum EntityType
+    {
+        Invalid,
+        Player,
+        Goon,
     }
 }
