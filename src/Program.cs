@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using Belmondo.FightFightDanger;
+using System.Numerics;
 using Raylib_cs.BleedingEdge;
 using static Raylib_cs.BleedingEdge.Raylib;
 using static Raylib_cs.BleedingEdge.Raymath;
@@ -7,6 +8,40 @@ using Position = (int X, int Y);
 
 static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
 static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
+
+string currentDialogLine = string.Empty;
+
+StateQueue stateQueue = new StateQueueBuilder()
+    .Then(new()
+    {
+        Name = "first state",
+        Enter = () =>
+        {
+            currentDialogLine = "pretty";
+            return true;
+        },
+    })
+    .Wait(TimeSpan.FromSeconds(1))
+    .Then(new()
+    {
+        Name = "second state",
+        Enter = () =>
+        {
+            currentDialogLine = "boy";
+            return true;
+        },
+    })
+    .Wait(TimeSpan.FromSeconds(1))
+    .Then(new()
+    {
+        Name = "third state",
+        Enter = () =>
+        {
+            currentDialogLine = "swag";
+            return true;
+        }
+    })
+    .Build();
 
 World world = new();
 
@@ -45,10 +80,13 @@ camera.Position.Z = world.Player.Entity.Y;
 
 Vector3 cameraDirection;
 
-static void DrawText(Font font, string text, Vector2 position)
+static void TextDraw(Font font, string text, Vector2 position)
 {
-    DrawTextEx(font, text, position + Vector2.One, 15, 1, Color.DarkBlue);
-    DrawTextEx(font, text, position, 15, 1, Color.DarkBlue);
+    var scaleFactor = GetScreenHeight() / 240f;
+    var scaledFontSize = 15 * scaleFactor;
+
+    DrawTextEx(font, text, position + Vector2.One * scaleFactor, scaledFontSize, 1, Color.DarkBlue);
+    DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
 }
 
 void Update(double delta)
@@ -100,6 +138,8 @@ void Update(double delta)
 
     world.Player.Current.WalkCooldown = Math.Max(world.Player.Current.WalkCooldown - delta, 0);
     cameraPositionLerpT = MathF.Min(cameraPositionLerpT + ((1.0F / (float)world.Player.Default.WalkCooldown) * (float)delta), 1);
+
+    stateQueue.Update();
 }
 
 {
@@ -175,8 +215,7 @@ Resources.CacheAndInitializeAll();
 
             var halfScreenHeight = GetScreenHeight() / 240;
 
-            // DrawTextEx(Resources.Font, "100+", new(16 + halfScreenHeight, 16 + halfScreenHeight), 15 * halfScreenHeight, halfScreenHeight, Color.DarkBlue);
-            // DrawTextEx(Resources.Font, "100+", new(16, 16), 15 * halfScreenHeight, halfScreenHeight, Color.White);
+            TextDraw(Resources.Font, currentDialogLine, Vector2.Zero);
         }
         EndDrawing();
     }
@@ -495,7 +534,7 @@ static class Resources
     }
 }
 
-namespace FightFightDanger
+namespace Belmondo.FightFightDanger
 {
     public enum EntityType
     {
