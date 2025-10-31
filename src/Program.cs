@@ -11,38 +11,6 @@ static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
 
 string currentDialogLine = string.Empty;
 
-StateQueue stateQueue = new StateQueueBuilder()
-    .Then(new()
-    {
-        Name = "first state",
-        Enter = () =>
-        {
-            currentDialogLine = "pretty";
-            return true;
-        },
-    })
-    .Wait(TimeSpan.FromSeconds(1))
-    .Then(new()
-    {
-        Name = "second state",
-        Enter = () =>
-        {
-            currentDialogLine = "boy";
-            return true;
-        },
-    })
-    .Wait(TimeSpan.FromSeconds(1))
-    .Then(new()
-    {
-        Name = "third state",
-        Enter = () =>
-        {
-            currentDialogLine = "swag";
-            return true;
-        }
-    })
-    .Build();
-
 World world = new();
 
 world.TileMap = new int[,]
@@ -68,6 +36,8 @@ int oldPlayerDirection = 0;
 float cameraPositionLerpT = 0;
 float cameraDirectionLerpT = 0;
 
+StateAutomaton stateAutomaton;
+
 Camera3D camera = new()
 {
     FovY = 90,
@@ -89,8 +59,10 @@ static void TextDraw(Font font, string text, Vector2 position)
     DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
 }
 
-void Update(double delta)
+void TickPlayer(double delta)
 {
+    // begin player update
+
     if (IsKeyPressed(KeyboardKey.Right))
     {
         oldPlayerDirection = world.Player.Entity.Direction;
@@ -139,7 +111,12 @@ void Update(double delta)
     world.Player.Current.WalkCooldown = Math.Max(world.Player.Current.WalkCooldown - delta, 0);
     cameraPositionLerpT = MathF.Min(cameraPositionLerpT + ((1.0F / (float)world.Player.Default.WalkCooldown) * (float)delta), 1);
 
-    stateQueue.Update();
+    // end player update
+}
+
+void Update(double delta)
+{
+    stateAutomaton.Update();
 }
 
 {
@@ -157,14 +134,38 @@ Resources.CacheAndInitializeAll();
     PlayMusicStream(Resources.Music);
 
     double oldTime = GetTime();
+    double delta = 0;
+
+    State playState = new()
+    {
+        EnterFunction = () =>
+        {
+            Console.WriteLine("Entered");
+        },
+        UpdateFunction = () =>
+        {
+            TickPlayer(delta);
+            return null;
+        },
+    };
+
+    State battleState = new()
+    {
+        UpdateFunction = () =>
+        {
+            return null;
+        },
+    };
+
+    stateAutomaton = new(playState);
 
     while (!WindowShouldClose())
     {
         UpdateMusicStream(Resources.Music);
 
         double newTime = GetTime();
-        double delta = newTime - oldTime;
 
+        delta = newTime - oldTime;
         oldTime = newTime;
 
         Update(delta);
@@ -531,15 +532,5 @@ static class Resources
         UnloadModel(TileModel);
         UnloadModel(FloorModel);
         UnloadShader(SurfaceShader);
-    }
-}
-
-namespace Belmondo.FightFightDanger
-{
-    public enum EntityType
-    {
-        Invalid,
-        Player,
-        Goon,
     }
 }
