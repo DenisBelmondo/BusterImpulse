@@ -8,22 +8,29 @@ using static Raylib_cs.BleedingEdge.Raymath;
 static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
 static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
 
-List<string> logLines = [];
-
 World world = new();
 
 world.TileMap = new int[,]
 {
-    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
-    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
-    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
-    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
-    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
-    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
-    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
-    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
-    { 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, },
+
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+    { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
+    { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
+    { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+    { 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
+    { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
+    { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+    { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+    { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
+    { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
+    { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+    { 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
+    { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
+    { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
+    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }
 };
 
 world.Player.Entity.X = 5;
@@ -50,12 +57,15 @@ camera.Position.Z = world.Player.Entity.Y;
 
 Vector3 cameraDirection;
 
-static void TextDraw(Font font, string text, Vector2 position)
+Log log = new(8);
+RaylibJukebox jukebox = new();
+
+static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 position)
 {
-    var scaleFactor = GetScreenHeight() / 240f;
+    var scaleFactor = screenSize.Y / 240f;
     var scaledFontSize = 15 * scaleFactor;
 
-    DrawTextEx(font, text, position + Vector2.One * scaleFactor, scaledFontSize, 1, Color.DarkBlue);
+    DrawTextEx(font, text, position + Vector2.One * scaleFactor, scaledFontSize, 1, Color.Black);
     DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
 }
 
@@ -131,18 +141,26 @@ InitAudioDevice();
 Resources.CacheAndInitializeAll();
 
 {
-    PlayMusicStream(Resources.Music);
+    RenderTexture2D renderTexture = LoadRenderTexture(640, 480);
 
     double oldTime = GetTime();
     double delta = 0;
 
     State? playState = null;
     State? battleStart = null;
+    State? battleStartAttack = null;
     State? battleAttack = null;
+    State? battleDefend = null;
+    State? battleRun = null;
     State? battleEnemyAttack = null;
 
     playState = new()
     {
+        EnterFunction = () =>
+        {
+            log.Clear();
+            jukebox.ChangeMusic(Resources.Music);
+        },
         UpdateFunction = () =>
         {
             if (IsKeyPressed(KeyboardKey.B))
@@ -160,30 +178,95 @@ Resources.CacheAndInitializeAll();
     {
         EnterFunction = () =>
         {
-            logLines.Add("What will you do?");
-            logLines.Add("A: attack");
+            jukebox.ChangeMusic(Resources.BattleMusic);
+            log.Clear();
+            log.Add("What will you do?");
+            log.Add("A: Attack");
+            log.Add("D: Defend");
+            log.Add("R: Run");
         },
         UpdateFunction = () =>
         {
-            if (IsKeyPressed(KeyboardKey.A))
+            while (true)
             {
-                return new(() => battleAttack);
+                var key = GetKeyPressed();
+
+                if (key == 0)
+                {
+                    break;
+                }
+
+                switch (key)
+                {
+                case KeyboardKey.A:
+                    return new(() => battleStartAttack);
+                case KeyboardKey.D:
+                    return new(() => battleDefend);
+                case KeyboardKey.R:
+                    return new(() => battleRun);
+                }
             }
 
             return new(() => null);
         },
     };
 
+    battleStartAttack = new()
+    {
+        EnterFunction = () =>
+        {
+            log.Clear();
+            log.Add("Player attacks!");
+        },
+        UpdateFunction = () =>
+        {
+            if (IsKeyPressed(KeyboardKey.Enter))
+            {
+                return new(() => battleAttack);
+            }
+
+            return new(() => null);
+        }
+    };
+
     battleAttack = new()
     {
         EnterFunction = () =>
         {
-            Console.WriteLine("\tPlayer attacks!");
-            Console.WriteLine("\tPlayer deals 10 damage!");
+            log.Add("Player deals 10 damage!");
+        },
+        UpdateFunction = () =>
+        {
+            if (IsKeyPressed(KeyboardKey.Enter))
+            {
+                return new(() => battleEnemyAttack);
+            }
+
+            return new(() => null);
+        },
+    };
+
+    battleDefend = new()
+    {
+        EnterFunction = () =>
+        {
+            log.Add("\tPlayer defends!");
         },
         UpdateFunction = () =>
         {
             return new(() => battleEnemyAttack);
+        }
+    };
+
+    battleRun = new()
+    {
+        EnterFunction = () =>
+        {
+            Console.WriteLine("\tPlayer runs!");
+        },
+        UpdateFunction = () =>
+        {
+            return new(() => playState);
         }
     };
 
@@ -204,7 +287,7 @@ Resources.CacheAndInitializeAll();
 
     while (!WindowShouldClose())
     {
-        UpdateMusicStream(Resources.Music);
+        jukebox.Update();
 
         double newTime = GetTime();
 
@@ -215,7 +298,7 @@ Resources.CacheAndInitializeAll();
 
         // render
 
-        BeginDrawing();
+        BeginTextureMode(renderTexture);
         {
             ClearBackground(Color.Black);
 
@@ -253,17 +336,64 @@ Resources.CacheAndInitializeAll();
                     }
                 }
 
-                // DrawBillboard(camera, Resources.EnemyTexture, Make3D(new(5, 5)), 1, Color.White);
+                // [FIXME]: BRUTAL fucking hack
+                if (stateAutomaton.CurrentState == battleStart || stateAutomaton.CurrentState == battleStartAttack || stateAutomaton.CurrentState == battleAttack)
+                {
+                    (float X, float Y) = Direction.ToInt32Tuple(world.Player.Entity.Direction);
+
+                    X /= 2;
+                    Y /= 2;
+                    X += world.Player.Entity.X;
+                    Y += world.Player.Entity.Y;
+
+                    Rlgl.DisableDepthTest();
+                    {
+                        DrawBillboard(camera, Resources.EnemyTexture, Make3D(new(X, Y)), 1, Color.White);
+                    }
+                }
             }
             EndMode3D();
 
-            for (int i = 0; i < logLines.Count; i++)
+            Rectangle boxRect = new()
             {
-                TextDraw(Resources.Font, logLines[i], new(0, 15 * i * GetScreenHeight() / 240f));
+                X = 0,
+                Y = 0,
+                Width = 128,
+                Height = 128,
+            };
+
+            for (int i = 0; i < log.Lines.Count; i++)
+            {
+                TextDraw(Resources.Font, log.Lines[i], new(renderTexture.Texture.Width, renderTexture.Texture.Height), new(0, i * 15 * GetScreenHeight() / 240f));
             }
+        }
+        EndTextureMode();
+
+        BeginDrawing();
+        {
+            DrawTexturePro(
+                renderTexture.Texture,
+                new Rectangle()
+                {
+                    Width = 640,
+                    Height = -480,
+                    Position = Vector2.Zero,
+                },
+                new Rectangle()
+                {
+                    Width = GetScreenWidth(),
+                    Height = GetScreenHeight(),
+                    Position = Vector2.Zero,
+                },
+                Vector2.Zero,
+                0,
+                Color.White
+            );
         }
         EndDrawing();
     }
+
+    UnloadRenderTexture(renderTexture);
 }
 
 Resources.UnloadAll();

@@ -7,7 +7,7 @@ public static partial class FightFightDanger
 {
     public static class Resources
     {
-        const string VERTEX_SHADER_SOURCE =
+        const string SURFACE_VERTEX_SHADER_SOURCE =
         """
         #version 330
 
@@ -49,11 +49,10 @@ public static partial class FightFightDanger
             fragNormal = vertexNormal;
 
             // Calculate final vertex position
-            gl_Position = mvp * vec4(vertexPosition, 1.0);
-        }
+            gl_Position = mvp * vec4(vertexPosition, 1.0); }
         """;
 
-        const string FRAGMENT_SHADER_SOURCE =
+        const string SURFACE_FRAGMENT_SHADER_SOURCE =
         """
         #version 330
 
@@ -65,6 +64,9 @@ public static partial class FightFightDanger
         // Input uniform values
         uniform sampler2D texture0;
         uniform vec4 colDiffuse;
+
+        float nearPlane = 0.1;
+        float farPlane = 100.0;
 
         // Output fragment color
         out vec4 finalColor;
@@ -104,7 +106,8 @@ public static partial class FightFightDanger
             vec4 rgba = texelColor * colDiffuse * fragColor;
             vec3 hsv = rgb2hsv(rgba.rgb);
 
-            hsv.z *= abs(dot(vec3(0.5, 1.0, 1.0), fragNormal));
+            hsv.y *= abs(dot(vec3(1 / 0.6, 1.0, 1.0), fragNormal));
+            hsv.z *= abs(dot(vec3(0.6, 1.0, 1.0), fragNormal));
             rgba.rgb = hsv2rgb(hsv);
             finalColor = rgba;
         }
@@ -117,6 +120,7 @@ public static partial class FightFightDanger
         public static Texture2D CeilingTexture;
         public static Texture2D ChestAtlas;
         public static Texture2D EnemyTexture;
+        public static Texture2D UIAtlas;
         public static Material TileMaterial;
         public static Material FloorMaterial;
         public static Mesh TileMesh;
@@ -126,17 +130,19 @@ public static partial class FightFightDanger
         public static Model CeilingModel;
         public static Sound StepSound;
         public static Music Music;
+        public static Music BattleMusic;
         public static Font Font;
 
         public static void CacheAndInitializeAll()
         {
-            SurfaceShader = LoadShaderFromMemory(VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE);
+            SurfaceShader = LoadShaderFromMemory(SURFACE_VERTEX_SHADER_SOURCE, SURFACE_FRAGMENT_SHADER_SOURCE);
             TileTextureImage = LoadImage("static/textures/cobolt-stone-0-moss-0.png");
             ImageFlipVertical(ref TileTextureImage);
             TileTexture = LoadTextureFromImage(TileTextureImage);
             FloorTexture = LoadTexture("static/textures/cobolt-stone-1-floor-0.png");
             CeilingTexture = LoadTexture("static/textures/cobolt-stone-0-floor-0.png");
             ChestAtlas = LoadTexture("static/textures/chest-wooden-0.png");
+            UIAtlas = LoadTexture("static/textures/ui.png");
             EnemyTexture = LoadTexture("static/textures/enemy.png");
             TileMaterial = LoadMaterialDefault();
             FloorMaterial = LoadMaterialDefault();
@@ -146,6 +152,7 @@ public static partial class FightFightDanger
             FloorModel = LoadModelFromMesh(PlaneMesh);
             CeilingModel = LoadModelFromMesh(PlaneMesh);
             Music = LoadMusicStream("static/music/ronde.mp3");
+            BattleMusic = LoadMusicStream("static/music/morgan.mp3");
             Font = LoadFont("static/fonts/pixel-font-15.png");
             StepSound = LoadSound("static/sounds/step.wav");
 
@@ -165,8 +172,10 @@ public static partial class FightFightDanger
             UnloadFont(Font);
             UnloadSound(StepSound);
             UnloadMusicStream(Music);
+            UnloadMusicStream(BattleMusic);
             UnloadTexture(EnemyTexture);
             UnloadTexture(ChestAtlas);
+            UnloadTexture(UIAtlas);
             UnloadImage(TileTextureImage);
             UnloadModel(TileModel);
             UnloadModel(FloorModel);
