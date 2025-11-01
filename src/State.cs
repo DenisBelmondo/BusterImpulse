@@ -3,28 +3,33 @@ namespace Belmondo.FightFightDanger;
 public class State
 {
 	public Action? EnterFunction;
-	public Func<State?>? UpdateFunction;
+	public Func<Lazy<State?>>? UpdateFunction;
 	public Action? ExitFunction;
 }
 
-public class StateAutomaton(State initialState)
+public class StateAutomaton
 {
 	private bool _hasEntered;
-	public State CurrentState = initialState;
+	public Lazy<State?>? CurrentState;
 
 	public void Update()
 	{
+		if (CurrentState is null || !CurrentState.IsValueCreated)
+		{
+			return;
+		}
+
 		if (!_hasEntered)
 		{
-			CurrentState.EnterFunction?.Invoke();
+			CurrentState!.Value?.EnterFunction?.Invoke();
 			_hasEntered = true;
 		}
 
-		State? nextState = CurrentState.UpdateFunction?.Invoke();
+		Lazy<State?>? nextState = CurrentState?.Value?.UpdateFunction?.Invoke();
 
-		if (nextState is not null)
+		if (nextState is not null && nextState.IsValueCreated && nextState.Value is not null)
 		{
-			CurrentState.ExitFunction?.Invoke();
+			CurrentState!.Value?.ExitFunction?.Invoke();
 			CurrentState = nextState;
 		}
 	}
