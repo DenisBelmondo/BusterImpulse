@@ -8,7 +8,7 @@ using static Raylib_cs.BleedingEdge.Raymath;
 static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
 static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
 
-string currentDialogLine = string.Empty;
+List<string> logLines = [];
 
 World world = new();
 
@@ -32,6 +32,7 @@ world.Player.Entity.Y = 5;
 float oldPlayerX = 0;
 float oldPlayerY = 0;
 int oldPlayerDirection = 0;
+
 float cameraPositionLerpT = 0;
 float cameraDirectionLerpT = 0;
 
@@ -135,38 +136,68 @@ Resources.CacheAndInitializeAll();
     double oldTime = GetTime();
     double delta = 0;
 
-    State playState;
-    State battleStart;
-    State battleAttack;
+    State? playState = null;
+    State? battleStart = null;
+    State? battleAttack = null;
+    State? battleEnemyAttack = null;
 
     playState = new()
     {
         UpdateFunction = () =>
         {
+            if (IsKeyPressed(KeyboardKey.B))
+            {
+                return new(() => battleStart);
+            }
+
             TickPlayer(delta);
-            return null;
-        },
+
+            return new(() => null);
+        }
     };
 
     battleStart = new()
     {
         EnterFunction = () =>
         {
-            Console.WriteLine("A: attack");
+            logLines.Add("What will you do?");
+            logLines.Add("A: attack");
         },
         UpdateFunction = () =>
         {
-            if (IsKeyDown(KeyboardKey.A))
+            if (IsKeyPressed(KeyboardKey.A))
             {
-                return battleAttack;
+                return new(() => battleAttack);
             }
 
-            return null;
+            return new(() => null);
         },
     };
 
     battleAttack = new()
     {
+        EnterFunction = () =>
+        {
+            Console.WriteLine("\tPlayer attacks!");
+            Console.WriteLine("\tPlayer deals 10 damage!");
+        },
+        UpdateFunction = () =>
+        {
+            return new(() => battleEnemyAttack);
+        }
+    };
+
+    battleEnemyAttack = new()
+    {
+        EnterFunction = () =>
+        {
+            Console.WriteLine("\tEnemy attacks!");
+            Console.WriteLine("\tEnemy deals 5 damage!");
+        },
+        UpdateFunction = () =>
+        {
+            return new(() => battleStart);
+        }
     };
 
     stateAutomaton.CurrentState = playState;
@@ -222,11 +253,14 @@ Resources.CacheAndInitializeAll();
                     }
                 }
 
-                DrawBillboard(camera, Resources.EnemyTexture, Make3D(new(5, 5)), 1, Color.White);
+                // DrawBillboard(camera, Resources.EnemyTexture, Make3D(new(5, 5)), 1, Color.White);
             }
             EndMode3D();
 
-            TextDraw(Resources.Font, currentDialogLine, Vector2.Zero);
+            for (int i = 0; i < logLines.Count; i++)
+            {
+                TextDraw(Resources.Font, logLines[i], new(0, 15 * i * GetScreenHeight() / 240f));
+            }
         }
         EndDrawing();
     }

@@ -1,36 +1,40 @@
-namespace Belmondo.FightFightDanger;
+namespace Belmondo;
 
-public class State
+public static partial class FightFightDanger
 {
-	public Action? EnterFunction;
-	public Func<Lazy<State?>>? UpdateFunction;
-	public Action? ExitFunction;
-}
-
-public class StateAutomaton
-{
-	private bool _hasEntered;
-	public Lazy<State?>? CurrentState;
-
-	public void Update()
+	public class State
 	{
-		if (CurrentState is null || !CurrentState.IsValueCreated)
-		{
-			return;
-		}
+		public Action? EnterFunction;
+		public Func<Lazy<State?>>? UpdateFunction;
+		public Action? ExitFunction;
+	}
 
-		if (!_hasEntered)
-		{
-			CurrentState!.Value?.EnterFunction?.Invoke();
-			_hasEntered = true;
-		}
+	public class StateAutomaton
+	{
+		private bool _hasEntered;
+		public State? CurrentState;
 
-		Lazy<State?>? nextState = CurrentState?.Value?.UpdateFunction?.Invoke();
-
-		if (nextState is not null && nextState.IsValueCreated && nextState.Value is not null)
+		public void Update()
 		{
-			CurrentState!.Value?.ExitFunction?.Invoke();
-			CurrentState = nextState;
+			if (CurrentState is null)
+			{
+				return;
+			}
+
+			if (!_hasEntered)
+			{
+				CurrentState!.EnterFunction?.Invoke();
+				_hasEntered = true;
+			}
+
+			Lazy<State?>? nextState = CurrentState.UpdateFunction?.Invoke();
+
+			if (nextState is not null && nextState.Value is not null)
+			{
+				CurrentState!.ExitFunction?.Invoke();
+				CurrentState = nextState.Value;
+				_hasEntered = false;
+			}
 		}
 	}
 }
