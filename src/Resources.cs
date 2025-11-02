@@ -129,6 +129,7 @@ public static partial class FightFightDanger
         public static Model FloorModel;
         public static Model CeilingModel;
         public static Sound StepSound;
+        public static Sound SmackSound;
         public static Music Music;
         public static Music BattleMusic;
         public static Font Font;
@@ -155,6 +156,7 @@ public static partial class FightFightDanger
             BattleMusic = LoadMusicStream("static/music/morgan.mp3");
             Font = LoadFont("static/fonts/pixel-font-15.png");
             StepSound = LoadSound("static/sounds/step.wav");
+            SmackSound = LoadSound("static/sounds/smack.wav");
 
             unsafe
             {
@@ -171,6 +173,7 @@ public static partial class FightFightDanger
         {
             UnloadFont(Font);
             UnloadSound(StepSound);
+            UnloadSound(SmackSound);
             UnloadMusicStream(Music);
             UnloadMusicStream(BattleMusic);
             UnloadTexture(EnemyTexture);

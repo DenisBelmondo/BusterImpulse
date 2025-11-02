@@ -8,6 +8,15 @@ using static Raylib_cs.BleedingEdge.Raymath;
 static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
 static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
 
+BattleFoe.Stats goonStats = new()
+{
+    Health = 5,
+    Damage = 1,
+};
+
+BattleFoe? currentFoe = null;
+ShakeStateContext shakeStateContext = new();
+
 World world = new();
 
 world.TileMap = new int[,]
@@ -43,7 +52,10 @@ int oldPlayerDirection = 0;
 float cameraPositionLerpT = 0;
 float cameraDirectionLerpT = 0;
 
+Vector3 foeBillboardOffset = new();
+
 StateAutomaton stateAutomaton = new();
+StateAutomaton foeVisualStateAutomaton = new();
 
 Camera3D camera = new()
 {
@@ -127,6 +139,8 @@ void TickPlayer(double delta)
 void Update(double delta)
 {
     stateAutomaton.Update();
+    foeVisualStateAutomaton.Update();
+    shakeStateContext.Update(delta);
 }
 
 {
@@ -165,6 +179,7 @@ Resources.CacheAndInitializeAll();
         {
             if (IsKeyPressed(KeyboardKey.B))
             {
+                currentFoe = new(goonStats);
                 return new(() => battleStart);
             }
 
@@ -233,10 +248,30 @@ Resources.CacheAndInitializeAll();
     {
         EnterFunction = () =>
         {
-            log.Add("Player deals 10 damage!");
+            if (currentFoe is not null)
+            {
+                currentFoe.CurrentStats.Health -= 1;
+                log.Add("Player deals 1 damage!");
+
+                if (currentFoe.CurrentStats.Health <= 0)
+                {
+                    log.Add("Enemy defeated.");
+                }
+            }
+
+            PlaySound(Resources.SmackSound);
+            shakeStateContext.Shake(0.5f);
         },
         UpdateFunction = () =>
         {
+            if (currentFoe is not null && currentFoe.CurrentStats.Health <= 0)
+            {
+                if (IsKeyPressed(KeyboardKey.Enter))
+                {
+                    return new(() => playState);
+                }
+            }
+
             if (IsKeyPressed(KeyboardKey.Enter))
             {
                 return new(() => battleEnemyAttack);
@@ -250,7 +285,7 @@ Resources.CacheAndInitializeAll();
     {
         EnterFunction = () =>
         {
-            log.Add("\tPlayer defends!");
+            log.Add("Player defends!");
         },
         UpdateFunction = () =>
         {
@@ -348,7 +383,7 @@ Resources.CacheAndInitializeAll();
 
                     Rlgl.DisableDepthTest();
                     {
-                        DrawBillboard(camera, Resources.EnemyTexture, Make3D(new(X, Y)), 1, Color.White);
+                        DrawBillboard(camera, Resources.EnemyTexture, Make3D(new(X, Y)) + shakeStateContext.Offset, 1, Color.White);
                     }
                 }
             }
@@ -399,3 +434,14 @@ Resources.CacheAndInitializeAll();
 Resources.UnloadAll();
 CloseAudioDevice();
 CloseWindow();
+
+class BattleFoe(BattleFoe.Stats stats)
+{
+    public struct Stats
+    {
+        public int Health;
+        public int Damage;
+    }
+
+    public Stats CurrentStats = stats;
+}
