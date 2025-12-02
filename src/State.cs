@@ -4,14 +4,23 @@ public static partial class FightFightDanger
 {
 	public class State
 	{
-		public Action? EnterFunction;
+        public static readonly Lazy<State?> None = new(() => null);
+
+        public Action? EnterFunction;
 		public Func<Lazy<State?>>? UpdateFunction;
 		public Action? ExitFunction;
 	}
 
 	public class StateAutomaton
 	{
-		private bool _hasEntered;
+		public class StateChangeEventArgs(Lazy<State> nextState) : EventArgs
+		{
+            public Lazy<State> NewState = nextState;
+        }
+
+        public event EventHandler? StateChanged;
+
+        private bool _hasEntered;
 		public State? CurrentState;
 
 		public void Update()
@@ -34,7 +43,8 @@ public static partial class FightFightDanger
 				CurrentState!.ExitFunction?.Invoke();
 				CurrentState = nextState.Value;
 				_hasEntered = false;
-			}
+                StateChanged?.Invoke(this, new StateChangeEventArgs(nextState!));
+            }
 		}
 	}
 }

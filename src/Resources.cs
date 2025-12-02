@@ -120,6 +120,7 @@ public static partial class FightFightDanger
         public static Texture2D CeilingTexture;
         public static Texture2D ChestAtlas;
         public static Texture2D EnemyTexture;
+        public static Texture2D EnemyAtlas;
         public static Texture2D UIAtlas;
         public static Material TileMaterial;
         public static Material FloorMaterial;
@@ -145,6 +146,7 @@ public static partial class FightFightDanger
             ChestAtlas = LoadTexture("static/textures/chest-wooden-0.png");
             UIAtlas = LoadTexture("static/textures/ui.png");
             EnemyTexture = LoadTexture("static/textures/enemy.png");
+            EnemyAtlas = LoadTexture("static/textures/enemy-atlas.png");
             TileMaterial = LoadMaterialDefault();
             FloorMaterial = LoadMaterialDefault();
             TileMesh = GenMeshCube(1, 1, 1);
@@ -177,6 +179,7 @@ public static partial class FightFightDanger
             UnloadMusicStream(Music);
             UnloadMusicStream(BattleMusic);
             UnloadTexture(EnemyTexture);
+            UnloadTexture(EnemyAtlas);
             UnloadTexture(ChestAtlas);
             UnloadTexture(UIAtlas);
             UnloadImage(TileTextureImage);

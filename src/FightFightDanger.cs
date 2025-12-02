@@ -4,8 +4,6 @@ public static partial class FightFightDanger
 {
 	public enum EntityType
 	{
-		Invalid,
-
 		Enemy,
 		EnemyGoon,
 		EnemyEnd,

@@ -8,20 +8,11 @@ using static Raylib_cs.BleedingEdge.Raymath;
 static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
 static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
 
-BattleFoe.Stats goonStats = new()
-{
-    Health = 5,
-    Damage = 1,
-};
-
-BattleFoe? currentFoe = null;
-ShakeStateContext shakeStateContext = new();
-
+Game game = new();
 World world = new();
 
 world.TileMap = new int[,]
 {
-
     { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
     { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
     { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
@@ -45,17 +36,7 @@ world.TileMap = new int[,]
 world.Player.Entity.X = 5;
 world.Player.Entity.Y = 5;
 
-float oldPlayerX = 0;
-float oldPlayerY = 0;
-int oldPlayerDirection = 0;
-
-float cameraPositionLerpT = 0;
-float cameraDirectionLerpT = 0;
-
-Vector3 foeBillboardOffset = new();
-
-StateAutomaton stateAutomaton = new();
-StateAutomaton foeVisualStateAutomaton = new();
+game.World = world;
 
 Camera3D camera = new()
 {
@@ -69,9 +50,6 @@ camera.Position.Z = world.Player.Entity.Y;
 
 Vector3 cameraDirection;
 
-Log log = new(8);
-RaylibJukebox jukebox = new();
-
 static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 position)
 {
     var scaleFactor = screenSize.Y / 240f;
@@ -79,68 +57,6 @@ static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 positio
 
     DrawTextEx(font, text, position + Vector2.One * scaleFactor, scaledFontSize, 1, Color.Black);
     DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
-}
-
-void TickPlayer(double delta)
-{
-    // begin player update
-
-    if (IsKeyPressed(KeyboardKey.Right))
-    {
-        oldPlayerDirection = world.Player.Entity.Direction;
-        cameraDirectionLerpT = 0;
-        world.Player.Entity.Direction++;
-    }
-    else if (IsKeyPressed(KeyboardKey.Left))
-    {
-        oldPlayerDirection = world.Player.Entity.Direction;
-        cameraDirectionLerpT = 0;
-        world.Player.Entity.Direction--;
-    }
-
-    world.Player.Entity.Direction = Direction.Clamped(world.Player.Entity.Direction);
-    cameraDirectionLerpT = MathF.Min(cameraDirectionLerpT + (float)delta, 1);
-
-    int? moveDirection = null;
-
-    if (IsKeyDown(KeyboardKey.W))
-    {
-        moveDirection = Direction.Clamped(world.Player.Entity.Direction);
-    }
-    else if (IsKeyDown(KeyboardKey.S))
-    {
-        moveDirection = Direction.Clamped(world.Player.Entity.Direction + 2);
-    }
-    else if (IsKeyDown(KeyboardKey.A))
-    {
-        moveDirection = Direction.Clamped(world.Player.Entity.Direction + 3);
-    }
-    else if (IsKeyDown(KeyboardKey.D))
-    {
-        moveDirection = Direction.Clamped(world.Player.Entity.Direction + 1);
-    }
-
-    if (moveDirection is not null && world.Player.Current.WalkCooldown == 0)
-    {
-        cameraPositionLerpT = 0;
-        oldPlayerX = world.Player.Entity.X;
-        oldPlayerY = world.Player.Entity.Y;
-        PlaySound(Resources.StepSound);
-        world.Player.Current.WalkCooldown = world.Player.Default.WalkCooldown;
-        world.TryMove(ref world.Player.Entity, (int)moveDirection);
-    }
-
-    world.Player.Current.WalkCooldown = Math.Max(world.Player.Current.WalkCooldown - delta, 0);
-    cameraPositionLerpT = MathF.Min(cameraPositionLerpT + ((1.0F / (float)world.Player.Default.WalkCooldown) * (float)delta), 1);
-
-    // end player update
-}
-
-void Update(double delta)
-{
-    stateAutomaton.Update();
-    foeVisualStateAutomaton.Update();
-    shakeStateContext.Update(delta);
 }
 
 {
@@ -158,180 +74,33 @@ Resources.CacheAndInitializeAll();
     RenderTexture2D renderTexture = LoadRenderTexture(640, 480);
 
     double oldTime = GetTime();
-    double delta = 0;
 
-    State? playState = null;
-    State? battleStart = null;
-    State? battleStartAttack = null;
-    State? battleAttack = null;
-    State? battleDefend = null;
-    State? battleRun = null;
-    State? battleEnemyAttack = null;
+    //
+    // begin state initializations
+    //
 
-    playState = new()
-    {
-        EnterFunction = () =>
-        {
-            log.Clear();
-            jukebox.ChangeMusic(Resources.Music);
-        },
-        UpdateFunction = () =>
-        {
-            if (IsKeyPressed(KeyboardKey.B))
-            {
-                currentFoe = new(goonStats);
-                return new(() => battleStart);
-            }
+    //
+    // end state initializations
+    //
 
-            TickPlayer(delta);
-
-            return new(() => null);
-        }
-    };
-
-    battleStart = new()
-    {
-        EnterFunction = () =>
-        {
-            jukebox.ChangeMusic(Resources.BattleMusic);
-            log.Clear();
-            log.Add("What will you do?");
-            log.Add("A: Attack");
-            log.Add("D: Defend");
-            log.Add("R: Run");
-        },
-        UpdateFunction = () =>
-        {
-            while (true)
-            {
-                var key = GetKeyPressed();
-
-                if (key == 0)
-                {
-                    break;
-                }
-
-                switch (key)
-                {
-                case KeyboardKey.A:
-                    return new(() => battleStartAttack);
-                case KeyboardKey.D:
-                    return new(() => battleDefend);
-                case KeyboardKey.R:
-                    return new(() => battleRun);
-                }
-            }
-
-            return new(() => null);
-        },
-    };
-
-    battleStartAttack = new()
-    {
-        EnterFunction = () =>
-        {
-            log.Clear();
-            log.Add("Player attacks!");
-        },
-        UpdateFunction = () =>
-        {
-            if (IsKeyPressed(KeyboardKey.Enter))
-            {
-                return new(() => battleAttack);
-            }
-
-            return new(() => null);
-        }
-    };
-
-    battleAttack = new()
-    {
-        EnterFunction = () =>
-        {
-            if (currentFoe is not null)
-            {
-                currentFoe.CurrentStats.Health -= 1;
-                log.Add("Player deals 1 damage!");
-
-                if (currentFoe.CurrentStats.Health <= 0)
-                {
-                    log.Add("Enemy defeated.");
-                }
-            }
-
-            PlaySound(Resources.SmackSound);
-            shakeStateContext.Shake(0.5f);
-        },
-        UpdateFunction = () =>
-        {
-            if (currentFoe is not null && currentFoe.CurrentStats.Health <= 0)
-            {
-                if (IsKeyPressed(KeyboardKey.Enter))
-                {
-                    return new(() => playState);
-                }
-            }
-
-            if (IsKeyPressed(KeyboardKey.Enter))
-            {
-                return new(() => battleEnemyAttack);
-            }
-
-            return new(() => null);
-        },
-    };
-
-    battleDefend = new()
-    {
-        EnterFunction = () =>
-        {
-            log.Add("Player defends!");
-        },
-        UpdateFunction = () =>
-        {
-            return new(() => battleEnemyAttack);
-        }
-    };
-
-    battleRun = new()
-    {
-        EnterFunction = () =>
-        {
-            Console.WriteLine("\tPlayer runs!");
-        },
-        UpdateFunction = () =>
-        {
-            return new(() => playState);
-        }
-    };
-
-    battleEnemyAttack = new()
-    {
-        EnterFunction = () =>
-        {
-            Console.WriteLine("\tEnemy attacks!");
-            Console.WriteLine("\tEnemy deals 5 damage!");
-        },
-        UpdateFunction = () =>
-        {
-            return new(() => battleStart);
-        }
-    };
-
-    stateAutomaton.CurrentState = playState;
+    game.StateAutomaton.CurrentState = game.ExploreState;
 
     while (!WindowShouldClose())
     {
-        jukebox.Update();
+        game.Jukebox.Update();
 
         double newTime = GetTime();
+        double delta = newTime - oldTime;
 
-        delta = newTime - oldTime;
         oldTime = newTime;
 
-        Update(delta);
+        game.TimeContext.Delta = delta;
+        game.TimeContext.Time += delta;
+        game.Update();
 
+        //
         // render
+        //
 
         BeginTextureMode(renderTexture);
         {
@@ -344,7 +113,7 @@ Resources.CacheAndInitializeAll();
                 playerDirection3d = new(X, 0, Y);
             }
 
-            camera.Position = Vector3.Lerp(new(oldPlayerX, 0, oldPlayerY), new(world.Player.Entity.X, 0, world.Player.Entity.Y), cameraPositionLerpT);
+            camera.Position = Vector3.Lerp(new(world.OldPlayerX, 0, world.OldPlayerY), new(world.Player.Entity.X, 0, world.Player.Entity.Y), world.CameraPositionLerpT);
 
             Quaternion cameraRotation = QuaternionFromAxisAngle(Vector3.UnitY, cameraDirection.SignedAngleTo(playerDirection3d, Vector3.UnitY) * 10 * (float)delta);
 
@@ -372,7 +141,16 @@ Resources.CacheAndInitializeAll();
                 }
 
                 // [FIXME]: BRUTAL fucking hack
-                if (stateAutomaton.CurrentState == battleStart || stateAutomaton.CurrentState == battleStartAttack || stateAutomaton.CurrentState == battleAttack)
+                var isInBattle = false
+                    || game.StateAutomaton.CurrentState == game.BattleStart
+                    || game.StateAutomaton.CurrentState == game.BattleStartPlayerAttack
+                    || game.StateAutomaton.CurrentState == game.BattlePlayerAiming
+                    || game.StateAutomaton.CurrentState == game.BattlePlayerMissed
+                    || game.StateAutomaton.CurrentState == game.BattleEnemyStartAttack
+                    || game.StateAutomaton.CurrentState == game.BattleEnemyAttack
+                    || game.StateAutomaton.CurrentState == game.BattlePlayerAttack;
+
+                if (isInBattle)
                 {
                     (float X, float Y) = Direction.ToInt32Tuple(world.Player.Entity.Direction);
 
@@ -383,23 +161,30 @@ Resources.CacheAndInitializeAll();
 
                     Rlgl.DisableDepthTest();
                     {
-                        DrawBillboard(camera, Resources.EnemyTexture, Make3D(new(X, Y)) + shakeStateContext.Offset, 1, Color.White);
+                        DrawBillboardPro(
+                            camera,
+                            Resources.EnemyAtlas,
+                            new(0, 0, 64, 64),
+                            Make3D(new(X, Y))
+                                + game.ShakeStateContext.Offset,
+                            Vector3.UnitY,
+                            Vector2.One,
+                            Vector2.One / 2f,
+                            0,
+                            Color.White);
                     }
                 }
             }
             EndMode3D();
 
-            Rectangle boxRect = new()
+            if (game.StateAutomaton.CurrentState == game.BattlePlayerAiming)
             {
-                X = 0,
-                Y = 0,
-                Width = 128,
-                Height = 128,
-            };
+                DrawCircle((int)(320 + (game.CurrentPlayerAimingStateContext.CurrentAimValue * 320)), 240, 24, game.CurrentPlayerAimingStateContext.IsInRange() ? Color.Green : Color.RayWhite);
+            }
 
-            for (int i = 0; i < log.Lines.Count; i++)
+            for (int i = 0; i < game.Log.Lines.Count; i++)
             {
-                TextDraw(Resources.Font, log.Lines[i], new(renderTexture.Texture.Width, renderTexture.Texture.Height), new(0, i * 15 * GetScreenHeight() / 240f));
+                TextDraw(Resources.Font, game.Log.Lines[i], new(renderTexture.Texture.Width, renderTexture.Texture.Height), new(0, i * 15 * GetScreenHeight() / 240f));
             }
         }
         EndTextureMode();
@@ -434,14 +219,3 @@ Resources.CacheAndInitializeAll();
 Resources.UnloadAll();
 CloseAudioDevice();
 CloseWindow();
-
-class BattleFoe(BattleFoe.Stats stats)
-{
-    public struct Stats
-    {
-        public int Health;
-        public int Damage;
-    }
-
-    public Stats CurrentStats = stats;
-}
