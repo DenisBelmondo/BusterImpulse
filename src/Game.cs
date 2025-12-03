@@ -110,7 +110,7 @@ public static partial class FightFightDanger
                 },
                 UpdateFunction = () =>
                 {
-                    if (IsKeyPressed(KeyboardKey.Enter))
+                    if (IsKeyPressed(KeyboardKey.Space))
                     {
                         return new(() => BattlePlayerAiming);
                     }
@@ -131,7 +131,7 @@ public static partial class FightFightDanger
                 {
                     CurrentPlayerAimingStateContext.CurrentAimValue = Math.Sin(TimeContext.Time * 4);
 
-                    if (IsKeyPressed(KeyboardKey.Enter))
+                    if (IsKeyPressed(KeyboardKey.Space))
                     {
                         if (!CurrentPlayerAimingStateContext.IsInRange())
                         {
@@ -154,7 +154,7 @@ public static partial class FightFightDanger
                 },
                 UpdateFunction = () =>
                 {
-                    if (IsKeyPressed(KeyboardKey.Enter))
+                    if (IsKeyPressed(KeyboardKey.Space))
                     {
                         return new(() => BattleEnemyStartAttack);
                     }
@@ -185,13 +185,13 @@ public static partial class FightFightDanger
                 {
                     if (CurrentFoe is not null && CurrentFoe.Current.Health <= 0)
                     {
-                        if (IsKeyPressed(KeyboardKey.Enter))
+                        if (IsKeyPressed(KeyboardKey.Space))
                         {
                             return new(() => ExploreState);
                         }
                     }
 
-                    if (IsKeyPressed(KeyboardKey.Enter))
+                    if (IsKeyPressed(KeyboardKey.Space))
                     {
                         return new(() => BattleEnemyStartAttack);
                     }
@@ -232,7 +232,7 @@ public static partial class FightFightDanger
                 },
                 UpdateFunction = () =>
                 {
-                    if (IsKeyPressed(KeyboardKey.Enter))
+                    if (IsKeyPressed(KeyboardKey.Space))
                     {
                         return new(() => BattleEnemyAttack);
                     }
@@ -249,7 +249,7 @@ public static partial class FightFightDanger
                 },
                 UpdateFunction = () =>
                 {
-                    if (IsKeyPressed(KeyboardKey.Enter))
+                    if (IsKeyPressed(KeyboardKey.Space))
                     {
                         return new(() => BattleStart);
                     }

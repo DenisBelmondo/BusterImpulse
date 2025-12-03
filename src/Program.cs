@@ -177,6 +177,12 @@ Resources.CacheAndInitializeAll();
             }
             EndMode3D();
 
+            BeginShaderMode(Resources.PlasmaShader);
+            {
+                DrawRectangle(0, 0, 640, 480, Color.White);
+            }
+            EndShaderMode();
+
             if (game.StateAutomaton.CurrentState == game.BattlePlayerAiming)
             {
                 DrawCircle((int)(320 + (game.CurrentPlayerAimingStateContext.CurrentAimValue * 320)), 240, 24, game.CurrentPlayerAimingStateContext.IsInRange() ? Color.Green : Color.RayWhite);
