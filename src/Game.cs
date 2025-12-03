@@ -16,6 +16,11 @@ public static partial class FightFightDanger
             public readonly bool IsInRange() => CurrentAimValue >= CurrentRange.Item1 && CurrentAimValue <= CurrentRange.Item2;
         }
 
+        public struct BattleScreenWipeContext
+        {
+            public float T;
+        }
+
         public BattleFoe? CurrentFoe = null;
         public ShakeStateContext ShakeStateContext = new();
         public World? World = null;
@@ -29,6 +34,7 @@ public static partial class FightFightDanger
         // playsim states
         //
         public State? ExploreState = null;
+        public State? BattleScreenWipe = null;
         public State? BattleStart = null;
         public State? BattleStartPlayerAttack = null;
         public State? BattlePlayerAiming = null;
@@ -39,6 +45,7 @@ public static partial class FightFightDanger
         public State? BattleEnemyStartAttack = null;
         public State? BattleEnemyAttack = null;
 
+        public BattleScreenWipeContext CurrentScreenWipeContext;
         public PlayerAimingStateContext CurrentPlayerAimingStateContext;
 
         public Game()
@@ -55,13 +62,33 @@ public static partial class FightFightDanger
                     if (IsKeyPressed(KeyboardKey.B))
                     {
                         CurrentFoe = new(BattleFoe.Stats.Goon);
-                        return new(() => BattleStart);
+                        return new(() => BattleScreenWipe);
                     }
 
                     World?.UpdatePlayer(TimeContext.Delta);
 
                     return State.None;
                 }
+            };
+
+            BattleScreenWipe = new()
+            {
+                EnterFunction = () =>
+                {
+                    CurrentScreenWipeContext.T = 0;
+                },
+
+                UpdateFunction = () =>
+                {
+                    CurrentScreenWipeContext.T += (float)TimeContext.Delta;
+
+                    if (CurrentScreenWipeContext.T >= 1.5f)
+                    {
+                        return new(() => BattleStart);
+                    }
+
+                    return State.None;
+                },
             };
 
             BattleStart = new()

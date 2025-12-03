@@ -178,16 +178,21 @@ public static partial class FightFightDanger
         """
         #version 330
 
-        in vec2 fragCoord;
+        // Input vertex attributes (from vertex shader)
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+        in vec3 fragNormal;
 
+        // Input uniform values
         uniform float iTime;
-        uniform ivec2 iResolution;
+        uniform vec2 iResolution;
 
-        out vec4 fragColor;
+        // Output fragment color
+        out vec4 finalColor;
 
-        void main()
-        {
+        void main() {
             float t = iTime*.3;
+            vec2 fragCoord = fragTexCoord * iResolution;
 
             // Normalized pixel coordinates (from 0 to 1)
             vec2 uv = (fragCoord-.5*iResolution.xy)/iResolution.y;
@@ -202,13 +207,61 @@ public static partial class FightFightDanger
             vec3 col = 0.5 + 0.5*cos(t*1.4+uv.xyx*5.+vec3(0,2,4)) + .3*sin(uv.xxx*(1.1+.2*sin(t*.9))*20.+t*.4)+.3;
 
             // Output to screen
-            fragColor = pow(vec4(col,1.0)*(1.-length(uv*1.6)),vec4(4));
-            fragColor = vec4(1.0, 0, 0, 1.0);
+            finalColor = pow(vec4(col,1.0)*(1.-length(uv*1.6)),vec4(4));
+        }
+        """;
+
+        private const string SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE =
+        """
+        #version 330
+
+        #define PI 3.14159265359
+        #define THETA deg2rad(50.)
+        #define DURATION ( 1. + .5 * ( iResolution.x / iResolution.y ) * tan(THETA) )
+        #define TIME ( 2. * iTime )
+
+        // Input vertex attributes (from vertex shader)
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+        in vec3 fragNormal;
+
+        // Input uniform values
+        uniform float iTime;
+        uniform vec2 iResolution;
+
+        // Output fragment color
+        out vec4 finalColor;
+
+        float deg2rad( float deg )
+        {
+            return deg * PI / 180.;
+        }
+
+        vec2 rot( in vec2 uv, float theta )
+        {
+            vec2 uv2;
+            uv2.x = uv.x * cos(theta) - uv.y * sin(theta);
+            uv2.y = uv.x * sin(theta) + uv.y * cos(theta);
+            return uv2;
+        }
+
+        void main()
+        {
+            vec2 uv = ( fragTexCoord*iResolution-.5*vec2(iResolution.x,0.) ) / iResolution.y;
+
+            uv.x = abs(uv.x);
+            uv = rot(uv, THETA);
+
+            float t = mod( TIME, DURATION );
+            float id = -2.*( mod( floor( TIME / DURATION ), 2.) - .5 );
+
+            finalColor = id*(uv.y - t) > 0. ? vec4(0.) : vec4(1., .8, 0., 1);
         }
         """;
 
         public static Shader SurfaceShader;
         public static Shader PlasmaShader;
+        public static Shader ScreenTransitionShader;
         public static Image TileTextureImage;
         public static Texture2D TileTexture;
         public static Texture2D FloorTexture;
@@ -234,6 +287,7 @@ public static partial class FightFightDanger
         {
             SurfaceShader = LoadShaderFromMemory(SURFACE_VERTEX_SHADER_SOURCE, SURFACE_FRAGMENT_SHADER_SOURCE);
             PlasmaShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, PLASMA_FRAGMENT_SHADER_SOURCE);
+            ScreenTransitionShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE);
             TileTextureImage = LoadImage("static/textures/cobolt-stone-0-moss-0.png");
             ImageFlipVertical(ref TileTextureImage);
             TileTexture = LoadTextureFromImage(TileTextureImage);
@@ -283,6 +337,7 @@ public static partial class FightFightDanger
             UnloadModel(FloorModel);
             UnloadShader(SurfaceShader);
             UnloadShader(PlasmaShader);
+            UnloadShader(ScreenTransitionShader);
         }
     }
 }
