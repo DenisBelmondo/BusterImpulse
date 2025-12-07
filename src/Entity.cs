@@ -1,12 +1,9 @@
-namespace Belmondo;
+namespace Belmondo.FightFightDanger;
 
-public static partial class FightFightDanger
+public struct Entity
 {
-    public struct Entity
-    {
-        public int Type;
-        public int X;
-        public int Y;
-        public int Direction;
-    }
+    public int Type;
+    public int X;
+    public int Y;
+    public int Direction;
 }

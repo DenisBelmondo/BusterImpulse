@@ -1,22 +1,19 @@
-namespace Belmondo;
+namespace Belmondo.FightFightDanger;
 
-public static partial class FightFightDanger
+public struct Chest
 {
-    public struct Chest
+    public required IDictionary<int, int> Items;
+    public Entity Entity;
+    public float CurrentOpenness;
+
+    public readonly int GetItemQuantity(int type)
     {
-        public required IDictionary<int, int> Items;
-        public Entity Entity;
-        public float CurrentOpenness;
+        Items.TryGetValue(type, out int quantity);
+        return quantity;
+    }
 
-        public readonly int GetItemQuantity(int type)
-        {
-            Items.TryGetValue(type, out int quantity);
-            return quantity;
-        }
-
-        public void Update(float delta)
-        {
-            CurrentOpenness += delta;
-        }
+    public void Update(float delta)
+    {
+        CurrentOpenness += delta;
     }
 }

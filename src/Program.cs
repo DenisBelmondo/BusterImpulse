@@ -1,7 +1,7 @@
 ﻿using System.Numerics;
 using Belmondo;
+using Belmondo.FightFightDanger;
 using Raylib_cs.BleedingEdge;
-using static Belmondo.FightFightDanger;
 using static Raylib_cs.BleedingEdge.Raylib;
 using static Raylib_cs.BleedingEdge.Raymath;
 

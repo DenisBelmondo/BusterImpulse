@@ -1,14 +1,12 @@
 using Raylib_cs.BleedingEdge;
 using static Raylib_cs.BleedingEdge.Raylib;
 
-namespace Belmondo;
+namespace Belmondo.FightFightDanger;
 
-public static partial class FightFightDanger
+public static class Resources
 {
-    public static class Resources
-    {
-        private const string BASE_VERTEX_SHADER_SOURCE =
-        """
+    private const string BASE_VERTEX_SHADER_SOURCE =
+    """
         #version 330
 
         // Input vertex attributes
@@ -36,8 +34,8 @@ public static partial class FightFightDanger
         }
         """;
 
-        private const string BASE_FRAGMENT_SHADER_SOURCE =
-        """
+    private const string BASE_FRAGMENT_SHADER_SOURCE =
+    """
         #version 330
 
         // Input vertex attributes (from vertex shader)
@@ -66,8 +64,8 @@ public static partial class FightFightDanger
         }
         """;
 
-        private const string SURFACE_VERTEX_SHADER_SOURCE =
-        """
+    private const string SURFACE_VERTEX_SHADER_SOURCE =
+    """
         #version 330
 
         // Input vertex attributes
@@ -110,8 +108,8 @@ public static partial class FightFightDanger
             gl_Position = mvp * vec4(vertexPosition, 1.0); }
         """;
 
-        private const string SURFACE_FRAGMENT_SHADER_SOURCE =
-        """
+    private const string SURFACE_FRAGMENT_SHADER_SOURCE =
+    """
         #version 330
 
         #define fog_start 0
@@ -185,8 +183,8 @@ public static partial class FightFightDanger
         }
         """;
 
-        private const string PLASMA_FRAGMENT_SHADER_SOURCE =
-        """
+    private const string PLASMA_FRAGMENT_SHADER_SOURCE =
+    """
         #version 330
 
         // Input vertex attributes (from vertex shader)
@@ -222,8 +220,8 @@ public static partial class FightFightDanger
         }
         """;
 
-        private const string SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE =
-        """
+    private const string SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE =
+    """
         #version 330
 
         #define PI 3.14159265359
@@ -267,8 +265,8 @@ public static partial class FightFightDanger
         }
         """;
 
-        private const string DOWNMIXED_FRAGMENT_SHADER_SOURCE =
-        """
+    private const string DOWNMIXED_FRAGMENT_SHADER_SOURCE =
+    """
         #version 330
 
         // Input vertex attributes (from vertex shader)
@@ -331,100 +329,99 @@ public static partial class FightFightDanger
         }
         """;
 
-        public static Shader SurfaceShader;
-        public static Shader PlasmaShader;
-        public static Shader ScreenTransitionShader;
-        public static Shader DownmixedShader;
-        public static Image TileTextureImage;
-        public static Texture2D TileTexture;
-        public static Texture2D FloorTexture;
-        public static Texture2D CeilingTexture;
-        public static Texture2D ChestAtlas;
-        public static Texture2D EnemyTexture;
-        public static Texture2D EnemyAtlas;
-        public static Texture2D UIAtlas;
-        public static Texture2D LUTTexture;
-        public static Material TileMaterial;
-        public static Material FloorMaterial;
-        public static Mesh TileMesh;
-        public static Mesh PlaneMesh;
-        public static Model TileModel;
-        public static Model FloorModel;
-        public static Model CeilingModel;
-        public static Sound StepSound;
-        public static Sound SmackSound;
-        public static Sound BattleStartSound;
-        public static Sound OpenChestSound;
-        public static Sound TalkSound;
-        public static Music Music;
-        public static Music BattleMusic;
-        public static Font Font;
+    public static Shader SurfaceShader;
+    public static Shader PlasmaShader;
+    public static Shader ScreenTransitionShader;
+    public static Shader DownmixedShader;
+    public static Image TileTextureImage;
+    public static Texture2D TileTexture;
+    public static Texture2D FloorTexture;
+    public static Texture2D CeilingTexture;
+    public static Texture2D ChestAtlas;
+    public static Texture2D EnemyTexture;
+    public static Texture2D EnemyAtlas;
+    public static Texture2D UIAtlas;
+    public static Texture2D LUTTexture;
+    public static Material TileMaterial;
+    public static Material FloorMaterial;
+    public static Mesh TileMesh;
+    public static Mesh PlaneMesh;
+    public static Model TileModel;
+    public static Model FloorModel;
+    public static Model CeilingModel;
+    public static Sound StepSound;
+    public static Sound SmackSound;
+    public static Sound BattleStartSound;
+    public static Sound OpenChestSound;
+    public static Sound TalkSound;
+    public static Music Music;
+    public static Music BattleMusic;
+    public static Font Font;
 
-        public static void CacheAndInitializeAll()
+    public static void CacheAndInitializeAll()
+    {
+        SurfaceShader = LoadShaderFromMemory(SURFACE_VERTEX_SHADER_SOURCE, SURFACE_FRAGMENT_SHADER_SOURCE);
+        PlasmaShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, PLASMA_FRAGMENT_SHADER_SOURCE);
+        ScreenTransitionShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE);
+        DownmixedShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, DOWNMIXED_FRAGMENT_SHADER_SOURCE);
+        TileTextureImage = LoadImage("static/textures/cobolt-stone-0-moss-0.png");
+        ImageFlipVertical(ref TileTextureImage);
+        TileTexture = LoadTextureFromImage(TileTextureImage);
+        FloorTexture = LoadTexture("static/textures/cobolt-stone-1-floor-0.png");
+        CeilingTexture = LoadTexture("static/textures/cobolt-stone-0-floor-0.png");
+        ChestAtlas = LoadTexture("static/textures/chest-wooden-0.png");
+        UIAtlas = LoadTexture("static/textures/ui.png");
+        EnemyTexture = LoadTexture("static/textures/enemy.png");
+        LUTTexture = LoadTexture("static/textures/lut.png");
+        EnemyAtlas = LoadTexture("static/textures/enemy-atlas.png");
+        TileMaterial = LoadMaterialDefault();
+        FloorMaterial = LoadMaterialDefault();
+        TileMesh = GenMeshCube(1, 1, 1);
+        TileModel = LoadModelFromMesh(TileMesh);
+        PlaneMesh = GenMeshPlane(1000, 1000, 1, 1);
+        FloorModel = LoadModelFromMesh(PlaneMesh);
+        CeilingModel = LoadModelFromMesh(PlaneMesh);
+        Music = LoadMusicStream("static/music/ronde.mp3");
+        BattleMusic = LoadMusicStream("static/music/morgan.mp3");
+        Font = LoadFont("static/fonts/pixel-font-15.png");
+        StepSound = LoadSound("static/sounds/step.wav");
+        SmackSound = LoadSound("static/sounds/smack.wav");
+        BattleStartSound = LoadSound("static/sounds/battle_start.wav");
+        OpenChestSound = LoadSound("static/sounds/open_chest.wav");
+        TalkSound = LoadSound("static/sounds/talk.wav");
+
+        unsafe
         {
-            SurfaceShader = LoadShaderFromMemory(SURFACE_VERTEX_SHADER_SOURCE, SURFACE_FRAGMENT_SHADER_SOURCE);
-            PlasmaShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, PLASMA_FRAGMENT_SHADER_SOURCE);
-            ScreenTransitionShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE);
-            DownmixedShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, DOWNMIXED_FRAGMENT_SHADER_SOURCE);
-            TileTextureImage = LoadImage("static/textures/cobolt-stone-0-moss-0.png");
-            ImageFlipVertical(ref TileTextureImage);
-            TileTexture = LoadTextureFromImage(TileTextureImage);
-            FloorTexture = LoadTexture("static/textures/cobolt-stone-1-floor-0.png");
-            CeilingTexture = LoadTexture("static/textures/cobolt-stone-0-floor-0.png");
-            ChestAtlas = LoadTexture("static/textures/chest-wooden-0.png");
-            UIAtlas = LoadTexture("static/textures/ui.png");
-            EnemyTexture = LoadTexture("static/textures/enemy.png");
-            LUTTexture = LoadTexture("static/textures/lut.png");
-            EnemyAtlas = LoadTexture("static/textures/enemy-atlas.png");
-            TileMaterial = LoadMaterialDefault();
-            FloorMaterial = LoadMaterialDefault();
-            TileMesh = GenMeshCube(1, 1, 1);
-            TileModel = LoadModelFromMesh(TileMesh);
-            PlaneMesh = GenMeshPlane(1000, 1000, 1, 1);
-            FloorModel = LoadModelFromMesh(PlaneMesh);
-            CeilingModel = LoadModelFromMesh(PlaneMesh);
-            Music = LoadMusicStream("static/music/ronde.mp3");
-            BattleMusic = LoadMusicStream("static/music/morgan.mp3");
-            Font = LoadFont("static/fonts/pixel-font-15.png");
-            StepSound = LoadSound("static/sounds/step.wav");
-            SmackSound = LoadSound("static/sounds/smack.wav");
-            BattleStartSound = LoadSound("static/sounds/battle_start.wav");
-            OpenChestSound = LoadSound("static/sounds/open_chest.wav");
-            TalkSound = LoadSound("static/sounds/talk.wav");
-
-            unsafe
-            {
-                TileModel.Materials[0].Maps[(int)MaterialMapIndex.Diffuse].Texture = TileTexture;
-                TileModel.Materials[0].Shader = SurfaceShader;
-                FloorModel.Materials[0].Maps[(int)MaterialMapIndex.Diffuse].Texture = FloorTexture;
-                FloorModel.Materials[0].Shader = SurfaceShader;
-                CeilingModel.Materials[0].Maps[(int)MaterialMapIndex.Diffuse].Texture = CeilingTexture;
-                CeilingModel.Materials[0].Shader = SurfaceShader;
-            }
+            TileModel.Materials[0].Maps[(int)MaterialMapIndex.Diffuse].Texture = TileTexture;
+            TileModel.Materials[0].Shader = SurfaceShader;
+            FloorModel.Materials[0].Maps[(int)MaterialMapIndex.Diffuse].Texture = FloorTexture;
+            FloorModel.Materials[0].Shader = SurfaceShader;
+            CeilingModel.Materials[0].Maps[(int)MaterialMapIndex.Diffuse].Texture = CeilingTexture;
+            CeilingModel.Materials[0].Shader = SurfaceShader;
         }
+    }
 
-        public static void UnloadAll()
-        {
-            UnloadFont(Font);
-            UnloadSound(StepSound);
-            UnloadSound(SmackSound);
-            UnloadSound(BattleStartSound);
-            UnloadSound(OpenChestSound);
-            UnloadSound(TalkSound);
-            UnloadMusicStream(Music);
-            UnloadMusicStream(BattleMusic);
-            UnloadTexture(EnemyTexture);
-            UnloadTexture(EnemyAtlas);
-            UnloadTexture(ChestAtlas);
-            UnloadTexture(UIAtlas);
-            UnloadTexture(LUTTexture);
-            UnloadImage(TileTextureImage);
-            UnloadModel(TileModel);
-            UnloadModel(FloorModel);
-            UnloadShader(SurfaceShader);
-            UnloadShader(PlasmaShader);
-            UnloadShader(ScreenTransitionShader);
-            UnloadShader(DownmixedShader);
-        }
+    public static void UnloadAll()
+    {
+        UnloadFont(Font);
+        UnloadSound(StepSound);
+        UnloadSound(SmackSound);
+        UnloadSound(BattleStartSound);
+        UnloadSound(OpenChestSound);
+        UnloadSound(TalkSound);
+        UnloadMusicStream(Music);
+        UnloadMusicStream(BattleMusic);
+        UnloadTexture(EnemyTexture);
+        UnloadTexture(EnemyAtlas);
+        UnloadTexture(ChestAtlas);
+        UnloadTexture(UIAtlas);
+        UnloadTexture(LUTTexture);
+        UnloadImage(TileTextureImage);
+        UnloadModel(TileModel);
+        UnloadModel(FloorModel);
+        UnloadShader(SurfaceShader);
+        UnloadShader(PlasmaShader);
+        UnloadShader(ScreenTransitionShader);
+        UnloadShader(DownmixedShader);
     }
 }

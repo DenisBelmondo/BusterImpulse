@@ -1,9 +1,6 @@
-namespace Belmondo;
+namespace Belmondo.FightFightDanger;
 
-public static partial class FightFightDanger
+public interface IJukebox<TMusic>
 {
-	public interface IJukebox<TMusic>
-	{
-		void ChangeMusic(TMusic music);
-	}
+	void ChangeMusic(TMusic music);
 }

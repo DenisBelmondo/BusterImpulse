@@ -1,11 +1,8 @@
-namespace Belmondo;
+namespace Belmondo.FightFightDanger;
 
 
-public static partial class FightFightDanger
+public class TimeContext
 {
-    public class TimeContext
-    {
-        public double Delta;
-        public double Time;
-    }
+    public double Delta;
+    public double Time;
 }
