@@ -5,7 +5,7 @@ namespace Belmondo;
 
 public static partial class FightFightDanger
 {
-    public class World
+    public sealed class World
     {
         public struct SpawnedEntity
         {

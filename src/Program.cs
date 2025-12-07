@@ -317,7 +317,7 @@ Resources.CacheAndInitializeAll();
                         i * 15));
             }
 
-            if (game.DialogStateAutomaton.CurrentState is not null && game.DialogStateAutomaton.CurrentState != State.None.Value)
+            if (game.DialogStateAutomaton.CurrentState is not null)
             {
                 DrawRectangle(0, renderTexture.Texture.Height - 48, renderTexture.Texture.Width, 48, Color.Black);
                 TextDraw(
