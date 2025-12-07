@@ -26,8 +26,7 @@ public static partial class FightFightDanger
 
         // NOTE: Add your custom variables here
 
-        void main()
-        {
+        void main() {
             // Send vertex attributes to fragment shader
             fragTexCoord = vertexTexCoord;
             fragColor = vertexColor;
@@ -54,8 +53,7 @@ public static partial class FightFightDanger
 
         // NOTE: Add your custom variables here
 
-        void main()
-        {
+        void main() {
             // Texel color fetching from texture sampler
             vec4 texelColor = texture(texture0, fragTexCoord);
 
@@ -88,8 +86,7 @@ public static partial class FightFightDanger
 
         // NOTE: Add your custom variables here
 
-        void main()
-        {
+        void main() {
             vec2 uv = vertexTexCoord;
             vec3 abs_normal = abs(vertexNormal);
 
@@ -117,6 +114,9 @@ public static partial class FightFightDanger
         """
         #version 330
 
+        #define fog_start 0
+        #define fog_end 20
+
         // Input vertex attributes (from vertex shader)
         in vec2 fragTexCoord;
         in vec4 fragColor;
@@ -133,8 +133,7 @@ public static partial class FightFightDanger
         out vec4 finalColor;
 
         // All components are in the range [0...1], including hue.
-        vec3 rgb2hsv(vec3 c)
-        {
+        vec3 rgb2hsv(vec3 c) {
             vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
             vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
             vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
@@ -145,17 +144,20 @@ public static partial class FightFightDanger
         }
 
         // All components are in the range [0…1], including hue.
-        vec3 hsv2rgb(vec3 c)
-        {
+        vec3 hsv2rgb(vec3 c) {
             vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
             vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
             return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
         }
 
+        float linearize(float depth, float near, float far) {
+            return (2.0 * near * far) / (far + near - depth * (far - near));
+        }
+
+
         // NOTE: Add your custom variables here
 
-        void main()
-        {
+        void main() {
             // Texel color fetching from texture sampler
             vec4 texelColor = texture(texture0, fragTexCoord);
 
@@ -169,7 +171,16 @@ public static partial class FightFightDanger
 
             hsv.y *= abs(dot(vec3(1 / 0.6, 1.0, 1.0), fragNormal));
             hsv.z *= abs(dot(vec3(0.6, 1.0, 1.0), fragNormal));
+            hsv.z = clamp(hsv.z, 0, 1);
+
             rgba.rgb = hsv2rgb(hsv);
+
+            float linearDepth = linearize(gl_FragCoord.z, 0.05, 4000.0);
+            float fog_factor = (linearDepth - fog_start) / (fog_end - fog_start);
+            fog_factor = clamp(fog_factor, 0.0, 1.0); // Clamp to ensure valid range
+
+            rgba.rgb = mix(rgba.rgb, vec3(0), fog_factor);
+
             finalColor = rgba;
         }
         """;
@@ -232,21 +243,18 @@ public static partial class FightFightDanger
         // Output fragment color
         out vec4 finalColor;
 
-        float deg2rad( float deg )
-        {
+        float deg2rad( float deg ) {
             return deg * PI / 180.;
         }
 
-        vec2 rot( in vec2 uv, float theta )
-        {
+        vec2 rot( in vec2 uv, float theta ) {
             vec2 uv2;
             uv2.x = uv.x * cos(theta) - uv.y * sin(theta);
             uv2.y = uv.x * sin(theta) + uv.y * cos(theta);
             return uv2;
         }
 
-        void main()
-        {
+        void main() {
             vec2 uv = ( fragTexCoord*iResolution-.5*vec2(iResolution.x,0.) ) / iResolution.y;
 
             uv.x = abs(uv.x);
@@ -255,13 +263,78 @@ public static partial class FightFightDanger
             float t = mod( TIME, DURATION );
             float id = -2.*( mod( floor( TIME / DURATION ), 2.) - .5 );
 
-            finalColor = id*(uv.y - t) > 0. ? vec4(0.) : vec4(1., .8, 0., 1);
+            finalColor = id*(uv.y - t) > 0. ? vec4(0.) : vec4(.1, .1, .5, 1);
+        }
+        """;
+
+        private const string DOWNMIXED_FRAGMENT_SHADER_SOURCE =
+        """
+        #version 330
+
+        // Input vertex attributes (from vertex shader)
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+
+        // Input uniform values
+        uniform sampler2D texture0;
+        uniform vec4 colDiffuse;
+        uniform sampler2D lutTexture;
+        uniform vec2 lutTextureSize;
+
+        // Output fragment color
+        out vec4 finalColor;
+
+        // NOTE: Add your custom variables here
+
+        vec4 lookup(in vec4 textureColor, in sampler2D lookupTable) {
+            textureColor = clamp(textureColor, 0.0, 1.0);
+
+            mediump float blueColor = textureColor.b * 63.0;
+
+            mediump vec2 quad1;
+            quad1.y = floor(floor(blueColor) / 8.0);
+            quad1.x = floor(blueColor) - (quad1.y * 8.0);
+
+            mediump vec2 quad2;
+            quad2.y = floor(ceil(blueColor) / 8.0);
+            quad2.x = ceil(blueColor) - (quad2.y * 8.0);
+
+            highp vec2 texPos1;
+            texPos1.x = (quad1.x * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.r);
+            texPos1.y = (quad1.y * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.g);
+
+            highp vec2 texPos2;
+            texPos2.x = (quad2.x * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.r);
+            texPos2.y = (quad2.y * 0.125) + 0.5/512.0 + ((0.125 - 1.0/512.0) * textureColor.g);
+
+            lowp vec4 newColor1 = texture2D(lookupTable, texPos1);
+            lowp vec4 newColor2 = texture2D(lookupTable, texPos2);
+
+            lowp vec4 newColor = mix(newColor1, newColor2, fract(blueColor));
+
+            return newColor;
+        }
+
+        void main() {
+            // Texel color fetching from texture sampler
+            vec4 texelColor = texture(texture0, fragTexCoord);
+
+            // NOTE: Implement here your fragment shader code
+
+            // final color is the color from the texture
+            //    times the tint color (colDiffuse)
+            //    times the fragment color (interpolated vertex color)
+            vec4 col = texelColor*colDiffuse*fragColor;
+
+            // finalColor = col;
+            finalColor = lookup(col, lutTexture);
         }
         """;
 
         public static Shader SurfaceShader;
         public static Shader PlasmaShader;
         public static Shader ScreenTransitionShader;
+        public static Shader DownmixedShader;
         public static Image TileTextureImage;
         public static Texture2D TileTexture;
         public static Texture2D FloorTexture;
@@ -270,6 +343,7 @@ public static partial class FightFightDanger
         public static Texture2D EnemyTexture;
         public static Texture2D EnemyAtlas;
         public static Texture2D UIAtlas;
+        public static Texture2D LUTTexture;
         public static Material TileMaterial;
         public static Material FloorMaterial;
         public static Mesh TileMesh;
@@ -279,6 +353,9 @@ public static partial class FightFightDanger
         public static Model CeilingModel;
         public static Sound StepSound;
         public static Sound SmackSound;
+        public static Sound BattleStartSound;
+        public static Sound OpenChestSound;
+        public static Sound TalkSound;
         public static Music Music;
         public static Music BattleMusic;
         public static Font Font;
@@ -288,6 +365,7 @@ public static partial class FightFightDanger
             SurfaceShader = LoadShaderFromMemory(SURFACE_VERTEX_SHADER_SOURCE, SURFACE_FRAGMENT_SHADER_SOURCE);
             PlasmaShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, PLASMA_FRAGMENT_SHADER_SOURCE);
             ScreenTransitionShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE);
+            DownmixedShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, DOWNMIXED_FRAGMENT_SHADER_SOURCE);
             TileTextureImage = LoadImage("static/textures/cobolt-stone-0-moss-0.png");
             ImageFlipVertical(ref TileTextureImage);
             TileTexture = LoadTextureFromImage(TileTextureImage);
@@ -296,6 +374,7 @@ public static partial class FightFightDanger
             ChestAtlas = LoadTexture("static/textures/chest-wooden-0.png");
             UIAtlas = LoadTexture("static/textures/ui.png");
             EnemyTexture = LoadTexture("static/textures/enemy.png");
+            LUTTexture = LoadTexture("static/textures/lut.png");
             EnemyAtlas = LoadTexture("static/textures/enemy-atlas.png");
             TileMaterial = LoadMaterialDefault();
             FloorMaterial = LoadMaterialDefault();
@@ -309,6 +388,9 @@ public static partial class FightFightDanger
             Font = LoadFont("static/fonts/pixel-font-15.png");
             StepSound = LoadSound("static/sounds/step.wav");
             SmackSound = LoadSound("static/sounds/smack.wav");
+            BattleStartSound = LoadSound("static/sounds/battle_start.wav");
+            OpenChestSound = LoadSound("static/sounds/open_chest.wav");
+            TalkSound = LoadSound("static/sounds/talk.wav");
 
             unsafe
             {
@@ -326,18 +408,23 @@ public static partial class FightFightDanger
             UnloadFont(Font);
             UnloadSound(StepSound);
             UnloadSound(SmackSound);
+            UnloadSound(BattleStartSound);
+            UnloadSound(OpenChestSound);
+            UnloadSound(TalkSound);
             UnloadMusicStream(Music);
             UnloadMusicStream(BattleMusic);
             UnloadTexture(EnemyTexture);
             UnloadTexture(EnemyAtlas);
             UnloadTexture(ChestAtlas);
             UnloadTexture(UIAtlas);
+            UnloadTexture(LUTTexture);
             UnloadImage(TileTextureImage);
             UnloadModel(TileModel);
             UnloadModel(FloorModel);
             UnloadShader(SurfaceShader);
             UnloadShader(PlasmaShader);
             UnloadShader(ScreenTransitionShader);
+            UnloadShader(DownmixedShader);
         }
     }
 }

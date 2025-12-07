@@ -1,4 +1,4 @@
-using System.ComponentModel;
+using System.Text;
 using Raylib_cs.BleedingEdge;
 using static Raylib_cs.BleedingEdge.Raylib;
 
@@ -8,6 +8,11 @@ public static partial class FightFightDanger
 {
     public class Game
     {
+        public struct BattleScreenWipeContext
+        {
+            public float T;
+        }
+
         public struct PlayerAimingStateContext
         {
             public (double, double) CurrentRange;
@@ -16,9 +21,11 @@ public static partial class FightFightDanger
             public readonly bool IsInRange() => CurrentAimValue >= CurrentRange.Item1 && CurrentAimValue <= CurrentRange.Item2;
         }
 
-        public struct BattleScreenWipeContext
+        public class DialogStateContext(string targetLine)
         {
-            public float T;
+            public string TargetLine = targetLine;
+            public StringBuilder RunningLine = new();
+            public float CurrentCharacterIndex;
         }
 
         public BattleFoe? CurrentFoe = null;
@@ -26,6 +33,7 @@ public static partial class FightFightDanger
         public World? World = null;
         public StateAutomaton StateAutomaton = new();
         public StateAutomaton FoeVisualStateAutomaton = new();
+        public StateAutomaton DialogStateAutomaton = new();
         public Log Log = new(8);
         public RaylibJukebox Jukebox = new();
         public TimeContext TimeContext = new();
@@ -45,8 +53,15 @@ public static partial class FightFightDanger
         public State? BattleEnemyStartAttack = null;
         public State? BattleEnemyAttack = null;
 
+        //
+        // dialog states
+        //
+        public State? DialogSpeakingState = null;
+        public State? DialogFinishedState = null;
+
         public BattleScreenWipeContext CurrentScreenWipeContext;
         public PlayerAimingStateContext CurrentPlayerAimingStateContext;
+        public DialogStateContext? CurrentDialogStateContext = null;
 
         public Game()
         {
@@ -59,10 +74,22 @@ public static partial class FightFightDanger
                 },
                 UpdateFunction = () =>
                 {
+                    if (World is not null)
+                    {
+                        if (IsKeyPressed(KeyboardKey.Space))
+                        {
+                            var (X, Y) = Direction.ToInt32Tuple(World.Player.Entity.Direction);
+                            var desiredX = World.Player.Entity.X + X;
+                            var desiredY = World.Player.Entity.Y + Y;
+
+                            // [TODO]: chest opening
+                        }
+                    }
+
                     if (IsKeyPressed(KeyboardKey.B))
                     {
                         CurrentFoe = new(BattleFoe.Stats.Goon);
-                        return new(() => BattleScreenWipe);
+                        return new(BattleScreenWipe);
                     }
 
                     World?.UpdatePlayer(TimeContext.Delta);
@@ -76,6 +103,7 @@ public static partial class FightFightDanger
                 EnterFunction = () =>
                 {
                     CurrentScreenWipeContext.T = 0;
+                    PlaySound(Resources.BattleStartSound);
                 },
 
                 UpdateFunction = () =>
@@ -84,7 +112,7 @@ public static partial class FightFightDanger
 
                     if (CurrentScreenWipeContext.T >= 1.5f)
                     {
-                        return new(() => BattleStart);
+                        return new(BattleStart);
                     }
 
                     return State.None;
@@ -116,11 +144,11 @@ public static partial class FightFightDanger
                         switch (key)
                         {
                             case KeyboardKey.A:
-                                return new(() => BattleStartPlayerAttack);
+                                return new(BattleStartPlayerAttack);
                             case KeyboardKey.D:
-                                return new(() => BattlePlayerDefend);
+                                return new(BattlePlayerDefend);
                             case KeyboardKey.R:
-                                return new(() => BattlePlayerRun);
+                                return new(BattlePlayerRun);
                         }
                     }
 
@@ -139,7 +167,7 @@ public static partial class FightFightDanger
                 {
                     if (IsKeyPressed(KeyboardKey.Space))
                     {
-                        return new(() => BattlePlayerAiming);
+                        return new(BattlePlayerAiming);
                     }
 
                     return State.None;
@@ -162,10 +190,10 @@ public static partial class FightFightDanger
                     {
                         if (!CurrentPlayerAimingStateContext.IsInRange())
                         {
-                            return new(() => BattlePlayerMissed);
+                            return new(BattlePlayerMissed);
                         }
 
-                        return new(() => BattlePlayerAttack);
+                        return new(BattlePlayerAttack);
                     }
 
                     return State.None;
@@ -183,7 +211,7 @@ public static partial class FightFightDanger
                 {
                     if (IsKeyPressed(KeyboardKey.Space))
                     {
-                        return new(() => BattleEnemyStartAttack);
+                        return new(BattleEnemyStartAttack);
                     }
 
                     return State.None;
@@ -214,13 +242,13 @@ public static partial class FightFightDanger
                     {
                         if (IsKeyPressed(KeyboardKey.Space))
                         {
-                            return new(() => ExploreState);
+                            return new(ExploreState);
                         }
                     }
 
                     if (IsKeyPressed(KeyboardKey.Space))
                     {
-                        return new(() => BattleEnemyStartAttack);
+                        return new(BattleEnemyStartAttack);
                     }
 
                     return State.None;
@@ -235,7 +263,7 @@ public static partial class FightFightDanger
                 },
                 UpdateFunction = () =>
                 {
-                    return new(() => BattleEnemyStartAttack);
+                    return new(BattleEnemyStartAttack);
                 }
             };
 
@@ -247,7 +275,7 @@ public static partial class FightFightDanger
                 },
                 UpdateFunction = () =>
                 {
-                    return new(() => ExploreState);
+                    return new(ExploreState);
                 }
             };
 
@@ -261,7 +289,7 @@ public static partial class FightFightDanger
                 {
                     if (IsKeyPressed(KeyboardKey.Space))
                     {
-                        return new(() => BattleEnemyAttack);
+                        return new(BattleEnemyAttack);
                     }
 
                     return State.None;
@@ -278,9 +306,49 @@ public static partial class FightFightDanger
                 {
                     if (IsKeyPressed(KeyboardKey.Space))
                     {
-                        return new(() => BattleStart);
+                        return new(BattleStart);
                     }
 
+                    return State.None;
+                }
+            };
+
+            DialogSpeakingState = new()
+            {
+                UpdateFunction = () =>
+                {
+                    if (CurrentDialogStateContext is not null)
+                    {
+                        CurrentDialogStateContext.CurrentCharacterIndex += (float)TimeContext.Delta * 30f;
+
+                        if (CurrentDialogStateContext.CurrentCharacterIndex >= CurrentDialogStateContext.TargetLine.Length)
+                        {
+                            return new(DialogFinishedState);
+                        }
+
+                        if ((int)CurrentDialogStateContext.CurrentCharacterIndex >= CurrentDialogStateContext.RunningLine.Length)
+                        {
+                            CurrentDialogStateContext.RunningLine.Append(CurrentDialogStateContext.TargetLine[(int)CurrentDialogStateContext.CurrentCharacterIndex]);
+                            PlaySound(Resources.TalkSound);
+                        }
+
+                        if (IsKeyPressed(KeyboardKey.Space))
+                        {
+                            CurrentDialogStateContext.RunningLine.Clear();
+                            CurrentDialogStateContext.RunningLine.Append(CurrentDialogStateContext.TargetLine);
+
+                            return new(DialogFinishedState);
+                        }
+                    }
+
+                    return State.None;
+                }
+            };
+
+            DialogFinishedState = new()
+            {
+                UpdateFunction = () =>
+                {
                     return State.None;
                 }
             };
@@ -290,7 +358,14 @@ public static partial class FightFightDanger
         {
             StateAutomaton.Update();
             FoeVisualStateAutomaton.Update();
+            DialogStateAutomaton.Update();
             ShakeStateContext.Update(TimeContext.Delta);
+        }
+
+        public void Say(string line)
+        {
+            CurrentDialogStateContext = new(line);
+            DialogStateAutomaton.CurrentState = DialogSpeakingState;
         }
     }
 }

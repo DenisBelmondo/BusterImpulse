@@ -3,8 +3,6 @@ using static Raylib_cs.BleedingEdge.Raylib;
 
 namespace Belmondo;
 
-using Position = (int X, int Y);
-
 public static partial class FightFightDanger
 {
     public class World
@@ -15,11 +13,21 @@ public static partial class FightFightDanger
             public Entity Entity;
         }
 
+        //
+        // collision stuff
+        //
         public int[,]? TileMap;
+        public int[,]? BroadPhaseCollisionMap;
 
-        public Dictionary<Position, HashSet<int>> BroadPhaseCollisionMap = [];
+        //
+        // entity stuff
+        //
         public Player Player = new();
-        public Dictionary<int, SpawnedEntity> Entities = [];
+        public List<Chest> Chests = [];
+
+        //
+        // running state
+        //
 
         public float OldPlayerX = 0;
         public float OldPlayerY = 0;
@@ -28,34 +36,17 @@ public static partial class FightFightDanger
         public float CameraPositionLerpT = 0;
         public float CameraDirectionLerpT = 0;
 
-        public int Spawn(int type, Position at)
-        {
-            var id = Entities.Count;
-
-            Entities[id] = new()
-            {
-                ID = id,
-                Entity = new()
-                {
-                    Type = type,
-                    X = at.X,
-                    Y = at.Y,
-                }
-            };
-
-            BroadPhaseCollisionMap[at].Add(id);
-
-            return id;
-        }
-
         public bool TryMove(ref Entity entity, int direction)
         {
-            (int X, int Y) = Direction.ToInt32Tuple(direction);
-
+            var (X, Y) = Direction.ToInt32Tuple(direction);
             int desiredX = entity.X + X;
             int desiredY = entity.Y + Y;
 
-            if (TileMap is not null && (TileMap[desiredY, desiredX] != 0))
+            bool canMoveToDestination = (true
+                && (TileMap is not null && (TileMap[desiredY, desiredX] == 0))
+            );
+
+            if (!canMoveToDestination)
             {
                 return false;
             }
