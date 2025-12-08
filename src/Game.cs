@@ -1,6 +1,4 @@
 using System.Text;
-using Raylib_cs.BleedingEdge;
-using static Raylib_cs.BleedingEdge.Raylib;
 
 namespace Belmondo.FightFightDanger;
 
@@ -35,6 +33,9 @@ public class Game
         Health = 5,
         Damage = 1,
     };
+
+    private readonly IAudioService _audioService;
+    private readonly IInputService _inputService;
 
     public BattleFoe? CurrentFoe = null;
     public ShakeStateContext ShakeStateContext = new();
@@ -77,20 +78,23 @@ public class Game
     public State DialogSpeakingState;
     public State DialogFinishedState;
 
-    public Game()
+    public Game(IAudioService audioService, IInputService inputService)
     {
+        _audioService = audioService;
+        _inputService = inputService;
+
         ExploreState = new()
         {
             EnterFunction = () =>
             {
                 Log.Clear();
-                Jukebox.ChangeMusic(Resources.Music);
+                Jukebox.ChangeMusic(RaylibResources.Music);
             },
             UpdateFunction = () =>
             {
                 if (World is not null)
                 {
-                    if (IsKeyPressed(KeyboardKey.Space))
+                    if (_inputService.ActionWasJustPressed(InputAction.Confirm))
                     {
                         var (X, Y) = Direction.ToInt32Tuple(World.Player.Entity.Direction);
                         var desiredX = World.Player.Entity.X + X;
@@ -100,7 +104,7 @@ public class Game
                     }
                 }
 
-                if (IsKeyPressed(KeyboardKey.B))
+                if (_inputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
                 {
                     CurrentFoe = new(GoonBattleStats);
                     return State.Goto(BattleScreenWipe!);
@@ -117,7 +121,7 @@ public class Game
             EnterFunction = () =>
             {
                 CurrentScreenWipeContext.T = 0;
-                PlaySound(Resources.BattleStartSound);
+                _audioService.PlaySoundEffect(SoundEffect.BattleStart);
             },
 
             UpdateFunction = () =>
@@ -137,7 +141,7 @@ public class Game
         {
             EnterFunction = () =>
             {
-                Jukebox.ChangeMusic(Resources.BattleMusic);
+                Jukebox.ChangeMusic(RaylibResources.BattleMusic);
                 Log.Clear();
                 Log.Add("What will you do?");
                 Log.Add("A: Attack");
@@ -146,24 +150,17 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                while (true)
+                if (_inputService.ActionWasJustPressed(InputAction.BattleAttack))
                 {
-                    var key = GetKeyPressed();
-
-                    if (key == 0)
-                    {
-                        break;
-                    }
-
-                    switch (key)
-                    {
-                        case KeyboardKey.A:
-                            return State.Goto(BattleStartPlayerAttack!);
-                        case KeyboardKey.D:
-                            return State.Goto(BattlePlayerDefend!);
-                        case KeyboardKey.R:
-                            return State.Goto(BattlePlayerRun!);
-                    }
+                    return State.Goto(BattleStartPlayerAttack!);
+                }
+                else if (_inputService.ActionWasJustPressed(InputAction.BattleDefend))
+                {
+                    return State.Goto(BattlePlayerDefend!);
+                }
+                else if (_inputService.ActionWasJustPressed(InputAction.BattleRun))
+                {
+                    return State.Goto(BattlePlayerRun!);
                 }
 
                 return State.Continue;
@@ -179,7 +176,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (IsKeyPressed(KeyboardKey.Space))
+                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattlePlayerAiming!);
                 }
@@ -200,7 +197,7 @@ public class Game
             {
                 CurrentPlayerAimingStateContext.CurrentAimValue = Math.Sin(TimeContext.Time * 4);
 
-                if (IsKeyPressed(KeyboardKey.Space))
+                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     if (!CurrentPlayerAimingStateContext.IsInRange())
                     {
@@ -223,7 +220,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (IsKeyPressed(KeyboardKey.Space))
+                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleEnemyStartAttack!);
                 }
@@ -247,20 +244,20 @@ public class Game
                     }
                 }
 
-                PlaySound(Resources.SmackSound);
+                _audioService.PlaySoundEffect(SoundEffect.Smack);
                 ShakeStateContext.Shake(0.5f);
             },
             UpdateFunction = () =>
             {
                 if (CurrentFoe is not null && CurrentFoe.Current.Health <= 0)
                 {
-                    if (IsKeyPressed(KeyboardKey.Space))
+                    if (_inputService.ActionWasJustPressed(InputAction.Confirm))
                     {
                         return State.Goto(ExploreState);
                     }
                 }
 
-                if (IsKeyPressed(KeyboardKey.Space))
+                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleEnemyStartAttack!);
                 }
@@ -301,7 +298,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (IsKeyPressed(KeyboardKey.Space))
+                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleEnemyAttack!);
                 }
@@ -318,7 +315,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (IsKeyPressed(KeyboardKey.Space))
+                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleStart);
                 }
@@ -343,10 +340,10 @@ public class Game
                     if ((int)CurrentDialogStateContext.CurrentCharacterIndex >= CurrentDialogStateContext.RunningLine.Length)
                     {
                         CurrentDialogStateContext.RunningLine.Append(CurrentDialogStateContext.TargetLine[(int)CurrentDialogStateContext.CurrentCharacterIndex]);
-                        PlaySound(Resources.TalkSound);
+                        _audioService.PlaySoundEffect(SoundEffect.Talk);
                     }
 
-                    if (IsKeyPressed(KeyboardKey.Space))
+                    if (_inputService.ActionWasJustPressed(InputAction.Confirm))
                     {
                         CurrentDialogStateContext.RunningLine.Clear();
                         CurrentDialogStateContext.RunningLine.Append(CurrentDialogStateContext.TargetLine);

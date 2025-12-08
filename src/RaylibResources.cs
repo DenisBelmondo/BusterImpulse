@@ -3,7 +3,7 @@ using static Raylib_cs.BleedingEdge.Raylib;
 
 namespace Belmondo.FightFightDanger;
 
-public static class Resources
+public static class RaylibResources
 {
     private const string BASE_VERTEX_SHADER_SOURCE =
     """
@@ -329,34 +329,33 @@ public static class Resources
         }
         """;
 
-    public static Shader SurfaceShader;
-    public static Shader PlasmaShader;
-    public static Shader ScreenTransitionShader;
-    public static Shader DownmixedShader;
-    public static Image TileTextureImage;
-    public static Texture2D TileTexture;
-    public static Texture2D FloorTexture;
-    public static Texture2D CeilingTexture;
-    public static Texture2D ChestAtlas;
-    public static Texture2D EnemyTexture;
-    public static Texture2D EnemyAtlas;
-    public static Texture2D UIAtlas;
-    public static Texture2D LUTTexture;
-    public static Material TileMaterial;
-    public static Material FloorMaterial;
-    public static Mesh TileMesh;
-    public static Mesh PlaneMesh;
-    public static Model TileModel;
-    public static Model FloorModel;
-    public static Model CeilingModel;
-    public static Sound StepSound;
-    public static Sound SmackSound;
-    public static Sound BattleStartSound;
-    public static Sound OpenChestSound;
-    public static Sound TalkSound;
-    public static Music Music;
-    public static Music BattleMusic;
-    public static Font Font;
+    public static Shader SurfaceShader { get; private set; }
+    public static Shader PlasmaShader { get; private set; }
+    public static Shader ScreenTransitionShader { get; private set; }
+    public static Shader DownmixedShader { get; private set; }
+    public static Texture2D TileTexture { get; private set; }
+    public static Texture2D FloorTexture { get; private set; }
+    public static Texture2D CeilingTexture { get; private set; }
+    public static Texture2D ChestAtlas { get; private set; }
+    public static Texture2D EnemyTexture { get; private set; }
+    public static Texture2D EnemyAtlas { get; private set; }
+    public static Texture2D UIAtlasTexture { get; private set; }
+    public static Texture2D LUTTexture { get; private set; }
+    public static Material TileMaterial { get; private set; }
+    public static Material FloorMaterial { get; private set; }
+    public static Mesh TileMesh { get; private set; }
+    public static Mesh PlaneMesh { get; private set; }
+    public static Model TileModel { get; private set; }
+    public static Model FloorModel { get; private set; }
+    public static Model CeilingModel { get; private set; }
+    public static Sound StepSound { get; private set; }
+    public static Sound SmackSound { get; private set; }
+    public static Sound BattleStartSound { get; private set; }
+    public static Sound OpenChestSound { get; private set; }
+    public static Sound TalkSound { get; private set; }
+    public static Music Music { get; private set; }
+    public static Music BattleMusic { get; private set; }
+    public static Font Font { get; private set; }
 
     public static void CacheAndInitializeAll()
     {
@@ -364,13 +363,17 @@ public static class Resources
         PlasmaShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, PLASMA_FRAGMENT_SHADER_SOURCE);
         ScreenTransitionShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE);
         DownmixedShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, DOWNMIXED_FRAGMENT_SHADER_SOURCE);
-        TileTextureImage = LoadImage("static/textures/cobolt-stone-0-moss-0.png");
-        ImageFlipVertical(ref TileTextureImage);
-        TileTexture = LoadTextureFromImage(TileTextureImage);
+
+        Image img = LoadImage("static/textures/cobolt-stone-0-moss-0.png");
+
+        ImageFlipVertical(ref img);
+        TileTexture = LoadTextureFromImage(img);
+        UnloadImage(img);
+
         FloorTexture = LoadTexture("static/textures/cobolt-stone-1-floor-0.png");
         CeilingTexture = LoadTexture("static/textures/cobolt-stone-0-floor-0.png");
         ChestAtlas = LoadTexture("static/textures/chest-wooden-0.png");
-        UIAtlas = LoadTexture("static/textures/ui.png");
+        UIAtlasTexture = LoadTexture("static/textures/ui.png");
         EnemyTexture = LoadTexture("static/textures/enemy.png");
         LUTTexture = LoadTexture("static/textures/lut.png");
         EnemyAtlas = LoadTexture("static/textures/enemy-atlas.png");
@@ -414,9 +417,8 @@ public static class Resources
         UnloadTexture(EnemyTexture);
         UnloadTexture(EnemyAtlas);
         UnloadTexture(ChestAtlas);
-        UnloadTexture(UIAtlas);
+        UnloadTexture(UIAtlasTexture);
         UnloadTexture(LUTTexture);
-        UnloadImage(TileTextureImage);
         UnloadModel(TileModel);
         UnloadModel(FloorModel);
         UnloadShader(SurfaceShader);

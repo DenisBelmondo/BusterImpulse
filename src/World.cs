@@ -1,9 +1,6 @@
-using Raylib_cs.BleedingEdge;
-using static Raylib_cs.BleedingEdge.Raylib;
-
 namespace Belmondo.FightFightDanger;
 
-public sealed class World
+public sealed class World(IAudioService audioService, IInputService inputService)
 {
     public struct SpawnedEntity
     {
@@ -59,13 +56,13 @@ public sealed class World
     {
         // begin player update
 
-        if (IsKeyPressed(KeyboardKey.Right))
+        if (inputService.ActionWasJustPressed(InputAction.LookRight))
         {
             OldPlayerDirection = Player.Entity.Direction;
             CameraDirectionLerpT = 0;
             Player.Entity.Direction++;
         }
-        else if (IsKeyPressed(KeyboardKey.Left))
+        else if (inputService.ActionWasJustPressed(InputAction.LookLeft))
         {
             OldPlayerDirection = Player.Entity.Direction;
             CameraDirectionLerpT = 0;
@@ -77,19 +74,19 @@ public sealed class World
 
         int? moveDirection = null;
 
-        if (IsKeyDown(KeyboardKey.W))
+        if (inputService.ActionIsPressed(InputAction.MoveForward))
         {
             moveDirection = Direction.Clamped(Player.Entity.Direction);
         }
-        else if (IsKeyDown(KeyboardKey.S))
+        else if (inputService.ActionIsPressed(InputAction.MoveBack))
         {
             moveDirection = Direction.Clamped(Player.Entity.Direction + 2);
         }
-        else if (IsKeyDown(KeyboardKey.A))
+        else if (inputService.ActionIsPressed(InputAction.MoveLeft))
         {
             moveDirection = Direction.Clamped(Player.Entity.Direction + 3);
         }
-        else if (IsKeyDown(KeyboardKey.D))
+        else if (inputService.ActionIsPressed(InputAction.MoveRight))
         {
             moveDirection = Direction.Clamped(Player.Entity.Direction + 1);
         }
@@ -99,7 +96,7 @@ public sealed class World
             CameraPositionLerpT = 0;
             OldPlayerX = Player.Entity.X;
             OldPlayerY = Player.Entity.Y;
-            PlaySound(Resources.StepSound);
+            audioService.PlaySoundEffect(SoundEffect.Step);
             Player.Current.WalkCooldown = Player.Default.WalkCooldown;
             TryMove(ref Player.Entity, (int)moveDirection);
         }

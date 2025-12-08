@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using Belmondo;
 using Belmondo.FightFightDanger;
+using Belmondo.FightFightDanger.Raylib_cs;
 using Raylib_cs.BleedingEdge;
 using static Raylib_cs.BleedingEdge.Raylib;
 using static Raylib_cs.BleedingEdge.Raymath;
@@ -8,8 +9,10 @@ using static Raylib_cs.BleedingEdge.Raymath;
 static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
 static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
 
-Game game = new();
-World world = new();
+RaylibAudioService audioService = new();
+RaylibInputService inputService = new();
+Game game = new(audioService, inputService);
+World world = new(audioService, inputService);
 
 world.TileMap = new int[,]
 {
@@ -81,7 +84,7 @@ SetConfigFlags(ConfigFlags.WindowResizable);
 
 InitWindow(1024, 768, "Fight Fight Danger");
 InitAudioDevice();
-Resources.CacheAndInitializeAll();
+RaylibResources.CacheAndInitializeAll();
 
 {
     // [INFO]: for all shape drawing routines, raylib actually samples the "blank character texture" in its default
@@ -115,16 +118,16 @@ Resources.CacheAndInitializeAll();
 
     game.StateAutomaton.CurrentState = game.ExploreState;
 
-    var plasmaShaderTimeLoc = GetShaderLocation(Resources.PlasmaShader, "iTime");
-    var plasmaShaderResolutionLoc = GetShaderLocation(Resources.PlasmaShader, "iResolution");
+    var plasmaShaderTimeLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iTime");
+    var plasmaShaderResolutionLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iResolution");
 
-    var screenTransitionShaderTimeLoc = GetShaderLocation(Resources.ScreenTransitionShader, "iTime");
-    var screenTransitionShaderResolutionLoc = GetShaderLocation(Resources.ScreenTransitionShader, "iResolution");
+    var screenTransitionShaderTimeLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iTime");
+    var screenTransitionShaderResolutionLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iResolution");
 
-    var downmixedShaderLUTLoc = GetShaderLocation(Resources.DownmixedShader, "lutTexture");
-    var downmixedShaderLUTSizeLoc = GetShaderLocation(Resources.DownmixedShader, "lutTextureSize");
+    var downmixedShaderLUTLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTexture");
+    var downmixedShaderLUTSizeLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTextureSize");
 
-    var lutSize = new Vector2(Resources.LUTTexture.Width, Resources.LUTTexture.Height);
+    var lutSize = new Vector2(RaylibResources.LUTTexture.Width, RaylibResources.LUTTexture.Height);
 
     while (!WindowShouldClose())
     {
@@ -186,25 +189,25 @@ Resources.CacheAndInitializeAll();
             unsafe
             {
                 SetShaderValue(
-                    Resources.PlasmaShader,
+                    RaylibResources.PlasmaShader,
                     plasmaShaderTimeLoc,
                     &fTime,
                     ShaderUniformDataType.Float);
 
                 SetShaderValue(
-                    Resources.PlasmaShader,
+                    RaylibResources.PlasmaShader,
                     plasmaShaderResolutionLoc,
                     &screenResolution,
                     ShaderUniformDataType.Vec2);
 
                 SetShaderValue(
-                    Resources.ScreenTransitionShader,
+                    RaylibResources.ScreenTransitionShader,
                     screenTransitionShaderTimeLoc,
                     &screenWipeT,
                     ShaderUniformDataType.Float);
 
                 SetShaderValue(
-                    Resources.ScreenTransitionShader,
+                    RaylibResources.ScreenTransitionShader,
                     screenTransitionShaderResolutionLoc,
                     &screenResolution,
                     ShaderUniformDataType.Vec2);
@@ -212,7 +215,7 @@ Resources.CacheAndInitializeAll();
 
             if (isInBattle)
             {
-                BeginShaderMode(Resources.PlasmaShader);
+                BeginShaderMode(RaylibResources.PlasmaShader);
                 {
                     DrawRectangle(0, 0, 320, 240, Color.White);
                 }
@@ -225,8 +228,8 @@ Resources.CacheAndInitializeAll();
                 {
                     Rlgl.DisableBackfaceCulling();
                     {
-                        DrawModel(Resources.FloorModel, Vector3.UnitY * -0.5F, 1, Color.White);
-                        DrawModel(Resources.CeilingModel, Vector3.UnitY * 0.5F, 1, Color.White);
+                        DrawModel(RaylibResources.FloorModel, Vector3.UnitY * -0.5F, 1, Color.White);
+                        DrawModel(RaylibResources.CeilingModel, Vector3.UnitY * 0.5F, 1, Color.White);
                     }
                     Rlgl.EnableBackfaceCulling();
 
@@ -236,7 +239,7 @@ Resources.CacheAndInitializeAll();
                         {
                             if (world.TileMap[y, x] != 0)
                             {
-                                DrawModel(Resources.TileModel, Make3D(new(x, y)), 1, Color.White);
+                                DrawModel(RaylibResources.TileModel, Make3D(new(x, y)), 1, Color.White);
                             }
                         }
                     }
@@ -245,7 +248,7 @@ Resources.CacheAndInitializeAll();
                     {
                         DrawBillboardPro(
                             camera,
-                            Resources.ChestAtlas,
+                            RaylibResources.ChestAtlas,
                             new Rectangle(0, 0, 32, 32),
                             Make3D(new(chest.Entity.X, chest.Entity.Y)),
                             Vector3.UnitY,
@@ -270,7 +273,7 @@ Resources.CacheAndInitializeAll();
                     {
                         DrawBillboardPro(
                             camera,
-                            Resources.EnemyAtlas,
+                            RaylibResources.EnemyAtlas,
                             new(0, 0, 64, 64),
                             Make3D(new(X, Y))
                                 + game.ShakeStateContext.Offset,
@@ -286,7 +289,7 @@ Resources.CacheAndInitializeAll();
 
             if (game.StateAutomaton.CurrentState == game.BattleScreenWipe)
             {
-                BeginShaderMode(Resources.ScreenTransitionShader);
+                BeginShaderMode(RaylibResources.ScreenTransitionShader);
                 {
                     DrawRectangle(0, 0, 320, 240, Color.Black);
                 }
@@ -307,7 +310,7 @@ Resources.CacheAndInitializeAll();
             for (int i = 0; i < game.Log.Lines.Count; i++)
             {
                 TextDraw(
-                    Resources.Font,
+                    RaylibResources.Font,
                     game.Log.Lines[i],
                     new Vector2(
                         renderTexture.Texture.Width,
@@ -321,7 +324,7 @@ Resources.CacheAndInitializeAll();
             {
                 DrawRectangle(0, renderTexture.Texture.Height - 48, renderTexture.Texture.Width, 48, Color.Black);
                 TextDraw(
-                    Resources.Font,
+                    RaylibResources.Font,
                     game.CurrentDialogStateContext!.RunningLine.ToString(),
                     new Vector2(
                         renderTexture.Texture.Width,
@@ -338,12 +341,14 @@ Resources.CacheAndInitializeAll();
 
         BeginDrawing();
         {
-            BeginShaderMode(Resources.DownmixedShader);
+            ClearBackground(Color.Black);
+
+            BeginShaderMode(RaylibResources.DownmixedShader);
             {
-                SetShaderValue(Resources.DownmixedShader, downmixedShaderLUTLoc, Resources.LUTTexture);
+                SetShaderValue(RaylibResources.DownmixedShader, downmixedShaderLUTLoc, RaylibResources.LUTTexture);
 
                 SetShaderValue(
-                    Resources.DownmixedShader,
+                    RaylibResources.DownmixedShader,
                     downmixedShaderLUTSizeLoc,
                     lutSize,
                     ShaderUniformDataType.Vec2);
@@ -358,11 +363,12 @@ Resources.CacheAndInitializeAll();
                     },
                     new Rectangle()
                     {
-                        Width = GetScreenWidth(),
+                        Width = 320 * (GetScreenHeight() / 240f),
                         Height = GetScreenHeight(),
                         Position = Vector2.Zero,
                     },
-                    Vector2.Zero,
+                    // [TODO]: cache. also the x coordinates are flipped so plus goes left and minus goes right
+                    new Vector2((-GetScreenWidth() / 2f) + (320 / 2f * (GetScreenHeight() / 240f)), 0),
                     0,
                     Color.White
                 );
@@ -375,6 +381,6 @@ Resources.CacheAndInitializeAll();
     UnloadRenderTexture(renderTexture);
 }
 
-Resources.UnloadAll();
+RaylibResources.UnloadAll();
 CloseAudioDevice();
 CloseWindow();
