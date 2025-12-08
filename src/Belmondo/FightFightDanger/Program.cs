@@ -9,63 +9,6 @@ using static Belmondo.Mathematics.Extensions;
 static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
 static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
 
-RaylibAudioService audioService = new();
-RaylibInputService inputService = new();
-Game game = new(audioService, inputService);
-World world = new(audioService, inputService);
-
-world.TileMap = new int[,]
-{
-    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
-    { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
-    { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
-    { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
-    { 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
-    { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
-    { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
-    { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
-    { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
-    { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
-    { 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
-    { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
-    { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
-    { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-};
-
-world.Chests.Add(new Chest()
-{
-    Items = new Dictionary<int, int>(),
-    Entity = new()
-    {
-        X = 6,
-        Y = 5,
-    },
-});
-
-world.Player.Entity.X = 5;
-world.Player.Entity.Y = 5;
-
-game.World = world;
-
-Camera3D camera = new()
-{
-    FovY = 90,
-    Projection = CameraProjection.Perspective,
-    Up = Vector3.UnitY,
-};
-
-game.World.OldPlayerX = world.Player.Entity.X;
-game.World.OldPlayerY = world.Player.Entity.Y;
-
-camera.Position.X = world.Player.Entity.X;
-camera.Position.Z = world.Player.Entity.Y;
-
-Vector3 cameraDirection;
-
 static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 position)
 {
     var scaleFactor = screenSize.Y / 240f;
@@ -75,11 +18,6 @@ static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 positio
     DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
 }
 
-{
-    var (X, Y) = Direction.ToInt32Tuple(world.Player.Entity.Direction);
-    cameraDirection = new(X, 0, Y);
-}
-
 SetConfigFlags(ConfigFlags.WindowResizable);
 
 InitWindow(1024, 768, "Fight Fight Danger");
@@ -87,6 +25,88 @@ InitAudioDevice();
 RaylibResources.CacheAndInitializeAll();
 
 {
+    RaylibAudioService raylibAudioService = new();
+    RaylibInputService raylibInputService = new();
+
+    Services services = new()
+    {
+        AudioService = raylibAudioService,
+        InputService = raylibInputService,
+    };
+
+    TimeContext timeContext = new();
+
+    Game game = new(services, timeContext);
+    World world = new(services, timeContext);
+
+    world.TileMap = new int[,]
+    {
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+        { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
+        { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+        { 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
+        { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
+        { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
+        { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+        { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+        { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
+        { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+        { 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
+        { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
+        { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
+        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+    };
+
+    world.SpawnChest(
+        new()
+        {
+            Items = new Dictionary<int, int>(),
+        },
+        new()
+        {
+            X = 6,
+            Y = 5,
+        });
+
+    world.SpawnChest(
+        new()
+        {
+            Items = new Dictionary<int, int>(),
+        },
+        new()
+        {
+            X = 7,
+            Y = 5,
+        });
+
+    world.Player.Transform.X = 5;
+    world.Player.Transform.Y = 5;
+
+    game.World = world;
+
+    Camera3D camera = new()
+    {
+        FovY = 90,
+        Projection = CameraProjection.Perspective,
+        Up = Vector3.UnitY,
+    };
+
+    world.OldPlayerX = world.Player.Transform.X;
+    world.OldPlayerY = world.Player.Transform.Y;
+
+    camera.Position.X = world.Player.Transform.X;
+    camera.Position.Z = world.Player.Transform.Y;
+
+    Vector3 cameraDirection;
+    {
+        var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
+        cameraDirection = new(X, 0, Y);
+    }
+
     // [INFO]: for all shape drawing routines, raylib actually samples the "blank character texture" in its default
     // character set. for some reason this throws off the fragTexCoord (uv) varyings in shaders. you need to actually
     // inform raylib that all shapes should be drawn with this empty 1x1 texture instead.
@@ -108,14 +128,6 @@ RaylibResources.CacheAndInitializeAll();
 
     double oldTime = GetTime();
 
-    //
-    // begin state initializations
-    //
-
-    //
-    // end state initializations
-    //
-
     game.StateAutomaton.CurrentState = game.ExploreState;
 
     var plasmaShaderTimeLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iTime");
@@ -131,15 +143,15 @@ RaylibResources.CacheAndInitializeAll();
 
     while (!WindowShouldClose())
     {
-        game.Jukebox.Update();
+        raylibAudioService.Update();
 
         double newTime = GetTime();
         double delta = newTime - oldTime;
 
         oldTime = newTime;
 
-        game.TimeContext.Delta = delta;
-        game.TimeContext.Time += delta;
+        timeContext.Delta = delta;
+        timeContext.Time += delta;
         game.Update();
 
         // [FIXME]: BRUTAL fucking hack
@@ -164,13 +176,13 @@ RaylibResources.CacheAndInitializeAll();
             Vector3 playerDirection3d;
 
             {
-                var (X, Y) = Direction.ToInt32Tuple(world.Player.Entity.Direction);
+                var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
                 playerDirection3d = new(X, 0, Y);
             }
 
             camera.Position = Vector3.Lerp(
                 new(world.OldPlayerX, 0, world.OldPlayerY),
-                new(world.Player.Entity.X, 0, world.Player.Entity.Y),
+                new(world.Player.Transform.X, 0, world.Player.Transform.Y),
                 world.CameraPositionLerpT);
 
             Quaternion cameraRotation = QuaternionFromAxisAngle(
@@ -183,7 +195,7 @@ RaylibResources.CacheAndInitializeAll();
             camera.Target = camera.Position + cameraDirection;
 
             Vector2 screenResolution = new(320, 240);
-            float fTime = (float)game.TimeContext.Time;
+            float fTime = (float)timeContext.Time;
             float screenWipeT = game.CurrentScreenWipeContext.T;
 
             unsafe
@@ -244,13 +256,15 @@ RaylibResources.CacheAndInitializeAll();
                         }
                     }
 
-                    foreach (var chest in world.Chests)
+                    foreach (var spawnedChest in world.Chests)
                     {
+                        int subFrame = (int)(spawnedChest.Value.CurrentOpenness * 3);
+
                         DrawBillboardPro(
                             camera,
                             RaylibResources.ChestAtlas,
-                            new Rectangle(0, 0, 32, 32),
-                            Make3D(new(chest.Entity.X, chest.Entity.Y)),
+                            new Rectangle(subFrame * 32, 0, 32, 32),
+                            Make3D(new(spawnedChest.Transform.X, spawnedChest.Transform.Y)),
                             Vector3.UnitY,
                             Vector2.One / 2f,
                             new Vector2(0.25f, 0.5f),
@@ -262,12 +276,12 @@ RaylibResources.CacheAndInitializeAll();
 
                 if (isInBattle)
                 {
-                    (float X, float Y) = Direction.ToInt32Tuple(world.Player.Entity.Direction);
+                    (float X, float Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
 
                     X /= 1.5f;
                     Y /= 1.5f;
-                    X += world.Player.Entity.X;
-                    Y += world.Player.Entity.Y;
+                    X += world.Player.Transform.X;
+                    Y += world.Player.Transform.Y;
 
                     Rlgl.DisableDepthTest();
                     {
@@ -276,7 +290,7 @@ RaylibResources.CacheAndInitializeAll();
                             RaylibResources.EnemyAtlas,
                             new(0, 0, 64, 64),
                             Make3D(new(X, Y))
-                                + game.ShakeStateContext.Offset,
+                                + game.ShakeStateContext.GetValueOrDefault().Offset,
                             Vector3.UnitY,
                             Vector2.One,
                             Vector2.One / 2f,
@@ -367,7 +381,8 @@ RaylibResources.CacheAndInitializeAll();
                         Height = GetScreenHeight(),
                         Position = Vector2.Zero,
                     },
-                    // [TODO]: cache. also the x coordinates are flipped so plus goes left and minus goes right
+                    // [TODO]: cache screen size values.
+                    // [INFO]: the x coordinates are flipped so plus goes left and minus goes right
                     new Vector2((-GetScreenWidth() / 2f) + (320 / 2f * (GetScreenHeight() / 240f)), 0),
                     0,
                     Color.White

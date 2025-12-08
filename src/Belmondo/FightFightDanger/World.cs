@@ -1,24 +1,33 @@
+using System.Runtime.InteropServices;
+
 namespace Belmondo.FightFightDanger;
 
-public sealed class World(IAudioService audioService, IInputService inputService)
+using Position = (int X, int Y);
+
+public sealed class World(Services services, TimeContext timeContext)
 {
-    public struct SpawnedEntity
+    public struct Spawned<T> where T : struct
     {
+        public T Value;
+        public Transform Transform;
         public int ID;
-        public Entity Entity;
+
+        public Spawned(T value) : this() => Value = value;
     }
 
     //
     // collision stuff
     //
+
     public int[,]? TileMap;
-    public int[,]? BroadPhaseCollisionMap;
+    public readonly Dictionary<Position, int> ChestMap = [];
 
     //
     // entity stuff
     //
-    public Player Player = new();
-    public List<Chest> Chests = [];
+
+    public readonly List<Spawned<Chest>> Chests = [];
+    public Spawned<Player> Player = new(new());
 
     //
     // running state
@@ -31,7 +40,7 @@ public sealed class World(IAudioService audioService, IInputService inputService
     public float CameraPositionLerpT = 0;
     public float CameraDirectionLerpT = 0;
 
-    public bool TryMove(ref Entity entity, int direction)
+    public bool TryMove(ref Transform entity, int direction)
     {
         var (X, Y) = Direction.ToInt32Tuple(direction);
         int desiredX = entity.X + X;
@@ -39,6 +48,7 @@ public sealed class World(IAudioService audioService, IInputService inputService
 
         bool canMoveToDestination = (true
             && (TileMap is not null && (TileMap[desiredY, desiredX] == 0))
+            && (!ChestMap.ContainsKey((desiredX, desiredY)))
         );
 
         if (!canMoveToDestination)
@@ -52,58 +62,110 @@ public sealed class World(IAudioService audioService, IInputService inputService
         return true;
     }
 
-    public void UpdatePlayer(double delta)
+    public void UpdatePlayer()
     {
         // begin player update
 
-        if (inputService.ActionWasJustPressed(InputAction.LookRight))
+        if (services.InputService.ActionWasJustPressed(InputAction.LookRight))
         {
-            OldPlayerDirection = Player.Entity.Direction;
+            OldPlayerDirection = Player.Transform.Direction;
             CameraDirectionLerpT = 0;
-            Player.Entity.Direction++;
+            Player.Transform.Direction++;
         }
-        else if (inputService.ActionWasJustPressed(InputAction.LookLeft))
+        else if (services.InputService.ActionWasJustPressed(InputAction.LookLeft))
         {
-            OldPlayerDirection = Player.Entity.Direction;
+            OldPlayerDirection = Player.Transform.Direction;
             CameraDirectionLerpT = 0;
-            Player.Entity.Direction--;
+            Player.Transform.Direction--;
         }
 
-        Player.Entity.Direction = Direction.Clamped(Player.Entity.Direction);
-        CameraDirectionLerpT = MathF.Min(CameraDirectionLerpT + (float)delta, 1);
+        Player.Transform.Direction = Direction.Clamped(Player.Transform.Direction);
+        CameraDirectionLerpT = MathF.Min(CameraDirectionLerpT + (float)timeContext.Delta, 1);
 
         int? moveDirection = null;
 
-        if (inputService.ActionIsPressed(InputAction.MoveForward))
+        if (services.InputService.ActionIsPressed(InputAction.MoveForward))
         {
-            moveDirection = Direction.Clamped(Player.Entity.Direction);
+            moveDirection = Direction.Clamped(Player.Transform.Direction);
         }
-        else if (inputService.ActionIsPressed(InputAction.MoveBack))
+        else if (services.InputService.ActionIsPressed(InputAction.MoveBack))
         {
-            moveDirection = Direction.Clamped(Player.Entity.Direction + 2);
+            moveDirection = Direction.Clamped(Player.Transform.Direction + 2);
         }
-        else if (inputService.ActionIsPressed(InputAction.MoveLeft))
+        else if (services.InputService.ActionIsPressed(InputAction.MoveLeft))
         {
-            moveDirection = Direction.Clamped(Player.Entity.Direction + 3);
+            moveDirection = Direction.Clamped(Player.Transform.Direction + 3);
         }
-        else if (inputService.ActionIsPressed(InputAction.MoveRight))
+        else if (services.InputService.ActionIsPressed(InputAction.MoveRight))
         {
-            moveDirection = Direction.Clamped(Player.Entity.Direction + 1);
+            moveDirection = Direction.Clamped(Player.Transform.Direction + 1);
         }
 
-        if (moveDirection is not null && Player.Current.WalkCooldown == 0)
+        if (moveDirection is not null && Player.Value.Current.WalkCooldown == 0)
         {
             CameraPositionLerpT = 0;
-            OldPlayerX = Player.Entity.X;
-            OldPlayerY = Player.Entity.Y;
-            audioService.PlaySoundEffect(SoundEffect.Step);
-            Player.Current.WalkCooldown = Player.Default.WalkCooldown;
-            TryMove(ref Player.Entity, (int)moveDirection);
+            OldPlayerX = Player.Transform.X;
+            OldPlayerY = Player.Transform.Y;
+            services.AudioService.PlaySoundEffect(SoundEffect.Step);
+            Player.Value.Current.WalkCooldown = Player.Value.Default.WalkCooldown;
+            TryMove(ref Player.Transform, (int)moveDirection);
         }
 
-        Player.Current.WalkCooldown = Math.Max(Player.Current.WalkCooldown - delta, 0);
-        CameraPositionLerpT = MathF.Min(CameraPositionLerpT + ((1.0F / (float)Player.Default.WalkCooldown) * (float)delta), 1);
+        Player.Value.Current.WalkCooldown = Math.Max(Player.Value.Current.WalkCooldown - timeContext.Delta, 0);
+        CameraPositionLerpT = MathF.Min(CameraPositionLerpT + ((1.0F / (float)Player.Value.Default.WalkCooldown) * (float)timeContext.Delta), 1);
 
         // end player update
+    }
+
+    public void SpawnChest(Chest chest, Transform transform)
+    {
+        ChestMap.Add((transform.X, transform.Y), Chests.Count);
+        Chests.Add(new()
+        {
+            ID = Chests.Count,
+            Transform = transform,
+            Value = chest,
+        });
+    }
+
+    public void UpdateChests()
+    {
+        foreach (ref var spawnedChest in CollectionsMarshal.AsSpan(Chests))
+        {
+            var chest = spawnedChest.Value;
+
+            if (chest.CurrentStatus == Chest.Status.Opening)
+            {
+                chest.CurrentOpenness += (float)timeContext.Delta * 2;
+
+                if (chest.CurrentOpenness >= 1)
+                {
+                    chest.CurrentOpenness = 1;
+                }
+            }
+
+            spawnedChest.Value = chest;
+        }
+    }
+
+    public bool TryToInteractWithChest(Position at)
+    {
+        if (!ChestMap.TryGetValue((at.X, at.Y), out int chestID))
+        {
+            return false;
+        }
+
+        var spawnedChest = Chests[chestID];
+
+        if (spawnedChest.Value.CurrentStatus != Chest.Status.Idle)
+        {
+            return false;
+        }
+
+        spawnedChest.Value.CurrentStatus = Chest.Status.Opening;
+        Chests[chestID] = spawnedChest;
+        services.AudioService.PlaySoundEffect(SoundEffect.OpenChest);
+
+        return true;
     }
 }

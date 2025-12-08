@@ -1,8 +1,7 @@
 namespace Belmondo.FightFightDanger;
 
-public struct Entity
+public struct Transform
 {
-    public int Type;
     public int X;
     public int Y;
     public int Direction;

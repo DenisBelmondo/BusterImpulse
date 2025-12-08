@@ -1,7 +1,7 @@
 namespace Belmondo.FightFightDanger;
 
 
-public class TimeContext
+public sealed class TimeContext
 {
     public double Delta;
     public double Time;

@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace Belmondo.FightFightDanger;
 
-public struct ShakeStateContext
+public struct ShakeStateContext(TimeContext timeContext)
 {
     public double SecondsLeft;
     public Vector3 Offset;
@@ -13,10 +13,10 @@ public struct ShakeStateContext
         SecondsLeft = durationSeconds;
     }
 
-    public void Update(double delta)
+    public void Update()
     {
         Offset = Vector3.Zero;
-        SecondsLeft -= delta;
+        SecondsLeft -= timeContext.Delta;
 
         if (SecondsLeft > 0)
         {

@@ -34,18 +34,13 @@ public class Game
         Damage = 1,
     };
 
-    private readonly IAudioService _audioService;
-    private readonly IInputService _inputService;
-
-    public BattleFoe? CurrentFoe = null;
-    public ShakeStateContext ShakeStateContext = new();
     public World? World = null;
+    public BattleFoe? CurrentFoe = null;
+    public ShakeStateContext? ShakeStateContext = null;
     public StateAutomaton StateAutomaton = new();
     public StateAutomaton FoeVisualStateAutomaton = new();
     public StateAutomaton DialogStateAutomaton = new();
     public Log Log = new(8);
-    public RaylibJukebox Jukebox = new();
-    public TimeContext TimeContext = new();
 
     //
     // state contexts
@@ -78,39 +73,39 @@ public class Game
     public State DialogSpeakingState;
     public State DialogFinishedState;
 
-    public Game(IAudioService audioService, IInputService inputService)
+    public Game(Services services, TimeContext timeContext)
     {
-        _audioService = audioService;
-        _inputService = inputService;
+        ShakeStateContext = new(timeContext);
 
         ExploreState = new()
         {
             EnterFunction = () =>
             {
                 Log.Clear();
-                Jukebox.ChangeMusic(RaylibResources.Music);
+                services.AudioService.ChangeMusic(MusicTrack.Wandering);
             },
             UpdateFunction = () =>
             {
                 if (World is not null)
                 {
-                    if (_inputService.ActionWasJustPressed(InputAction.Confirm))
+                    if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                     {
-                        var (X, Y) = Direction.ToInt32Tuple(World.Player.Entity.Direction);
-                        var desiredX = World.Player.Entity.X + X;
-                        var desiredY = World.Player.Entity.Y + Y;
+                        var (X, Y) = Direction.ToInt32Tuple(World.Player.Transform.Direction);
+                        var desiredX = World.Player.Transform.X + X;
+                        var desiredY = World.Player.Transform.Y + Y;
 
-                        // [TODO]: chest opening
+                        World.TryToInteractWithChest((desiredX, desiredY));
                     }
                 }
 
-                if (_inputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
+                if (services.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
                 {
                     CurrentFoe = new(GoonBattleStats);
                     return State.Goto(BattleScreenWipe!);
                 }
 
-                World?.UpdatePlayer(TimeContext.Delta);
+                World?.UpdatePlayer();
+                World?.UpdateChests();
 
                 return State.Continue;
             }
@@ -121,12 +116,12 @@ public class Game
             EnterFunction = () =>
             {
                 CurrentScreenWipeContext.T = 0;
-                _audioService.PlaySoundEffect(SoundEffect.BattleStart);
+                services.AudioService.PlaySoundEffect(SoundEffect.BattleStart);
             },
 
             UpdateFunction = () =>
             {
-                CurrentScreenWipeContext.T += (float)TimeContext.Delta;
+                CurrentScreenWipeContext.T += (float)timeContext.Delta;
 
                 if (CurrentScreenWipeContext.T >= 1.5f)
                 {
@@ -141,7 +136,7 @@ public class Game
         {
             EnterFunction = () =>
             {
-                Jukebox.ChangeMusic(RaylibResources.BattleMusic);
+                services.AudioService.ChangeMusic(MusicTrack.Battle);
                 Log.Clear();
                 Log.Add("What will you do?");
                 Log.Add("A: Attack");
@@ -150,15 +145,15 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (_inputService.ActionWasJustPressed(InputAction.BattleAttack))
+                if (services.InputService.ActionWasJustPressed(InputAction.BattleAttack))
                 {
                     return State.Goto(BattleStartPlayerAttack!);
                 }
-                else if (_inputService.ActionWasJustPressed(InputAction.BattleDefend))
+                else if (services.InputService.ActionWasJustPressed(InputAction.BattleDefend))
                 {
                     return State.Goto(BattlePlayerDefend!);
                 }
-                else if (_inputService.ActionWasJustPressed(InputAction.BattleRun))
+                else if (services.InputService.ActionWasJustPressed(InputAction.BattleRun))
                 {
                     return State.Goto(BattlePlayerRun!);
                 }
@@ -176,7 +171,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
+                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattlePlayerAiming!);
                 }
@@ -195,9 +190,9 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                CurrentPlayerAimingStateContext.CurrentAimValue = Math.Sin(TimeContext.Time * 4);
+                CurrentPlayerAimingStateContext.CurrentAimValue = Math.Sin(timeContext.Time * 4);
 
-                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
+                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     if (!CurrentPlayerAimingStateContext.IsInRange())
                     {
@@ -220,7 +215,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
+                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleEnemyStartAttack!);
                 }
@@ -244,20 +239,20 @@ public class Game
                     }
                 }
 
-                _audioService.PlaySoundEffect(SoundEffect.Smack);
-                ShakeStateContext.Shake(0.5f);
+                services.AudioService.PlaySoundEffect(SoundEffect.Smack);
+                ShakeStateContext?.Shake(0.5f);
             },
             UpdateFunction = () =>
             {
                 if (CurrentFoe is not null && CurrentFoe.Current.Health <= 0)
                 {
-                    if (_inputService.ActionWasJustPressed(InputAction.Confirm))
+                    if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                     {
                         return State.Goto(ExploreState);
                     }
                 }
 
-                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
+                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleEnemyStartAttack!);
                 }
@@ -298,7 +293,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
+                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleEnemyAttack!);
                 }
@@ -315,7 +310,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (_inputService.ActionWasJustPressed(InputAction.Confirm))
+                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleStart);
                 }
@@ -330,7 +325,7 @@ public class Game
             {
                 if (CurrentDialogStateContext is not null)
                 {
-                    CurrentDialogStateContext.CurrentCharacterIndex += (float)TimeContext.Delta * 30f;
+                    CurrentDialogStateContext.CurrentCharacterIndex += (float)timeContext.Delta * 30f;
 
                     if (CurrentDialogStateContext.CurrentCharacterIndex >= CurrentDialogStateContext.TargetLine.Length)
                     {
@@ -340,10 +335,10 @@ public class Game
                     if ((int)CurrentDialogStateContext.CurrentCharacterIndex >= CurrentDialogStateContext.RunningLine.Length)
                     {
                         CurrentDialogStateContext.RunningLine.Append(CurrentDialogStateContext.TargetLine[(int)CurrentDialogStateContext.CurrentCharacterIndex]);
-                        _audioService.PlaySoundEffect(SoundEffect.Talk);
+                        services.AudioService.PlaySoundEffect(SoundEffect.Talk);
                     }
 
-                    if (_inputService.ActionWasJustPressed(InputAction.Confirm))
+                    if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                     {
                         CurrentDialogStateContext.RunningLine.Clear();
                         CurrentDialogStateContext.RunningLine.Append(CurrentDialogStateContext.TargetLine);
@@ -370,7 +365,7 @@ public class Game
         StateAutomaton.Update();
         FoeVisualStateAutomaton.Update();
         DialogStateAutomaton.Update();
-        ShakeStateContext.Update(TimeContext.Delta);
+        ShakeStateContext?.Update();
     }
 
     public void Say(string line)
