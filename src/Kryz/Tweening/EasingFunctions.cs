@@ -1,5 +1,3 @@
-using System;
-
 namespace Kryz.Tweening
 {
 	// Made with the help of this great post: https://joshondesign.com/2013/03/01/improvedEasingEquations

@@ -1,8 +1,8 @@
 using System.Numerics;
 
-namespace Belmondo;
+namespace Belmondo.Mathematics;
 
-public static class Math2
+public static class Extensions
 {
     public static float Lerp(float v0, float v1, float t) => (1 - t) * v0 + t * v1;
 

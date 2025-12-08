@@ -1,10 +1,10 @@
 ﻿using System.Numerics;
-using Belmondo;
 using Belmondo.FightFightDanger;
 using Belmondo.FightFightDanger.Raylib_cs;
 using Raylib_cs.BleedingEdge;
 using static Raylib_cs.BleedingEdge.Raylib;
 using static Raylib_cs.BleedingEdge.Raymath;
+using static Belmondo.Mathematics.Extensions;
 
 static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
 static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
