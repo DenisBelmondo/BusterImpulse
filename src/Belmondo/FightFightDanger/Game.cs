@@ -6,18 +6,19 @@ public class Game
     public event Action? EnemyDamaged;
     public event Action? EnemyDied;
 
-    private readonly TimeContext _timeContext;
+    public required GameContext? GameContext;
+
     private bool _shouldTickHealth;
     private double _healthTickDownAccumulator;
 
-    public GameState GameState = new();
+    public World? World;
 
-    public World World;
+    public BattleState BattleState;
+    public DialogState DialogState;
 
     //
     // temp
     //
-    public ShakeStateContext? ShakeStateContext = null;
     public StateAutomaton StateAutomaton = new();
     public StateAutomaton FoeVisualStateAutomaton = new();
     public StateAutomaton DialogStateAutomaton = new();
@@ -27,60 +28,58 @@ public class Game
     // playsim states
     //
 
-    public State ExploreState;
-    public State BattleScreenWipe;
-    public State BattleStart;
-    public State BattleStartPlayerAttack;
-    public State BattlePlayerAiming;
-    public State BattlePlayerAttack;
-    public State BattlePlayerMissed;
-    public State BattlePlayerDefend;
-    public State BattlePlayerItem;
-    public State BattlePlayerRun;
-    public State BattleEnemyStartAttack;
-    public State BattleEnemyAttack;
+    public State? ExploreState;
+    public State? BattleScreenWipe;
+    public State? BattleStart;
+    public State? BattleStartPlayerAttack;
+    public State? BattlePlayerAiming;
+    public State? BattlePlayerAttack;
+    public State? BattlePlayerMissed;
+    public State? BattlePlayerDefend;
+    public State? BattlePlayerItem;
+    public State? BattlePlayerRun;
+    public State? BattleEnemyStartAttack;
+    public State? BattleEnemyAttack;
 
     //
     // dialog states
     //
 
-    public State DialogSpeakingState;
-    public State DialogFinishedState;
+    public State? DialogSpeakingState;
+    public State? DialogFinishedState;
 
-    public Game(Services services, TimeContext timeContext)
+    public void InitStates()
     {
-        _timeContext = timeContext;
-
-        World = new(services, timeContext);
-        ShakeStateContext = new(timeContext);
+        GameContext gameContext = GameContext!;
+        World world = World!;
 
         ExploreState = new()
         {
             EnterFunction = () =>
             {
                 Log.Clear();
-                services.AudioService.ChangeMusic(MusicTrack.WanderingStage1);
+                gameContext.AudioService.ChangeMusic(MusicTrack.WanderingStage1);
             },
             UpdateFunction = () =>
             {
-                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
-                    var (X, Y) = Direction.ToInt32Tuple(GameState.WorldState.Player.Transform.Direction);
-                    var desiredX = GameState.WorldState.Player.Transform.Position.X + X;
-                    var desiredY = GameState.WorldState.Player.Transform.Position.Y + Y;
+                    var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
+                    var desiredX = world.Player.Transform.Position.X + X;
+                    var desiredY = world.Player.Transform.Position.Y + Y;
 
-                    World.TryToInteractWithChest(ref GameState.WorldState, (desiredX, desiredY));
+                    GameLogic.TryToInteractWithChest(gameContext, ref world, (desiredX, desiredY));
                 }
 
-                if (services.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
                 {
-                    GameState.BattleState.Foe = new(FightFightDangerBattleStats.Goon);
+                    BattleState.Foe = new(FightFightDangerBattleStats.Goon);
 
                     return State.Goto(BattleScreenWipe!);
                 }
 
-                World.UpdatePlayer(ref GameState.WorldState);
-                World.UpdateChests(ref GameState.WorldState);
+                GameLogic.UpdatePlayer(gameContext, ref world);
+                GameLogic.UpdateChests(gameContext, ref world);
 
                 return State.Continue;
             }
@@ -90,15 +89,15 @@ public class Game
         {
             EnterFunction = () =>
             {
-                GameState.BattleState.ScreenWipeState.T = 0;
-                services.AudioService.PlaySoundEffect(SoundEffect.BattleStart);
+                BattleState.ScreenWipeState.T = 0;
+                gameContext.AudioService.PlaySoundEffect(SoundEffect.BattleStart);
             },
 
             UpdateFunction = () =>
             {
-                GameState.BattleState.ScreenWipeState.T += (float)timeContext.Delta;
+                BattleState.ScreenWipeState.T += (float)gameContext.Delta;
 
-                if (GameState.BattleState.ScreenWipeState.T >= 1.5f)
+                if (BattleState.ScreenWipeState.T >= 1.5f)
                 {
                     return State.Goto(BattleStart!);
                 }
@@ -112,7 +111,7 @@ public class Game
             EnterFunction = () =>
             {
                 _shouldTickHealth = true;
-                services.AudioService.ChangeMusic(MusicTrack.Battle);
+                gameContext.AudioService.ChangeMusic(MusicTrack.Battle);
                 Log.Clear();
                 Log.Add("What will you do?");
                 Log.Add("A: Attack");
@@ -123,19 +122,19 @@ public class Game
 
             UpdateFunction = () =>
             {
-                if (services.InputService.ActionWasJustPressed(InputAction.BattleAttack))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.BattleAttack))
                 {
                     return State.Goto(BattleStartPlayerAttack!);
                 }
-                else if (services.InputService.ActionWasJustPressed(InputAction.BattleDefend))
+                else if (gameContext.InputService.ActionWasJustPressed(InputAction.BattleDefend))
                 {
                     return State.Goto(BattlePlayerDefend!);
                 }
-                else if (services.InputService.ActionWasJustPressed(InputAction.BattleRun))
+                else if (gameContext.InputService.ActionWasJustPressed(InputAction.BattleRun))
                 {
                     return State.Goto(BattlePlayerRun!);
                 }
-                else if (services.InputService.ActionWasJustPressed(InputAction.BattleItem))
+                else if (gameContext.InputService.ActionWasJustPressed(InputAction.BattleItem))
                 {
                     return State.Goto(BattlePlayerItem!);
                 }
@@ -156,7 +155,7 @@ public class Game
 
             UpdateFunction = () =>
             {
-                if (services.InputService.ActionWasJustPressed(InputAction.Cancel))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.Cancel))
                 {
                     return State.Goto(BattleStart);
                 }
@@ -174,7 +173,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattlePlayerAiming!);
                 }
@@ -189,15 +188,15 @@ public class Game
             {
                 Log.Clear();
                 Log.Add("Align the circle with the enemy then press enter!");
-                GameState.BattleState.PlayerAimingState.CurrentRange = (-0.3, 0.3);
+                BattleState.PlayerAimingState.CurrentRange = (-0.3, 0.3);
             },
             UpdateFunction = () =>
             {
-                GameState.BattleState.PlayerAimingState.CurrentAimValue = Math.Sin(timeContext.Time * 4);
+                BattleState.PlayerAimingState.CurrentAimValue = Math.Sin(gameContext.Time * 4);
 
-                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
-                    if (!GameState.BattleState.PlayerAimingState.IsInRange())
+                    if (!BattleState.PlayerAimingState.IsInRange())
                     {
                         return State.Goto(BattlePlayerMissed!);
                     }
@@ -218,7 +217,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleEnemyStartAttack!);
                 }
@@ -231,31 +230,30 @@ public class Game
         {
             EnterFunction = () =>
             {
-                GameState.BattleState.Foe.Current.Health -= 1;
+                BattleState.Foe.Current.Health -= 1;
                 EnemyDamaged?.Invoke();
                 Log.Add("Player deals 1 damage!");
 
-                if (GameState.BattleState.Foe.Current.Health <= 0)
+                if (BattleState.Foe.Current.Health <= 0)
                 {
                     EnemyDied?.Invoke();
                     Log.Add("Enemy defeated.");
                     _shouldTickHealth = false;
                 }
 
-                services.AudioService.PlaySoundEffect(SoundEffect.Smack);
-                ShakeStateContext?.Shake(0.5f);
+                gameContext.AudioService.PlaySoundEffect(SoundEffect.Smack);
             },
             UpdateFunction = () =>
             {
-                if (GameState.BattleState.Foe.Current.Health <= 0)
+                if (BattleState.Foe.Current.Health <= 0)
                 {
-                    if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                    if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                     {
                         return State.Goto(ExploreState);
                     }
                 }
 
-                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleEnemyStartAttack!);
                 }
@@ -296,7 +294,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleEnemyAttack!);
                 }
@@ -311,14 +309,14 @@ public class Game
             {
                 int damage = Random.Shared.Next(0, 20);
 
-                GameState.WorldState.Player.Value.Current.Health -= damage;
-                services.AudioService.PlaySoundEffect(SoundEffect.Smack);
+                world.Player.Value.Current.Health -= damage;
+                gameContext.AudioService.PlaySoundEffect(SoundEffect.Smack);
                 PlayerDamaged?.Invoke();
                 Log.Add($"\tEnemy deals {damage} damage!");
             },
             UpdateFunction = () =>
             {
-                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
                     return State.Goto(BattleStart);
                 }
@@ -331,23 +329,23 @@ public class Game
         {
             UpdateFunction = () =>
             {
-                GameState.DialogState.CurrentCharacterIndex += (float)timeContext.Delta * 30f;
+                DialogState.CurrentCharacterIndex += (float)gameContext.Delta * 30f;
 
-                if (GameState.DialogState.CurrentCharacterIndex >= GameState.DialogState.TargetLine?.Length)
+                if (DialogState.CurrentCharacterIndex >= DialogState.TargetLine?.Length)
                 {
                     return State.Goto(DialogFinishedState!);
                 }
 
-                if ((int)GameState.DialogState.CurrentCharacterIndex >= GameState.DialogState.RunningLine.Length)
+                if ((int)DialogState.CurrentCharacterIndex >= DialogState.RunningLine.Length)
                 {
-                    GameState.DialogState.RunningLine.Append(GameState.DialogState.TargetLine?[(int)GameState.DialogState.CurrentCharacterIndex]);
-                    services.AudioService.PlaySoundEffect(SoundEffect.Talk);
+                    DialogState.RunningLine.Append(DialogState.TargetLine?[(int)DialogState.CurrentCharacterIndex]);
+                    gameContext.AudioService.PlaySoundEffect(SoundEffect.Talk);
                 }
 
-                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
-                    GameState.DialogState.RunningLine.Clear();
-                    GameState.DialogState.RunningLine.Append(GameState.DialogState.TargetLine);
+                    DialogState.RunningLine.Clear();
+                    DialogState.RunningLine.Append(DialogState.TargetLine);
 
                     return State.Goto(DialogFinishedState!);
                 }
@@ -367,15 +365,18 @@ public class Game
 
     public void Update()
     {
+        GameContext gameContext = GameContext!;
+        World world = World!;
+
         if (_shouldTickHealth)
         {
-            _healthTickDownAccumulator += _timeContext.Delta;
+            _healthTickDownAccumulator += gameContext.Delta;
 
             if (_healthTickDownAccumulator >= 0.5f)
             {
-                if (GameState.WorldState.Player.Value.Current.Health != GameState.WorldState.Player.Value.RunningHealth)
+                if (world.Player.Value.Current.Health != world.Player.Value.RunningHealth)
                 {
-                    GameState.WorldState.Player.Value.RunningHealth += MathF.Sign(GameState.WorldState.Player.Value.Current.Health - GameState.WorldState.Player.Value.RunningHealth);
+                    world.Player.Value.RunningHealth += MathF.Sign(world.Player.Value.Current.Health - world.Player.Value.RunningHealth);
                 }
 
                 _healthTickDownAccumulator = 0;
@@ -385,12 +386,11 @@ public class Game
         StateAutomaton.Update();
         FoeVisualStateAutomaton.Update();
         DialogStateAutomaton.Update();
-        ShakeStateContext?.Update();
     }
 
     public void Say(string line)
     {
-        GameState.DialogState.TargetLine = line;
+        DialogState.TargetLine = line;
         DialogStateAutomaton.CurrentState = DialogSpeakingState;
     }
 }
