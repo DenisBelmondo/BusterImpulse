@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public struct Chest
+public struct ChestState
 {
     public enum Status
     {

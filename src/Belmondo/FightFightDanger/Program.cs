@@ -61,31 +61,27 @@ RaylibResources.CacheAndInitializeAll();
         { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
     };
 
-    world.SpawnChest(
+    game.GameState.WorldState.SpawnChest(
         new()
         {
             Items = new Dictionary<int, int>(),
         },
         new()
         {
-            X = 6,
-            Y = 5,
+            Position = (6, 5),
         });
 
-    world.SpawnChest(
+    game.GameState.WorldState.SpawnChest(
         new()
         {
             Items = new Dictionary<int, int>(),
         },
         new()
         {
-            X = 7,
-            Y = 5,
+            Position = (7, 5),
         });
 
-    world.Player.Transform.X = 5;
-    world.Player.Transform.Y = 5;
-
+    game.GameState.WorldState.Player.Transform.Position = (5, 5);
     game.World = world;
 
     Camera3D camera = new()
@@ -95,15 +91,15 @@ RaylibResources.CacheAndInitializeAll();
         Up = Vector3.UnitY,
     };
 
-    world.OldPlayerX = world.Player.Transform.X;
-    world.OldPlayerY = world.Player.Transform.Y;
+    game.GameState.WorldState.OldPlayerX = game.GameState.WorldState.Player.Transform.Position.X;
+    game.GameState.WorldState.OldPlayerY = game.GameState.WorldState.Player.Transform.Position.Y;
 
-    camera.Position.X = world.Player.Transform.X;
-    camera.Position.Z = world.Player.Transform.Y;
+    camera.Position.X = game.GameState.WorldState.Player.Transform.Position.X;
+    camera.Position.Z = game.GameState.WorldState.Player.Transform.Position.Y;
 
     Vector3 cameraDirection;
     {
-        var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
+        var (X, Y) = Direction.ToInt32Tuple(game.GameState.WorldState.Player.Transform.Direction);
         cameraDirection = new(X, 0, Y);
     }
 
@@ -156,7 +152,7 @@ RaylibResources.CacheAndInitializeAll();
 
         // [FIXME]: BRUTAL fucking hack
         var isInBattle = false
-            || (game.StateAutomaton.CurrentState == game.BattleScreenWipe && game.CurrentScreenWipeContext.T > 0.75f)
+            || (game.StateAutomaton.CurrentState == game.BattleScreenWipe && game.GameState.BattleState.ScreenWipeState.T > 0.75f)
             || game.StateAutomaton.CurrentState == game.BattleStart
             || game.StateAutomaton.CurrentState == game.BattleStartPlayerAttack
             || game.StateAutomaton.CurrentState == game.BattlePlayerAiming
@@ -176,14 +172,14 @@ RaylibResources.CacheAndInitializeAll();
             Vector3 playerDirection3d;
 
             {
-                var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
+                var (X, Y) = Direction.ToInt32Tuple(game.GameState.WorldState.Player.Transform.Direction);
                 playerDirection3d = new(X, 0, Y);
             }
 
             camera.Position = Vector3.Lerp(
-                new(world.OldPlayerX, 0, world.OldPlayerY),
-                new(world.Player.Transform.X, 0, world.Player.Transform.Y),
-                world.CameraPositionLerpT);
+                new Vector3(game.GameState.WorldState.OldPlayerX, 0, game.GameState.WorldState.OldPlayerY),
+                new Vector3(game.GameState.WorldState.Player.Transform.Position.X, 0, game.GameState.WorldState.Player.Transform.Position.Y),
+                game.GameState.WorldState.CameraPositionLerpT);
 
             Quaternion cameraRotation = QuaternionFromAxisAngle(
                 Vector3.UnitY,
@@ -196,7 +192,7 @@ RaylibResources.CacheAndInitializeAll();
 
             Vector2 screenResolution = new(320, 240);
             float fTime = (float)timeContext.Time;
-            float screenWipeT = game.CurrentScreenWipeContext.T;
+            float screenWipeT = game.GameState.BattleState.ScreenWipeState.T;
 
             unsafe
             {
@@ -258,7 +254,7 @@ RaylibResources.CacheAndInitializeAll();
 
                     BeginShaderMode(RaylibResources.BaseShader);
                     {
-                        foreach (var spawnedChest in world.Chests)
+                        foreach (var spawnedChest in game.GameState.WorldState.Chests)
                         {
                             int subFrame = (int)(spawnedChest.Value.CurrentOpenness * 3);
 
@@ -266,7 +262,7 @@ RaylibResources.CacheAndInitializeAll();
                                 camera,
                                 RaylibResources.ChestAtlas,
                                 new Rectangle(subFrame * 32, 0, 32, 32),
-                                Make3D(new(spawnedChest.Transform.X, spawnedChest.Transform.Y)),
+                                Make3D(new(spawnedChest.Transform.Position.X, spawnedChest.Transform.Position.Y)),
                                 Vector3.UnitY,
                                 Vector2.One / 2f,
                                 new Vector2(0.25f, 0.5f),
@@ -280,12 +276,12 @@ RaylibResources.CacheAndInitializeAll();
 
                 if (isInBattle)
                 {
-                    (float X, float Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
+                    (float X, float Y) = Direction.ToInt32Tuple(game.GameState.WorldState.Player.Transform.Direction);
 
                     X /= 1.5f;
                     Y /= 1.5f;
-                    X += world.Player.Transform.X;
-                    Y += world.Player.Transform.Y;
+                    X += game.GameState.WorldState.Player.Transform.Position.X;
+                    Y += game.GameState.WorldState.Player.Transform.Position.Y;
 
                     Rlgl.DisableDepthTest();
                     {
@@ -301,6 +297,7 @@ RaylibResources.CacheAndInitializeAll();
                             0,
                             Color.White);
                     }
+                    Rlgl.EnableDepthTest();
                 }
             }
             EndMode3D();
@@ -317,10 +314,10 @@ RaylibResources.CacheAndInitializeAll();
             if (game.StateAutomaton.CurrentState == game.BattlePlayerAiming)
             {
                 DrawCircle(
-                    (int)(160 + (game.CurrentPlayerAimingStateContext.CurrentAimValue * 160)),
+                    (int)(160 + (game.GameState.BattleState.PlayerAimingState.CurrentAimValue * 160)),
                     120,
                     8,
-                    game.CurrentPlayerAimingStateContext.IsInRange()
+                    game.GameState.BattleState.PlayerAimingState.IsInRange()
                         ? Color.Green
                         : Color.RayWhite);
             }
@@ -343,7 +340,7 @@ RaylibResources.CacheAndInitializeAll();
                 DrawRectangle(0, renderTexture.Texture.Height - 48, renderTexture.Texture.Width, 48, Color.Black);
                 TextDraw(
                     RaylibResources.Font,
-                    game.CurrentDialogStateContext!.RunningLine.ToString(),
+                    game.GameState.DialogState.RunningLine.ToString(),
                     new Vector2(
                         renderTexture.Texture.Width,
                         renderTexture.Texture.Height

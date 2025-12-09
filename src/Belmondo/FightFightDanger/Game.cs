@@ -1,57 +1,19 @@
-using System.Text;
-
 namespace Belmondo.FightFightDanger;
 
 public class Game
 {
-    public struct BattleScreenWipeContext
-    {
-        public float T;
-    }
+    public GameState GameState = new();
 
-    public struct PlayerAimingStateContext
-    {
-        public (double, double) CurrentRange;
-        public double CurrentAimValue;
-
-        public readonly bool IsInRange() => CurrentAimValue >= CurrentRange.Item1 && CurrentAimValue <= CurrentRange.Item2;
-    }
-
-    public class DialogStateContext(string targetLine)
-    {
-        public string TargetLine = targetLine;
-        public StringBuilder RunningLine = new();
-        public float CurrentCharacterIndex;
-    }
-
-    private readonly Services _services;
-    private readonly TimeContext _timeContext;
+    public World World;
 
     //
-    // battle stats
+    // temp
     //
-
-    public static readonly BattleFoe.Stats GoonBattleStats = new()
-    {
-        Health = 5,
-        Damage = 1,
-    };
-
-    public World? World = null;
-    public BattleFoe? CurrentFoe = null;
     public ShakeStateContext? ShakeStateContext = null;
     public StateAutomaton StateAutomaton = new();
     public StateAutomaton FoeVisualStateAutomaton = new();
     public StateAutomaton DialogStateAutomaton = new();
     public Log Log = new(8);
-
-    //
-    // state contexts
-    //
-
-    public BattleScreenWipeContext CurrentScreenWipeContext;
-    public PlayerAimingStateContext CurrentPlayerAimingStateContext;
-    public DialogStateContext? CurrentDialogStateContext = null;
 
     //
     // playsim states
@@ -78,8 +40,7 @@ public class Game
 
     public Game(Services services, TimeContext timeContext)
     {
-        _services = services;
-        _timeContext = timeContext;
+        World = new(services, timeContext);
         ShakeStateContext = new(timeContext);
 
         ExploreState = new()
@@ -91,26 +52,23 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (World is not null)
+                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
-                    if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
-                    {
-                        var (X, Y) = Direction.ToInt32Tuple(World.Player.Transform.Direction);
-                        var desiredX = World.Player.Transform.X + X;
-                        var desiredY = World.Player.Transform.Y + Y;
+                    var (X, Y) = Direction.ToInt32Tuple(GameState.WorldState.Player.Transform.Direction);
+                    var desiredX = GameState.WorldState.Player.Transform.Position.X + X;
+                    var desiredY = GameState.WorldState.Player.Transform.Position.Y + Y;
 
-                        World.TryToInteractWithChest((desiredX, desiredY));
-                    }
+                    World.TryToInteractWithChest(ref GameState.WorldState, (desiredX, desiredY));
                 }
 
                 if (services.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
                 {
-                    CurrentFoe = new(GoonBattleStats);
+                    GameState.BattleState.Foe = new(BattleStats.Goon);
                     return State.Goto(BattleScreenWipe!);
                 }
 
-                UpdatePlayer();
-                World?.UpdateChests();
+                World.UpdatePlayer(ref GameState.WorldState);
+                World.UpdateChests(ref GameState.WorldState);
 
                 return State.Continue;
             }
@@ -120,15 +78,15 @@ public class Game
         {
             EnterFunction = () =>
             {
-                CurrentScreenWipeContext.T = 0;
+                GameState.BattleState.ScreenWipeState.T = 0;
                 services.AudioService.PlaySoundEffect(SoundEffect.BattleStart);
             },
 
             UpdateFunction = () =>
             {
-                CurrentScreenWipeContext.T += (float)timeContext.Delta;
+                GameState.BattleState.ScreenWipeState.T += (float)timeContext.Delta;
 
-                if (CurrentScreenWipeContext.T >= 1.5f)
+                if (GameState.BattleState.ScreenWipeState.T >= 1.5f)
                 {
                     return State.Goto(BattleStart!);
                 }
@@ -191,15 +149,15 @@ public class Game
             {
                 Log.Clear();
                 Log.Add("Align the circle with the enemy then press enter!");
-                CurrentPlayerAimingStateContext.CurrentRange = (-0.3, 0.3);
+                GameState.BattleState.PlayerAimingState.CurrentRange = (-0.3, 0.3);
             },
             UpdateFunction = () =>
             {
-                CurrentPlayerAimingStateContext.CurrentAimValue = Math.Sin(timeContext.Time * 4);
+                GameState.BattleState.PlayerAimingState.CurrentAimValue = Math.Sin(timeContext.Time * 4);
 
                 if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                 {
-                    if (!CurrentPlayerAimingStateContext.IsInRange())
+                    if (!GameState.BattleState.PlayerAimingState.IsInRange())
                     {
                         return State.Goto(BattlePlayerMissed!);
                     }
@@ -233,15 +191,12 @@ public class Game
         {
             EnterFunction = () =>
             {
-                if (CurrentFoe is not null)
-                {
-                    CurrentFoe.Current.Health -= 1;
-                    Log.Add("Player deals 1 damage!");
+                GameState.BattleState.Foe.Current.Health -= 1;
+                Log.Add("Player deals 1 damage!");
 
-                    if (CurrentFoe.Current.Health <= 0)
-                    {
-                        Log.Add("Enemy defeated.");
-                    }
+                if (GameState.BattleState.Foe.Current.Health <= 0)
+                {
+                    Log.Add("Enemy defeated.");
                 }
 
                 services.AudioService.PlaySoundEffect(SoundEffect.Smack);
@@ -249,7 +204,7 @@ public class Game
             },
             UpdateFunction = () =>
             {
-                if (CurrentFoe is not null && CurrentFoe.Current.Health <= 0)
+                if (GameState.BattleState.Foe.Current.Health <= 0)
                 {
                     if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
                     {
@@ -328,28 +283,25 @@ public class Game
         {
             UpdateFunction = () =>
             {
-                if (CurrentDialogStateContext is not null)
+                GameState.DialogState.CurrentCharacterIndex += (float)timeContext.Delta * 30f;
+
+                if (GameState.DialogState.CurrentCharacterIndex >= GameState.DialogState.TargetLine?.Length)
                 {
-                    CurrentDialogStateContext.CurrentCharacterIndex += (float)timeContext.Delta * 30f;
+                    return State.Goto(DialogFinishedState!);
+                }
 
-                    if (CurrentDialogStateContext.CurrentCharacterIndex >= CurrentDialogStateContext.TargetLine.Length)
-                    {
-                        return State.Goto(DialogFinishedState!);
-                    }
+                if ((int)GameState.DialogState.CurrentCharacterIndex >= GameState.DialogState.RunningLine.Length)
+                {
+                    GameState.DialogState.RunningLine.Append(GameState.DialogState.TargetLine?[(int)GameState.DialogState.CurrentCharacterIndex]);
+                    services.AudioService.PlaySoundEffect(SoundEffect.Talk);
+                }
 
-                    if ((int)CurrentDialogStateContext.CurrentCharacterIndex >= CurrentDialogStateContext.RunningLine.Length)
-                    {
-                        CurrentDialogStateContext.RunningLine.Append(CurrentDialogStateContext.TargetLine[(int)CurrentDialogStateContext.CurrentCharacterIndex]);
-                        services.AudioService.PlaySoundEffect(SoundEffect.Talk);
-                    }
+                if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
+                {
+                    GameState.DialogState.RunningLine.Clear();
+                    GameState.DialogState.RunningLine.Append(GameState.DialogState.TargetLine);
 
-                    if (services.InputService.ActionWasJustPressed(InputAction.Confirm))
-                    {
-                        CurrentDialogStateContext.RunningLine.Clear();
-                        CurrentDialogStateContext.RunningLine.Append(CurrentDialogStateContext.TargetLine);
-
-                        return State.Goto(DialogFinishedState!);
-                    }
+                    return State.Goto(DialogFinishedState!);
                 }
 
                 return State.Continue;
@@ -365,60 +317,6 @@ public class Game
         };
     }
 
-    private void UpdatePlayer()
-    {
-        if (World is World world)
-        {
-            if (_services.InputService.ActionWasJustPressed(InputAction.LookRight))
-            {
-                world.OldPlayerDirection = world.Player.Transform.Direction;
-                world.CameraDirectionLerpT = 0;
-                world.Player.Transform.Direction++;
-            }
-            else if (_services.InputService.ActionWasJustPressed(InputAction.LookLeft))
-            {
-                world.OldPlayerDirection = world.Player.Transform.Direction;
-                world.CameraDirectionLerpT = 0;
-                world.Player.Transform.Direction--;
-            }
-
-            world.Player.Transform.Direction = Direction.Clamped(world.Player.Transform.Direction);
-            world.CameraDirectionLerpT = MathF.Min(world.CameraDirectionLerpT + (float)_timeContext.Delta, 1);
-
-            int? moveDirection = null;
-
-            if (_services.InputService.ActionIsPressed(InputAction.MoveForward))
-            {
-                moveDirection = Direction.Clamped(world.Player.Transform.Direction);
-            }
-            else if (_services.InputService.ActionIsPressed(InputAction.MoveBack))
-            {
-                moveDirection = Direction.Clamped(world.Player.Transform.Direction + 2);
-            }
-            else if (_services.InputService.ActionIsPressed(InputAction.MoveLeft))
-            {
-                moveDirection = Direction.Clamped(world.Player.Transform.Direction + 3);
-            }
-            else if (_services.InputService.ActionIsPressed(InputAction.MoveRight))
-            {
-                moveDirection = Direction.Clamped(world.Player.Transform.Direction + 1);
-            }
-
-            if (moveDirection is not null && world.Player.Value.Current.WalkCooldown == 0)
-            {
-                world.CameraPositionLerpT = 0;
-                world.OldPlayerX = world.Player.Transform.X;
-                world.OldPlayerY = world.Player.Transform.Y;
-                _services.AudioService.PlaySoundEffect(SoundEffect.Step);
-                world.Player.Value.Current.WalkCooldown = world.Player.Value.Default.WalkCooldown;
-                world.TryMove(ref world.Player.Transform, (int)moveDirection);
-            }
-
-            world.Player.Value.Current.WalkCooldown = Math.Max(world.Player.Value.Current.WalkCooldown - _timeContext.Delta, 0);
-            world.CameraPositionLerpT = MathF.Min(world.CameraPositionLerpT + ((1.0F / (float)world.Player.Value.Default.WalkCooldown) * (float)_timeContext.Delta), 1);
-        }
-    }
-
     public void Update()
     {
         StateAutomaton.Update();
@@ -429,7 +327,7 @@ public class Game
 
     public void Say(string line)
     {
-        CurrentDialogStateContext = new(line);
+        GameState.DialogState.TargetLine = line;
         DialogStateAutomaton.CurrentState = DialogSpeakingState;
     }
 }

@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public sealed class BattleFoe(BattleFoe.Stats stats)
+public struct BattleFoe(BattleFoe.Stats stats)
 {
     public struct Stats
     {

@@ -1,8 +1,9 @@
 namespace Belmondo.FightFightDanger;
 
+using Position = (int X, int Y);
+
 public struct Transform
 {
-    public int X;
-    public int Y;
+    public Position Position;
     public int Direction;
 }
