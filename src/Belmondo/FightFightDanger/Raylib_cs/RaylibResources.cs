@@ -376,6 +376,7 @@ public static class RaylibResources
     public static Texture2D EnemyAtlas { get; private set; }
     public static Texture2D UIAtlasTexture { get; private set; }
     public static Texture2D LUTTexture { get; private set; }
+    public static Texture2D MugshotTexture { get; private set; }
     public static Material TileMaterial { get; private set; }
     public static Material FloorMaterial { get; private set; }
     public static Mesh TileMesh { get; private set; }
@@ -413,6 +414,7 @@ public static class RaylibResources
         UIAtlasTexture = LoadTexture("static/textures/ui.png");
         EnemyTexture = LoadTexture("static/textures/enemy.png");
         LUTTexture = LoadTexture("static/textures/lut.png");
+        MugshotTexture = LoadTexture("static/textures/mugshot.png");
         EnemyAtlas = LoadTexture("static/textures/enemy-atlas.png");
         TileMaterial = LoadMaterialDefault();
         FloorMaterial = LoadMaterialDefault();
@@ -458,6 +460,7 @@ public static class RaylibResources
         UnloadTexture(ChestAtlas);
         UnloadTexture(UIAtlasTexture);
         UnloadTexture(LUTTexture);
+        UnloadTexture(MugshotTexture);
         UnloadModel(TileModel);
         UnloadModel(FloorModel);
         UnloadShader(BaseShader);

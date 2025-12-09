@@ -18,6 +18,11 @@ static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 positio
     DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
 }
 
+float battleEnemyBillboardShakeT = 0;
+float battleEnemyDieT = 0;
+int battleEnemyFrame = 0;
+float screenShakeT = 0;
+
 SetConfigFlags(ConfigFlags.WindowResizable);
 
 InitWindow(1024, 768, "Fight Fight Danger");
@@ -37,6 +42,24 @@ RaylibResources.CacheAndInitializeAll();
     TimeContext timeContext = new();
 
     Game game = new(services, timeContext);
+
+    game.EnemyDamaged += () =>
+    {
+        battleEnemyBillboardShakeT = 0.25f;
+        battleEnemyFrame = 2;
+    };
+
+    game.EnemyDied += () =>
+    {
+        battleEnemyDieT = 1f;
+        battleEnemyFrame = 3;
+    };
+
+    game.PlayerDamaged += () =>
+    {
+        screenShakeT = 0.25f;
+    };
+
     World world = new(services, timeContext);
 
     world.TileMap = new int[,]
@@ -149,6 +172,14 @@ RaylibResources.CacheAndInitializeAll();
         timeContext.Delta = delta;
         timeContext.Time += delta;
         game.Update();
+        battleEnemyBillboardShakeT = Math.Max(battleEnemyBillboardShakeT - ((float)timeContext.Delta), 0);
+        battleEnemyDieT = Math.Max(battleEnemyDieT - ((float)timeContext.Delta / 2f), 0);
+        screenShakeT = Math.Max(screenShakeT - ((float)timeContext.Delta), 0);
+
+        if (battleEnemyBillboardShakeT <= 0 && battleEnemyDieT == 0)
+        {
+            battleEnemyFrame = 0;
+        }
 
         // [FIXME]: BRUTAL fucking hack
         var isInBattle = false
@@ -159,7 +190,8 @@ RaylibResources.CacheAndInitializeAll();
             || game.StateAutomaton.CurrentState == game.BattlePlayerMissed
             || game.StateAutomaton.CurrentState == game.BattleEnemyStartAttack
             || game.StateAutomaton.CurrentState == game.BattleEnemyAttack
-            || game.StateAutomaton.CurrentState == game.BattlePlayerAttack;
+            || game.StateAutomaton.CurrentState == game.BattlePlayerAttack
+            || game.StateAutomaton.CurrentState == game.BattlePlayerItem;
 
         //
         // render
@@ -283,14 +315,26 @@ RaylibResources.CacheAndInitializeAll();
                     X += game.GameState.WorldState.Player.Transform.Position.X;
                     Y += game.GameState.WorldState.Player.Transform.Position.Y;
 
+                    var offs = Vector3.Zero;
+
+                    if (battleEnemyBillboardShakeT > 0)
+                    {
+                        offs = new((Random.Shared.NextSingle() * 2 - 1) / 20f, 0, (Random.Shared.NextSingle() * 2 - 1) / 20f);
+                    }
+
+                    if (game.GameState.BattleState.Foe.Current.Health <= 0)
+                    {
+                        offs.Y = Kryz.Tweening.EasingFunctions.InOutCubic(Kryz.Tweening.EasingFunctions.InOutCubic(battleEnemyDieT)) - 1f;
+                    }
+
                     Rlgl.DisableDepthTest();
                     {
                         DrawBillboardPro(
                             camera,
                             RaylibResources.EnemyAtlas,
-                            new(0, 0, 64, 64),
+                            new(battleEnemyFrame * 64, 0, 64, 64),
                             Make3D(new(X, Y))
-                                + game.ShakeStateContext.GetValueOrDefault().Offset,
+                                + offs,
                             Vector3.UnitY,
                             Vector2.One,
                             Vector2.One / 2f,
@@ -351,6 +395,17 @@ RaylibResources.CacheAndInitializeAll();
                     )
                 );
             }
+
+            // draw hud
+            DrawRectangle(0, 240 - 32, 320, 32, new(16, 16, 16));
+            DrawTexture(RaylibResources.MugshotTexture, 0, 240 - 32, Color.White);
+            DrawTextEx(
+                RaylibResources.Font,
+                game.GameState.WorldState.Player.Value.RunningHealth.ToString(),
+                new(32, 240 - 15),
+                15,
+                1,
+                Color.RayWhite);
         }
         EndTextureMode();
 
@@ -368,6 +423,13 @@ RaylibResources.CacheAndInitializeAll();
                     lutSize,
                     ShaderUniformDataType.Vec2);
 
+                Vector2 shakeOffs = Vector2.Zero;
+
+                if (screenShakeT > 0)
+                {
+                    shakeOffs = new Vector2(Random.Shared.NextSingle(), Random.Shared.NextSingle()) * 8;
+                }
+
                 DrawTexturePro(
                     renderTexture.Texture,
                     new Rectangle()
@@ -384,7 +446,7 @@ RaylibResources.CacheAndInitializeAll();
                     },
                     // [TODO]: cache screen size values.
                     // [INFO]: the x coordinates are flipped so plus goes left and minus goes right
-                    new Vector2((-GetScreenWidth() / 2f) + (320 / 2f * (GetScreenHeight() / 240f)), 0),
+                    new Vector2((-GetScreenWidth() / 2f) + (320 / 2f * (GetScreenHeight() / 240f)), 0) + shakeOffs,
                     0,
                     Color.White
                 );

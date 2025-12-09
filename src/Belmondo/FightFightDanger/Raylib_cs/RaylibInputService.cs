@@ -14,11 +14,12 @@ public sealed class RaylibInputService : IInputService
         InputAction.LookRight => IsKeyDown(KeyboardKey.Right),
         InputAction.LookLeft => IsKeyDown(KeyboardKey.Left),
         InputAction.Confirm => IsKeyDown(KeyboardKey.Space),
-        InputAction.Cancel => IsKeyDown(KeyboardKey.Escape),
+        InputAction.Cancel => IsKeyDown(KeyboardKey.Backspace),
         InputAction.DebugBattleScreen => IsKeyDown(KeyboardKey.B),
         InputAction.BattleAttack => IsKeyDown(KeyboardKey.A),
         InputAction.BattleDefend => IsKeyDown(KeyboardKey.D),
         InputAction.BattleRun => IsKeyDown(KeyboardKey.R),
+        InputAction.BattleItem => IsKeyDown(KeyboardKey.I),
         _ => false,
     };
 
@@ -31,11 +32,12 @@ public sealed class RaylibInputService : IInputService
         InputAction.LookRight => IsKeyPressed(KeyboardKey.Right),
         InputAction.LookLeft => IsKeyPressed(KeyboardKey.Left),
         InputAction.Confirm => IsKeyPressed(KeyboardKey.Space),
-        InputAction.Cancel => IsKeyPressed(KeyboardKey.Escape),
+        InputAction.Cancel => IsKeyPressed(KeyboardKey.Backspace),
         InputAction.DebugBattleScreen => IsKeyPressed(KeyboardKey.B),
         InputAction.BattleAttack => IsKeyPressed(KeyboardKey.A),
         InputAction.BattleDefend => IsKeyPressed(KeyboardKey.D),
         InputAction.BattleRun => IsKeyPressed(KeyboardKey.R),
+        InputAction.BattleItem => IsKeyPressed(KeyboardKey.I),
         _ => false,
     };
 
@@ -48,11 +50,12 @@ public sealed class RaylibInputService : IInputService
         InputAction.LookRight => IsKeyReleased(KeyboardKey.Right),
         InputAction.LookLeft => IsKeyReleased(KeyboardKey.Left),
         InputAction.Confirm => IsKeyReleased(KeyboardKey.Space),
-        InputAction.Cancel => IsKeyReleased(KeyboardKey.Escape),
+        InputAction.Cancel => IsKeyReleased(KeyboardKey.Backspace),
         InputAction.DebugBattleScreen => IsKeyReleased(KeyboardKey.B),
         InputAction.BattleAttack => IsKeyReleased(KeyboardKey.A),
         InputAction.BattleDefend => IsKeyReleased(KeyboardKey.D),
         InputAction.BattleRun => IsKeyReleased(KeyboardKey.R),
+        InputAction.BattleItem => IsKeyPressed(KeyboardKey.I),
         _ => false,
     };
 }

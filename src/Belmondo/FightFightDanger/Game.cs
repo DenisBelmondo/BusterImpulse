@@ -2,6 +2,13 @@ namespace Belmondo.FightFightDanger;
 
 public class Game
 {
+    public event Action? PlayerDamaged;
+    public event Action? EnemyDamaged;
+    public event Action? EnemyDied;
+
+    private readonly TimeContext? _timeContext;
+    private double _healthTickDownAccumulator;
+
     public GameState GameState = new();
 
     public World World;
@@ -27,6 +34,7 @@ public class Game
     public State BattlePlayerAttack;
     public State BattlePlayerMissed;
     public State BattlePlayerDefend;
+    public State BattlePlayerItem;
     public State BattlePlayerRun;
     public State BattleEnemyStartAttack;
     public State BattleEnemyAttack;
@@ -40,6 +48,8 @@ public class Game
 
     public Game(Services services, TimeContext timeContext)
     {
+        _timeContext = timeContext;
+
         World = new(services, timeContext);
         ShakeStateContext = new(timeContext);
 
@@ -64,6 +74,7 @@ public class Game
                 if (services.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
                 {
                     GameState.BattleState.Foe = new(FightFightDangerBattleStats.Goon);
+
                     return State.Goto(BattleScreenWipe!);
                 }
 
@@ -103,9 +114,11 @@ public class Game
                 Log.Clear();
                 Log.Add("What will you do?");
                 Log.Add("A: Attack");
+                Log.Add("I: Items");
                 Log.Add("D: Defend");
                 Log.Add("R: Run");
             },
+
             UpdateFunction = () =>
             {
                 if (services.InputService.ActionWasJustPressed(InputAction.BattleAttack))
@@ -119,6 +132,31 @@ public class Game
                 else if (services.InputService.ActionWasJustPressed(InputAction.BattleRun))
                 {
                     return State.Goto(BattlePlayerRun!);
+                }
+                else if (services.InputService.ActionWasJustPressed(InputAction.BattleItem))
+                {
+                    return State.Goto(BattlePlayerItem!);
+                }
+
+                return State.Continue;
+            },
+        };
+
+        BattlePlayerItem = new()
+        {
+            EnterFunction = () =>
+            {
+                Log.Clear();
+                Log.Add("1: Chicken Leg");
+                Log.Add("2: Whole Chicken");
+                Log.Add("Backspace: Cancel");
+            },
+
+            UpdateFunction = () =>
+            {
+                if (services.InputService.ActionWasJustPressed(InputAction.Cancel))
+                {
+                    return State.Goto(BattleStart);
                 }
 
                 return State.Continue;
@@ -192,10 +230,12 @@ public class Game
             EnterFunction = () =>
             {
                 GameState.BattleState.Foe.Current.Health -= 1;
+                EnemyDamaged?.Invoke();
                 Log.Add("Player deals 1 damage!");
 
                 if (GameState.BattleState.Foe.Current.Health <= 0)
                 {
+                    EnemyDied?.Invoke();
                     Log.Add("Enemy defeated.");
                 }
 
@@ -266,7 +306,12 @@ public class Game
         {
             EnterFunction = () =>
             {
-                Log.Add("\tEnemy deals 1 damage!");
+                int damage = Random.Shared.Next(0, 20);
+
+                GameState.WorldState.Player.Value.Current.Health -= damage;
+                services.AudioService.PlaySoundEffect(SoundEffect.Smack);
+                PlayerDamaged?.Invoke();
+                Log.Add($"\tEnemy deals {damage} damage!");
             },
             UpdateFunction = () =>
             {
@@ -319,6 +364,18 @@ public class Game
 
     public void Update()
     {
+        _healthTickDownAccumulator += _timeContext.Delta;
+
+        if (_healthTickDownAccumulator >= 0.5f)
+        {
+            if (GameState.WorldState.Player.Value.Current.Health != GameState.WorldState.Player.Value.RunningHealth)
+            {
+                GameState.WorldState.Player.Value.RunningHealth += MathF.Sign(GameState.WorldState.Player.Value.Current.Health - GameState.WorldState.Player.Value.RunningHealth);
+            }
+
+            _healthTickDownAccumulator = 0;
+        }
+
         StateAutomaton.Update();
         FoeVisualStateAutomaton.Update();
         DialogStateAutomaton.Update();
