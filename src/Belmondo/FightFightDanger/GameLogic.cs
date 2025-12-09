@@ -70,13 +70,13 @@ public static class GameLogic
         {
             var chest = spawnedChest.Value;
 
-            if (chest.Current.Status == ChestStatus.Opening)
+            if (chest.Status == ChestStatus.Opening)
             {
-                chest.Current.Openness += (float)gameContext.Delta * 2;
+                chest.Openness += (float)gameContext.Delta * 2;
 
-                if (chest.Current.Openness >= 1)
+                if (chest.Openness >= 1)
                 {
-                    chest.Current.Openness = 1;
+                    chest.Openness = 1;
                 }
             }
 
@@ -93,12 +93,12 @@ public static class GameLogic
 
         var spawnedChest = world.Chests[chestID];
 
-        if (spawnedChest.Value.Current.Status != ChestStatus.Idle)
+        if (spawnedChest.Value.Status != ChestStatus.Idle)
         {
             return false;
         }
 
-        spawnedChest.Value.Current.Status = ChestStatus.Opening;
+        spawnedChest.Value.Status = ChestStatus.Opening;
         world.Chests[chestID] = spawnedChest;
         gameContext.AudioService.PlaySoundEffect(SoundEffect.OpenChest);
 
