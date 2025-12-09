@@ -2,6 +2,7 @@ namespace Belmondo.FightFightDanger;
 
 public enum MusicTrack
 {
-    Wandering,
+    WanderingStage1,
+    WanderingStage2,
     Battle,
 }

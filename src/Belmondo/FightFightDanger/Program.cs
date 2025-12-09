@@ -256,22 +256,26 @@ RaylibResources.CacheAndInitializeAll();
                         }
                     }
 
-                    foreach (var spawnedChest in world.Chests)
+                    BeginShaderMode(RaylibResources.BaseShader);
                     {
-                        int subFrame = (int)(spawnedChest.Value.CurrentOpenness * 3);
+                        foreach (var spawnedChest in world.Chests)
+                        {
+                            int subFrame = (int)(spawnedChest.Value.CurrentOpenness * 3);
 
-                        DrawBillboardPro(
-                            camera,
-                            RaylibResources.ChestAtlas,
-                            new Rectangle(subFrame * 32, 0, 32, 32),
-                            Make3D(new(spawnedChest.Transform.X, spawnedChest.Transform.Y)),
-                            Vector3.UnitY,
-                            Vector2.One / 2f,
-                            new Vector2(0.25f, 0.5f),
-                            0,
-                            Color.White
-                        );
+                            DrawBillboardPro(
+                                camera,
+                                RaylibResources.ChestAtlas,
+                                new Rectangle(subFrame * 32, 0, 32, 32),
+                                Make3D(new(spawnedChest.Transform.X, spawnedChest.Transform.Y)),
+                                Vector3.UnitY,
+                                Vector2.One / 2f,
+                                new Vector2(0.25f, 0.5f),
+                                0,
+                                Color.White
+                            );
+                        }
                     }
+                    EndShaderMode();
                 }
 
                 if (isInBattle)

@@ -62,61 +62,6 @@ public sealed class World(Services services, TimeContext timeContext)
         return true;
     }
 
-    public void UpdatePlayer()
-    {
-        // begin player update
-
-        if (services.InputService.ActionWasJustPressed(InputAction.LookRight))
-        {
-            OldPlayerDirection = Player.Transform.Direction;
-            CameraDirectionLerpT = 0;
-            Player.Transform.Direction++;
-        }
-        else if (services.InputService.ActionWasJustPressed(InputAction.LookLeft))
-        {
-            OldPlayerDirection = Player.Transform.Direction;
-            CameraDirectionLerpT = 0;
-            Player.Transform.Direction--;
-        }
-
-        Player.Transform.Direction = Direction.Clamped(Player.Transform.Direction);
-        CameraDirectionLerpT = MathF.Min(CameraDirectionLerpT + (float)timeContext.Delta, 1);
-
-        int? moveDirection = null;
-
-        if (services.InputService.ActionIsPressed(InputAction.MoveForward))
-        {
-            moveDirection = Direction.Clamped(Player.Transform.Direction);
-        }
-        else if (services.InputService.ActionIsPressed(InputAction.MoveBack))
-        {
-            moveDirection = Direction.Clamped(Player.Transform.Direction + 2);
-        }
-        else if (services.InputService.ActionIsPressed(InputAction.MoveLeft))
-        {
-            moveDirection = Direction.Clamped(Player.Transform.Direction + 3);
-        }
-        else if (services.InputService.ActionIsPressed(InputAction.MoveRight))
-        {
-            moveDirection = Direction.Clamped(Player.Transform.Direction + 1);
-        }
-
-        if (moveDirection is not null && Player.Value.Current.WalkCooldown == 0)
-        {
-            CameraPositionLerpT = 0;
-            OldPlayerX = Player.Transform.X;
-            OldPlayerY = Player.Transform.Y;
-            services.AudioService.PlaySoundEffect(SoundEffect.Step);
-            Player.Value.Current.WalkCooldown = Player.Value.Default.WalkCooldown;
-            TryMove(ref Player.Transform, (int)moveDirection);
-        }
-
-        Player.Value.Current.WalkCooldown = Math.Max(Player.Value.Current.WalkCooldown - timeContext.Delta, 0);
-        CameraPositionLerpT = MathF.Min(CameraPositionLerpT + ((1.0F / (float)Player.Value.Default.WalkCooldown) * (float)timeContext.Delta), 1);
-
-        // end player update
-    }
-
     public void SpawnChest(Chest chest, Transform transform)
     {
         ChestMap.Add((transform.X, transform.Y), Chests.Count);

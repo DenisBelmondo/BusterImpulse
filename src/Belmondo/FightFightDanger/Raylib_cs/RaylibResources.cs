@@ -38,6 +38,9 @@ public static class RaylibResources
     """
         #version 330
 
+        #define fog_start 0
+        #define fog_end 20
+
         // Input vertex attributes (from vertex shader)
         in vec2 fragTexCoord;
         in vec4 fragColor;
@@ -51,6 +54,28 @@ public static class RaylibResources
 
         // NOTE: Add your custom variables here
 
+        // All components are in the range [0...1], including hue.
+        vec3 rgb2hsv(vec3 c) {
+            vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+            vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+            vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+            float d = q.x - min(q.w, q.y);
+            float e = 1.0e-10;
+            return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+        }
+
+        // All components are in the range [0…1], including hue.
+        vec3 hsv2rgb(vec3 c) {
+            vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+            vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+            return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+        }
+
+        float linearize(float depth, float near, float far) {
+            return (2.0 * near * far) / (far + near - depth * (far - near));
+        }
+
         void main() {
             // Texel color fetching from texture sampler
             vec4 texelColor = texture(texture0, fragTexCoord);
@@ -60,7 +85,16 @@ public static class RaylibResources
             // final color is the color from the texture
             //    times the tint color (colDiffuse)
             //    times the fragment color (interpolated vertex color)
-            finalColor = texelColor*colDiffuse*fragColor;
+            vec4 rgba = texelColor*colDiffuse*fragColor;
+            vec3 rgb = rgba.rgb;
+
+            float linearDepth = linearize(gl_FragCoord.z, 0.05, 4000.0);
+            float fog_factor = (linearDepth - fog_start) / (fog_end - fog_start);
+            fog_factor = clamp(fog_factor, 0.0, 1.0); // Clamp to ensure valid range
+
+            rgba.rgb = mix(rgba.rgb, vec3(0), fog_factor);
+
+            finalColor = rgba;
         }
         """;
 
@@ -329,6 +363,7 @@ public static class RaylibResources
         }
         """;
 
+    public static Shader BaseShader { get; private set; }
     public static Shader SurfaceShader { get; private set; }
     public static Shader PlasmaShader { get; private set; }
     public static Shader ScreenTransitionShader { get; private set; }
@@ -353,12 +388,14 @@ public static class RaylibResources
     public static Sound BattleStartSound { get; private set; }
     public static Sound OpenChestSound { get; private set; }
     public static Sound TalkSound { get; private set; }
-    public static Music Music { get; private set; }
+    public static Music Stage1WanderingMusic { get; private set; }
+    public static Music Stage2WanderingMusic { get; private set; }
     public static Music BattleMusic { get; private set; }
     public static Font Font { get; private set; }
 
     public static void CacheAndInitializeAll()
     {
+        BaseShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, BASE_FRAGMENT_SHADER_SOURCE);
         SurfaceShader = LoadShaderFromMemory(SURFACE_VERTEX_SHADER_SOURCE, SURFACE_FRAGMENT_SHADER_SOURCE);
         PlasmaShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, PLASMA_FRAGMENT_SHADER_SOURCE);
         ScreenTransitionShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE);
@@ -384,7 +421,8 @@ public static class RaylibResources
         PlaneMesh = GenMeshPlane(1000, 1000, 1, 1);
         FloorModel = LoadModelFromMesh(PlaneMesh);
         CeilingModel = LoadModelFromMesh(PlaneMesh);
-        Music = LoadMusicStream("static/music/ronde.mp3");
+        Stage1WanderingMusic = LoadMusicStream("static/music/ronde.mp3");
+        Stage2WanderingMusic = LoadMusicStream("static/music/draculas-tears.mp3");
         BattleMusic = LoadMusicStream("static/music/morgan.mp3");
         Font = LoadFont("static/fonts/pixel-font-15.png");
         StepSound = LoadSound("static/sounds/step.wav");
@@ -412,7 +450,8 @@ public static class RaylibResources
         UnloadSound(BattleStartSound);
         UnloadSound(OpenChestSound);
         UnloadSound(TalkSound);
-        UnloadMusicStream(Music);
+        UnloadMusicStream(Stage1WanderingMusic);
+        UnloadMusicStream(Stage2WanderingMusic);
         UnloadMusicStream(BattleMusic);
         UnloadTexture(EnemyTexture);
         UnloadTexture(EnemyAtlas);
@@ -421,6 +460,7 @@ public static class RaylibResources
         UnloadTexture(LUTTexture);
         UnloadModel(TileModel);
         UnloadModel(FloorModel);
+        UnloadShader(BaseShader);
         UnloadShader(SurfaceShader);
         UnloadShader(PlasmaShader);
         UnloadShader(ScreenTransitionShader);

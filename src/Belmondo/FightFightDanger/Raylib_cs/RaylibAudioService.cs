@@ -31,7 +31,8 @@ public sealed class RaylibAudioService : IAudioService
     {
         Music? maybeNewMusic = musicTrack switch
         {
-            MusicTrack.Wandering => RaylibResources.Music,
+            MusicTrack.WanderingStage1 => RaylibResources.Stage1WanderingMusic,
+            MusicTrack.WanderingStage2 => RaylibResources.Stage2WanderingMusic,
             MusicTrack.Battle => RaylibResources.BattleMusic,
             _ => null,
         };
@@ -40,7 +41,15 @@ public sealed class RaylibAudioService : IAudioService
         {
             if (_maybeCurrentMusicAndTrack is MusicAndTrack musicAndTrack)
             {
-                StopMusicStream(musicAndTrack.Music);
+                unsafe
+                {
+                    if (music.Stream == musicAndTrack.Music.Stream)
+                    {
+                        return;
+                    }
+
+                    StopMusicStream(musicAndTrack.Music);
+                }
             }
 
             _maybeCurrentMusicAndTrack = (MusicAndTrack?)(musicTrack, music);

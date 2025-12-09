@@ -24,6 +24,9 @@ public class Game
         public float CurrentCharacterIndex;
     }
 
+    private readonly Services _services;
+    private readonly TimeContext _timeContext;
+
     //
     // battle stats
     //
@@ -75,6 +78,8 @@ public class Game
 
     public Game(Services services, TimeContext timeContext)
     {
+        _services = services;
+        _timeContext = timeContext;
         ShakeStateContext = new(timeContext);
 
         ExploreState = new()
@@ -82,7 +87,7 @@ public class Game
             EnterFunction = () =>
             {
                 Log.Clear();
-                services.AudioService.ChangeMusic(MusicTrack.Wandering);
+                services.AudioService.ChangeMusic(MusicTrack.WanderingStage1);
             },
             UpdateFunction = () =>
             {
@@ -104,7 +109,7 @@ public class Game
                     return State.Goto(BattleScreenWipe!);
                 }
 
-                World?.UpdatePlayer();
+                UpdatePlayer();
                 World?.UpdateChests();
 
                 return State.Continue;
@@ -358,6 +363,60 @@ public class Game
                 return State.Continue;
             }
         };
+    }
+
+    private void UpdatePlayer()
+    {
+        if (World is World world)
+        {
+            if (_services.InputService.ActionWasJustPressed(InputAction.LookRight))
+            {
+                world.OldPlayerDirection = world.Player.Transform.Direction;
+                world.CameraDirectionLerpT = 0;
+                world.Player.Transform.Direction++;
+            }
+            else if (_services.InputService.ActionWasJustPressed(InputAction.LookLeft))
+            {
+                world.OldPlayerDirection = world.Player.Transform.Direction;
+                world.CameraDirectionLerpT = 0;
+                world.Player.Transform.Direction--;
+            }
+
+            world.Player.Transform.Direction = Direction.Clamped(world.Player.Transform.Direction);
+            world.CameraDirectionLerpT = MathF.Min(world.CameraDirectionLerpT + (float)_timeContext.Delta, 1);
+
+            int? moveDirection = null;
+
+            if (_services.InputService.ActionIsPressed(InputAction.MoveForward))
+            {
+                moveDirection = Direction.Clamped(world.Player.Transform.Direction);
+            }
+            else if (_services.InputService.ActionIsPressed(InputAction.MoveBack))
+            {
+                moveDirection = Direction.Clamped(world.Player.Transform.Direction + 2);
+            }
+            else if (_services.InputService.ActionIsPressed(InputAction.MoveLeft))
+            {
+                moveDirection = Direction.Clamped(world.Player.Transform.Direction + 3);
+            }
+            else if (_services.InputService.ActionIsPressed(InputAction.MoveRight))
+            {
+                moveDirection = Direction.Clamped(world.Player.Transform.Direction + 1);
+            }
+
+            if (moveDirection is not null && world.Player.Value.Current.WalkCooldown == 0)
+            {
+                world.CameraPositionLerpT = 0;
+                world.OldPlayerX = world.Player.Transform.X;
+                world.OldPlayerY = world.Player.Transform.Y;
+                _services.AudioService.PlaySoundEffect(SoundEffect.Step);
+                world.Player.Value.Current.WalkCooldown = world.Player.Value.Default.WalkCooldown;
+                world.TryMove(ref world.Player.Transform, (int)moveDirection);
+            }
+
+            world.Player.Value.Current.WalkCooldown = Math.Max(world.Player.Value.Current.WalkCooldown - _timeContext.Delta, 0);
+            world.CameraPositionLerpT = MathF.Min(world.CameraPositionLerpT + ((1.0F / (float)world.Player.Value.Default.WalkCooldown) * (float)_timeContext.Delta), 1);
+        }
     }
 
     public void Update()
