@@ -18,10 +18,7 @@ static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 positio
     DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
 }
 
-float battleEnemyBillboardShakeT = 0;
-float battleEnemyDieT = 0;
-int battleEnemyFrame = 0;
-float screenShakeT = 0;
+ViewModel viewModel = new();
 
 SetConfigFlags(ConfigFlags.WindowResizable);
 
@@ -44,22 +41,9 @@ RaylibResources.CacheAndInitializeAll();
         GameContext = gameContext,
     };
 
-    game.EnemyDamaged += () =>
-    {
-        battleEnemyBillboardShakeT = 0.25f;
-        battleEnemyFrame = 2;
-    };
-
-    game.EnemyDied += () =>
-    {
-        battleEnemyDieT = 1f;
-        battleEnemyFrame = 3;
-    };
-
-    game.PlayerDamaged += () =>
-    {
-        screenShakeT = 0.25f;
-    };
+    game.EnemyDamaged += viewModel.ShakeBattleEnemy;
+    game.EnemyDied += viewModel.KillBattleEnemy;
+    game.PlayerDamaged += viewModel.ShakeScreen;
 
     World world = new();
 
@@ -107,7 +91,7 @@ RaylibResources.CacheAndInitializeAll();
 
     world.Player.Transform.Position = (5, 5);
     game.World = world;
-    game.InitStates();
+    game.Initialize();
 
     Camera3D camera = new()
     {
@@ -174,14 +158,7 @@ RaylibResources.CacheAndInitializeAll();
         gameContext.Delta = delta;
         gameContext.Time += delta;
         game.Update();
-        battleEnemyBillboardShakeT = Math.Max(battleEnemyBillboardShakeT - ((float)gameContext.Delta), 0);
-        battleEnemyDieT = Math.Max(battleEnemyDieT - ((float)gameContext.Delta / 2f), 0);
-        screenShakeT = Math.Max(screenShakeT - ((float)gameContext.Delta), 0);
-
-        if (battleEnemyBillboardShakeT <= 0 && battleEnemyDieT == 0)
-        {
-            battleEnemyFrame = 0;
-        }
+        viewModel.Update(gameContext);
 
         // [FIXME]: BRUTAL fucking hack
         var isInBattle = false
@@ -319,14 +296,14 @@ RaylibResources.CacheAndInitializeAll();
 
                     var offs = Vector3.Zero;
 
-                    if (battleEnemyBillboardShakeT > 0)
+                    if (viewModel.BattleEnemyBillboardShakeT > 0)
                     {
                         offs = new((Random.Shared.NextSingle() * 2 - 1) / 20f, 0, (Random.Shared.NextSingle() * 2 - 1) / 20f);
                     }
 
                     if (game.BattleState.Foe.Current.Health <= 0)
                     {
-                        offs.Y = Kryz.Tweening.EasingFunctions.InOutCubic(Kryz.Tweening.EasingFunctions.InOutCubic(battleEnemyDieT)) - 1f;
+                        offs.Y = Kryz.Tweening.EasingFunctions.InOutCubic(Kryz.Tweening.EasingFunctions.InOutCubic(viewModel.BattleEnemyDieT)) - 1f;
                     }
 
                     Rlgl.DisableDepthTest();
@@ -334,7 +311,7 @@ RaylibResources.CacheAndInitializeAll();
                         DrawBillboardPro(
                             camera,
                             RaylibResources.EnemyAtlas,
-                            new(battleEnemyFrame * 64, 0, 64, 64),
+                            new(viewModel.BattleEnemyFrame * 64, 0, 64, 64),
                             Make3D(new(X, Y))
                                 + offs,
                             Vector3.UnitY,
@@ -427,7 +404,7 @@ RaylibResources.CacheAndInitializeAll();
 
                 Vector2 shakeOffs = Vector2.Zero;
 
-                if (screenShakeT > 0)
+                if (viewModel.ScreenShakeT > 0)
                 {
                     shakeOffs = new Vector2(Random.Shared.NextSingle(), Random.Shared.NextSingle()) * 8;
                 }

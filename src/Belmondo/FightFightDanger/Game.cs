@@ -48,7 +48,7 @@ public class Game
     public State? DialogSpeakingState;
     public State? DialogFinishedState;
 
-    public void InitStates()
+    public void Initialize()
     {
         GameContext gameContext = GameContext!;
         World world = World!;
