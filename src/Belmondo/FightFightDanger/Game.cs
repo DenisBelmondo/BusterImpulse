@@ -63,7 +63,7 @@ public class Game
 
                 if (services.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
                 {
-                    GameState.BattleState.Foe = new(BattleStats.Goon);
+                    GameState.BattleState.Foe = new(FightFightDangerBattleStats.Goon);
                     return State.Goto(BattleScreenWipe!);
                 }
 

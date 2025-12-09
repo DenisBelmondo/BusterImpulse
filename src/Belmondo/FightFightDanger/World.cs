@@ -96,13 +96,13 @@ public sealed class World(Services services, TimeContext timeContext)
         {
             var chest = spawnedChest.Value;
 
-            if (chest.CurrentStatus == ChestState.Status.Opening)
+            if (chest.Current.Status == ChestStatus.Opening)
             {
-                chest.CurrentOpenness += (float)timeContext.Delta * 2;
+                chest.Current.Openness += (float)timeContext.Delta * 2;
 
-                if (chest.CurrentOpenness >= 1)
+                if (chest.Current.Openness >= 1)
                 {
-                    chest.CurrentOpenness = 1;
+                    chest.Current.Openness = 1;
                 }
             }
 
@@ -119,12 +119,12 @@ public sealed class World(Services services, TimeContext timeContext)
 
         var spawnedChest = worldState.Chests[chestID];
 
-        if (spawnedChest.Value.CurrentStatus != ChestState.Status.Idle)
+        if (spawnedChest.Value.Current.Status != ChestStatus.Idle)
         {
             return false;
         }
 
-        spawnedChest.Value.CurrentStatus = ChestState.Status.Opening;
+        spawnedChest.Value.Current.Status = ChestStatus.Opening;
         worldState.Chests[chestID] = spawnedChest;
         services.AudioService.PlaySoundEffect(SoundEffect.OpenChest);
 

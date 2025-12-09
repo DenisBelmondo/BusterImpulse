@@ -1,13 +1,7 @@
 namespace Belmondo.FightFightDanger;
 
-public struct BattleFoe(BattleFoe.Stats stats)
+public struct BattleFoe(BattleStats battleStats)
 {
-    public struct Stats
-    {
-        public int Health;
-        public int Damage;
-    }
-
-    public readonly Stats Default = stats;
-    public Stats Current = stats;
+    public readonly BattleStats Default = battleStats;
+    public BattleStats Current = battleStats;
 }

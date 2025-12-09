@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-
 namespace Belmondo.FightFightDanger;
 
 using Position = (int X, int Y);
@@ -25,7 +23,7 @@ public struct WorldState()
     // entity stuff
     //
 
-    public readonly List<Spawned<ChestState>> Chests = [];
+    public readonly List<Spawned<Chest>> Chests = [];
     public Spawned<Player> Player = new(new());
 
     //
@@ -39,7 +37,7 @@ public struct WorldState()
     public float CameraPositionLerpT = 0;
     public float CameraDirectionLerpT = 0;
 
-    public void SpawnChest(ChestState chest, Transform transform)
+    public void SpawnChest(Chest chest, Transform transform)
     {
         ChestMap.Add(transform.Position, Chests.Count);
         Chests.Add(new()

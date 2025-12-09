@@ -256,7 +256,7 @@ RaylibResources.CacheAndInitializeAll();
                     {
                         foreach (var spawnedChest in game.GameState.WorldState.Chests)
                         {
-                            int subFrame = (int)(spawnedChest.Value.CurrentOpenness * 3);
+                            int subFrame = (int)(spawnedChest.Value.Current.Openness * 3);
 
                             DrawBillboardPro(
                                 camera,

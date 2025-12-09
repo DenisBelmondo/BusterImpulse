@@ -6,7 +6,6 @@ public struct ShakeStateContext(TimeContext timeContext)
 {
     public double SecondsLeft;
     public Vector3 Offset;
-    public State State;
 
     public void Shake(double durationSeconds)
     {
