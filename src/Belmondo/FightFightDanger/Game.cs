@@ -6,7 +6,8 @@ public class Game
     public event Action? EnemyDamaged;
     public event Action? EnemyDied;
 
-    private readonly TimeContext? _timeContext;
+    private readonly TimeContext _timeContext;
+    private bool _shouldTickHealth;
     private double _healthTickDownAccumulator;
 
     public GameState GameState = new();
@@ -110,6 +111,7 @@ public class Game
         {
             EnterFunction = () =>
             {
+                _shouldTickHealth = true;
                 services.AudioService.ChangeMusic(MusicTrack.Battle);
                 Log.Clear();
                 Log.Add("What will you do?");
@@ -237,6 +239,7 @@ public class Game
                 {
                     EnemyDied?.Invoke();
                     Log.Add("Enemy defeated.");
+                    _shouldTickHealth = false;
                 }
 
                 services.AudioService.PlaySoundEffect(SoundEffect.Smack);
@@ -364,16 +367,19 @@ public class Game
 
     public void Update()
     {
-        _healthTickDownAccumulator += _timeContext.Delta;
-
-        if (_healthTickDownAccumulator >= 0.5f)
+        if (_shouldTickHealth)
         {
-            if (GameState.WorldState.Player.Value.Current.Health != GameState.WorldState.Player.Value.RunningHealth)
-            {
-                GameState.WorldState.Player.Value.RunningHealth += MathF.Sign(GameState.WorldState.Player.Value.Current.Health - GameState.WorldState.Player.Value.RunningHealth);
-            }
+            _healthTickDownAccumulator += _timeContext.Delta;
 
-            _healthTickDownAccumulator = 0;
+            if (_healthTickDownAccumulator >= 0.5f)
+            {
+                if (GameState.WorldState.Player.Value.Current.Health != GameState.WorldState.Player.Value.RunningHealth)
+                {
+                    GameState.WorldState.Player.Value.RunningHealth += MathF.Sign(GameState.WorldState.Player.Value.Current.Health - GameState.WorldState.Player.Value.RunningHealth);
+                }
+
+                _healthTickDownAccumulator = 0;
+            }
         }
 
         StateAutomaton.Update();
