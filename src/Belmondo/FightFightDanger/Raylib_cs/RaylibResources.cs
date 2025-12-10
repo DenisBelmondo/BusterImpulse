@@ -389,6 +389,7 @@ public static class RaylibResources
     public static Sound BattleStartSound { get; private set; }
     public static Sound OpenChestSound { get; private set; }
     public static Sound TalkSound { get; private set; }
+    public static Sound ItemSound { get; private set; }
     public static Music Stage1WanderingMusic { get; private set; }
     public static Music Stage2WanderingMusic { get; private set; }
     public static Music BattleMusic { get; private set; }
@@ -432,6 +433,7 @@ public static class RaylibResources
         BattleStartSound = LoadSound("static/sounds/battle_start.wav");
         OpenChestSound = LoadSound("static/sounds/open_chest.wav");
         TalkSound = LoadSound("static/sounds/talk.wav");
+        ItemSound = LoadSound("static/sounds/item.ogg");
 
         unsafe
         {
@@ -452,6 +454,7 @@ public static class RaylibResources
         UnloadSound(BattleStartSound);
         UnloadSound(OpenChestSound);
         UnloadSound(TalkSound);
+        UnloadSound(ItemSound);
         UnloadMusicStream(Stage1WanderingMusic);
         UnloadMusicStream(Stage2WanderingMusic);
         UnloadMusicStream(BattleMusic);

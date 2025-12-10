@@ -2,10 +2,84 @@ namespace Belmondo.FightFightDanger;
 
 public class ViewModel
 {
-    public float BattleEnemyBillboardShakeT = 0;
-    public float BattleEnemyDieT = 0;
-    public int BattleEnemyFrame = 0;
-    public float ScreenShakeT = 0;
+    public float BattleEnemyBillboardShakeT;
+    public float BattleEnemyDieT;
+    public int BattleEnemyFrame;
+    public float ScreenShakeT;
+    public float PopUpT;
+    public float PopUpWaitT;
+    public string CurrentPopUpMessage;
+
+    public required GameContext GameContext;
+
+    public StateAutomaton PopUpStateAutomaton = new();
+    public State? PopUpAppearState;
+    public State? PopUpStickAroundState;
+    public State? PopUpDisappearState;
+
+    public ViewModel()
+    {
+        PopUpAppearState = new()
+        {
+            EnterFunction = () =>
+            {
+                PopUpT = 0;
+            },
+
+            UpdateFunction = () =>
+            {
+                PopUpT += (float)(GameContext?.Delta).GetValueOrDefault() * 5;
+
+                if (PopUpT >= 1)
+                {
+                    return State.Goto(PopUpStickAroundState!);
+                }
+
+                return State.Continue;
+            },
+        };
+
+        PopUpStickAroundState = new()
+        {
+            EnterFunction = () =>
+            {
+                PopUpWaitT = 0;
+            },
+
+            UpdateFunction = () =>
+            {
+                PopUpWaitT += (float)(GameContext?.Delta).GetValueOrDefault();
+
+                if (PopUpWaitT >= 3)
+                {
+                    return State.Goto(PopUpDisappearState!);
+                }
+
+                return State.Continue;
+            },
+        };
+
+        PopUpDisappearState = new()
+        {
+            UpdateFunction = () =>
+            {
+                PopUpT -= (float)(GameContext?.Delta).GetValueOrDefault() * 5;
+
+                if (PopUpT <= 0)
+                {
+                    return State.Stop;
+                }
+
+                return State.Continue;
+            },
+        };
+    }
+
+    public void ShowPopUp(string message)
+    {
+        CurrentPopUpMessage = message;
+        PopUpStateAutomaton.CurrentState = PopUpAppearState;
+    }
 
     public void ShakeBattleEnemy()
     {
@@ -34,5 +108,7 @@ public class ViewModel
         {
             BattleEnemyFrame = 0;
         }
+
+        PopUpStateAutomaton.Update();
     }
 }

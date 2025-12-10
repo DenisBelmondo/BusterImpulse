@@ -66,21 +66,25 @@ public static class GameLogic
 
     public static void UpdateChests(in GameContext gameContext, ref World world)
     {
-        foreach (ref var spawnedChest in CollectionsMarshal.AsSpan(world.Chests))
+        for (int i = 0; i < world.Chests.Count; i++)
         {
-            var chest = spawnedChest.Value;
+            var chest = world.Chests[i];
 
-            if (chest.Status == ChestStatus.Opening)
+            if (chest.Value.Status == ChestStatus.Opening)
             {
-                chest.Openness += (float)gameContext.Delta * 2;
+                chest.Value.Openness += (float)gameContext.Delta * 2;
 
-                if (chest.Openness >= 1)
+                if (chest.Value.Openness >= 1)
                 {
-                    chest.Openness = 1;
+                    chest.Value.Openness = 1;
+                    chest.Value.Status = ChestStatus.Opened;
+                    world.OpenChest(i);
+                    TransferInventory(chest.Value.Items, world.Player.Value.Inventory);
+                    gameContext.AudioService.PlaySoundEffect(SoundEffect.Item);
                 }
             }
 
-            spawnedChest.Value = chest;
+            world.Chests[i] = chest;
         }
     }
 
@@ -103,5 +107,21 @@ public static class GameLogic
         gameContext.AudioService.PlaySoundEffect(SoundEffect.OpenChest);
 
         return true;
+    }
+
+    public static void TransferInventory(IDictionary<int, int> from, IDictionary<int, int> to)
+    {
+        foreach (var kvp in from)
+        {
+            int itemType = kvp.Key;
+            int quantity = kvp.Value;
+
+            if (!to.ContainsKey(itemType))
+            {
+                to[itemType] = 0;
+            }
+
+            to[itemType] += quantity;
+        }
     }
 }

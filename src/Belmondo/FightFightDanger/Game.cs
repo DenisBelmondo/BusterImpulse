@@ -40,6 +40,7 @@ public class Game
     public State? BattlePlayerRun;
     public State? BattleEnemyStartAttack;
     public State? BattleEnemyAttack;
+    public State? BattlePlayerDied;
 
     //
     // dialog states
@@ -137,6 +138,11 @@ public class Game
                 else if (gameContext.InputService.ActionWasJustPressed(InputAction.BattleItem))
                 {
                     return State.Goto(BattlePlayerItem!);
+                }
+
+                if (world.Player.Value.RunningHealth <= 0)
+                {
+                    return State.Goto(BattlePlayerDied!);
                 }
 
                 return State.Continue;
@@ -323,6 +329,20 @@ public class Game
 
                 return State.Continue;
             }
+        };
+
+        BattlePlayerDied = new()
+        {
+            EnterFunction = () =>
+            {
+                Log.Clear();
+                Log.Add("Oops, you died.");
+            },
+
+            UpdateFunction = () =>
+            {
+                return State.Stop;
+            },
         };
 
         DialogSpeakingState = new()

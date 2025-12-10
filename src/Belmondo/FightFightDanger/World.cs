@@ -13,6 +13,8 @@ public class World
         public Spawned(T value) : this() => Value = value;
     }
 
+    public event Action<int>? ChestOpened;
+
     //
     // collision stuff
     //
@@ -73,4 +75,6 @@ public class World
 
         return true;
     }
+
+    public void OpenChest(int chestID) => ChestOpened?.Invoke(chestID);
 }

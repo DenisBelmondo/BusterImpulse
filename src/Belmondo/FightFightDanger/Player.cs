@@ -10,6 +10,7 @@ public struct Player
 
     public Defaults Default = new();
     public Defaults Current = new();
+    public Dictionary<int, int> Inventory = [];
     public float RunningHealth;
 
     public Player()

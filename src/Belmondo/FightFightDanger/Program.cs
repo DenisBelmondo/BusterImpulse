@@ -18,8 +18,6 @@ static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 positio
     DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
 }
 
-ViewModel viewModel = new();
-
 SetConfigFlags(ConfigFlags.WindowResizable);
 
 InitWindow(1024, 768, "Fight Fight Danger");
@@ -34,6 +32,11 @@ RaylibResources.CacheAndInitializeAll();
     {
         AudioService = raylibAudioService,
         InputService = raylibInputService,
+    };
+
+    ViewModel viewModel = new()
+    {
+        GameContext = gameContext,
     };
 
     Game game = new()
@@ -72,7 +75,10 @@ RaylibResources.CacheAndInitializeAll();
     world.SpawnChest(
         new()
         {
-            Items = new Dictionary<int, int>(),
+            Items = new Dictionary<int, int>()
+            {
+                [(int)ItemType.ChickenLeg] = 1,
+            },
         },
         new()
         {
@@ -82,12 +88,38 @@ RaylibResources.CacheAndInitializeAll();
     world.SpawnChest(
         new()
         {
-            Items = new Dictionary<int, int>(),
+            Items = new Dictionary<int, int>()
+            {
+                [(int)ItemType.ChickenLeg] = 1,
+            },
         },
         new()
         {
             Position = (7, 5),
         });
+
+    world.SpawnChest(
+        new()
+        {
+            Items = new Dictionary<int, int>()
+            {
+                [(int)ItemType.ChickenLeg] = 1,
+            },
+        },
+        new()
+        {
+            Position = (5, 7),
+        });
+
+    world.ChestOpened += chestID =>
+    {
+        var items = world.Chests[chestID].Value.Items;
+
+        foreach (var kvp in items)
+        {
+            viewModel.ShowPopUp($"{ItemTypeNames.Get((ItemType)kvp.Key)} x{1}");
+        }
+    };
 
     world.Player.Transform.Position = (5, 5);
     game.World = world;
@@ -385,6 +417,21 @@ RaylibResources.CacheAndInitializeAll();
                 15,
                 1,
                 Color.RayWhite);
+
+            // draw pop  ups
+            if (viewModel.PopUpT > 0)
+            {
+                var t = Kryz.Tweening.EasingFunctions.InOutCubic(viewModel.PopUpT);
+
+                DrawRectangle(0, (int)(t * 16) - 16, 320, 16, new(16, 16, 16));
+                DrawTextEx(
+                    RaylibResources.Font,
+                    viewModel.CurrentPopUpMessage,
+                    new(0, (int)(t * 16) - 16),
+                    15,
+                    1,
+                    Color.White);
+            }
         }
         EndTextureMode();
 

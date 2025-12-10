@@ -8,4 +8,5 @@ public enum SoundEffect
     Smack,
     Step,
     Talk,
+    Item,
 }
