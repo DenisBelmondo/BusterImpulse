@@ -8,7 +8,7 @@ public class ViewModel
     public float ScreenShakeT;
     public float PopUpT;
     public float PopUpWaitT;
-    public string CurrentPopUpMessage;
+    public string? CurrentPopUpMessage;
 
     public required GameContext GameContext;
 

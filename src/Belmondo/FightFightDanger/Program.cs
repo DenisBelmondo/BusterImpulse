@@ -90,7 +90,7 @@ RaylibResources.CacheAndInitializeAll();
         {
             Items = new Dictionary<int, int>()
             {
-                [(int)ItemType.ChickenLeg] = 1,
+                [(int)ItemType.WholeChicken] = 1,
             },
         },
         new()

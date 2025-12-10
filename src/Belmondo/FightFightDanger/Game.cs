@@ -12,6 +12,7 @@ public class Game
     private double _healthTickDownAccumulator;
 
     public World? World;
+    public Battle? Battle;
 
     public BattleState BattleState;
     public DialogState DialogState;
@@ -22,6 +23,7 @@ public class Game
     public StateAutomaton StateAutomaton = new();
     public StateAutomaton FoeVisualStateAutomaton = new();
     public StateAutomaton DialogStateAutomaton = new();
+    public StateAutomaton FoeBattleStateAutomaton = new();
     public Log Log = new(8);
 
     //
@@ -74,9 +76,8 @@ public class Game
 
                 if (gameContext.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
                 {
-                    BattleState.Foe = new(FightFightDangerBattleStats.Goon);
-
-                    return State.Goto(BattleScreenWipe!);
+                    StartBattle(new(FightFightDangerBattleStats.Goon));
+                    return State.Reset;
                 }
 
                 GameLogic.UpdatePlayer(gameContext, ref world);
@@ -193,7 +194,7 @@ public class Game
             EnterFunction = () =>
             {
                 Log.Clear();
-                Log.Add("Align the circle with the enemy then press enter!");
+                Log.Add("Align the circle with the enemy then press space!");
                 BattleState.PlayerAimingState.CurrentRange = (-0.3, 0.3);
             },
             UpdateFunction = () =>
@@ -315,11 +316,13 @@ public class Game
             {
                 int damage = Random.Shared.Next(0, 20);
 
+                FoeBattleStateAutomaton.CurrentState = BattleState.Foe.AttackTurnState;
                 world.Player.Value.Current.Health -= damage;
                 gameContext.AudioService.PlaySoundEffect(SoundEffect.Smack);
                 PlayerDamaged?.Invoke();
                 Log.Add($"\tEnemy deals {damage} damage!");
             },
+
             UpdateFunction = () =>
             {
                 if (gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
@@ -412,5 +415,11 @@ public class Game
     {
         DialogState.TargetLine = line;
         DialogStateAutomaton.CurrentState = DialogSpeakingState;
+    }
+
+    public void StartBattle(BattleFoe battleFoe)
+    {
+        BattleState.Foe = battleFoe;
+        StateAutomaton.CurrentState = BattleScreenWipe;
     }
 }
