@@ -1,3 +1,4 @@
+using System.Numerics;
 using Raylib_cs.BleedingEdge;
 using static Raylib_cs.BleedingEdge.Raylib;
 
@@ -384,16 +385,25 @@ public static class RaylibResources
     public static Model TileModel { get; private set; }
     public static Model FloorModel { get; private set; }
     public static Model CeilingModel { get; private set; }
-    public static Sound StepSound { get; private set; }
-    public static Sound SmackSound { get; private set; }
     public static Sound BattleStartSound { get; private set; }
-    public static Sound OpenChestSound { get; private set; }
-    public static Sound TalkSound { get; private set; }
     public static Sound ItemSound { get; private set; }
+    public static Sound MachineGunSound { get; private set; }
+    public static Sound OpenChestSound { get; private set; }
+    public static Sound SmackSound { get; private set; }
+    public static Sound StepSound { get; private set; }
+    public static Sound TalkSound { get; private set; }
     public static Music Stage1WanderingMusic { get; private set; }
     public static Music Stage2WanderingMusic { get; private set; }
     public static Music BattleMusic { get; private set; }
     public static Font Font { get; private set; }
+
+    public static int PlasmaShaderTimeLoc { get; private set; }
+    public static int PlasmaShaderResolutionLoc { get; private set; }
+    public static int ScreenTransitionShaderTimeLoc { get; private set; }
+    public static int ScreenTransitionShaderResolutionLoc { get; private set; }
+    public static int DownmixedShaderLUTLoc { get; private set; }
+    public static int DownmixedShaderLUTSizeLoc { get; private set; }
+    public static Vector2 LUTSize { get; private set; }
 
     public static void CacheAndInitializeAll()
     {
@@ -428,12 +438,13 @@ public static class RaylibResources
         Stage2WanderingMusic = LoadMusicStream("static/music/draculas-tears.mp3");
         BattleMusic = LoadMusicStream("static/music/morgan.mp3");
         Font = LoadFont("static/fonts/pixel-font-15.png");
-        StepSound = LoadSound("static/sounds/step.wav");
-        SmackSound = LoadSound("static/sounds/smack.wav");
         BattleStartSound = LoadSound("static/sounds/battle_start.wav");
-        OpenChestSound = LoadSound("static/sounds/open_chest.wav");
-        TalkSound = LoadSound("static/sounds/talk.wav");
         ItemSound = LoadSound("static/sounds/item.ogg");
+        MachineGunSound = LoadSound("static/sounds/machine_gun.wav");
+        OpenChestSound = LoadSound("static/sounds/open_chest.wav");
+        SmackSound = LoadSound("static/sounds/smack.wav");
+        StepSound = LoadSound("static/sounds/step.wav");
+        TalkSound = LoadSound("static/sounds/talk.wav");
 
         unsafe
         {
@@ -444,17 +455,26 @@ public static class RaylibResources
             CeilingModel.Materials[0].Maps[(int)MaterialMapIndex.Diffuse].Texture = CeilingTexture;
             CeilingModel.Materials[0].Shader = SurfaceShader;
         }
+
+            PlasmaShaderTimeLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iTime");
+            PlasmaShaderResolutionLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iResolution");
+            ScreenTransitionShaderTimeLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iTime");
+            ScreenTransitionShaderResolutionLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iResolution");
+            DownmixedShaderLUTLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTexture");
+            DownmixedShaderLUTSizeLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTextureSize");
+            LUTSize = new Vector2(RaylibResources.LUTTexture.Width, RaylibResources.LUTTexture.Height);
     }
 
     public static void UnloadAll()
     {
         UnloadFont(Font);
-        UnloadSound(StepSound);
-        UnloadSound(SmackSound);
         UnloadSound(BattleStartSound);
-        UnloadSound(OpenChestSound);
-        UnloadSound(TalkSound);
         UnloadSound(ItemSound);
+        UnloadSound(MachineGunSound);
+        UnloadSound(OpenChestSound);
+        UnloadSound(SmackSound);
+        UnloadSound(StepSound);
+        UnloadSound(TalkSound);
         UnloadMusicStream(Stage1WanderingMusic);
         UnloadMusicStream(Stage2WanderingMusic);
         UnloadMusicStream(BattleMusic);

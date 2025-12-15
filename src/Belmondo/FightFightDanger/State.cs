@@ -1,45 +1,54 @@
 namespace Belmondo.FightFightDanger;
 
-public sealed class State
+public enum StateFlow
 {
-    public enum Flow
-    {
-        Continue,
-        Stop,
-        Reset,
-        Goto,
-    }
-
-    public struct Result(Flow flow, State? nextState = null)
-    {
-        public Flow Flow = flow;
-        public State? NextState = nextState;
-    }
-
-    public static Result Continue => new(Flow.Continue);
-    public static Result Stop => new(Flow.Stop);
-    public static Result Reset => new(Flow.Reset);
-    public static Result Goto(State nextState) => new(Flow.Goto, nextState);
-
-    public Action? EnterFunction;
-    public Func<Result>? UpdateFunction;
-    public Action? ExitFunction;
+    Continue,
+    Stop,
+    Reset,
+    Goto,
 }
 
-public sealed class StateAutomaton
+public sealed class State<T>
 {
-    public class StateChangeEventArgs(State nextState) : EventArgs
+    public struct Result(StateFlow flow, State<T>? nextState = null)
     {
-        public State NewState = nextState;
+        public StateFlow Flow = flow;
+        public State<T>? NextState = nextState;
+    }
+
+    public delegate void EnterDelegate(T arg);
+    public delegate Result UpdateDelegate(T arg);
+    public delegate void ExitDelegate(T arg);
+
+    public static readonly State<T> Empty = new();
+
+    public static Result Continue => new(StateFlow.Continue);
+    public static Result Stop => new(StateFlow.Stop);
+    public static Result Reset => new(StateFlow.Reset);
+    public static Result Goto(State<T> nextState) => new(StateFlow.Goto, nextState);
+
+    public EnterDelegate? EnterFunction;
+    public UpdateDelegate? UpdateFunction;
+    public ExitDelegate? ExitFunction;
+}
+
+public sealed class StateAutomaton<T>
+{
+    public class StateChangeEventArgs(State<T> nextState) : EventArgs
+    {
+        public State<T> NewState = nextState;
     }
 
     public event EventHandler? StateChanged;
 
     private bool _hasEntered;
-    public State? CurrentState;
+    public State<T>? PreviousState;
+    public State<T>? CurrentState;
 
-    public void Update()
+    public void Update(T arg)
     {
+        PreviousState = CurrentState;
+
         if (CurrentState is null)
         {
             return;
@@ -48,29 +57,29 @@ public sealed class StateAutomaton
         if (!_hasEntered)
         {
             _hasEntered = true;
-            CurrentState.EnterFunction?.Invoke();
+            CurrentState.EnterFunction?.Invoke(arg);
             StateChanged?.Invoke(this, new StateChangeEventArgs(CurrentState));
         }
 
-        State.Result? maybeResult = CurrentState.UpdateFunction?.Invoke();
+        State<T>.Result? maybeResult = CurrentState.UpdateFunction?.Invoke(arg);
 
-        if (maybeResult is State.Result result)
+        if (maybeResult is State<T>.Result result)
         {
             switch (result.Flow)
             {
-                case State.Flow.Continue:
+                case StateFlow.Continue:
                     return;
-                case State.Flow.Stop:
-                    CurrentState = null;
+                case StateFlow.Stop:
+                    CurrentState = State<T>.Empty;
                     return;
-                case State.Flow.Reset:
+                case StateFlow.Reset:
                     _hasEntered = false;
                     return;
-                case State.Flow.Goto:
+                case StateFlow.Goto:
                     {
-                        if (result.NextState is State nextState)
+                        if (result.NextState is State<T> nextState)
                         {
-                            CurrentState.ExitFunction?.Invoke();
+                            CurrentState.ExitFunction?.Invoke(arg);
                             CurrentState = nextState;
                             _hasEntered = false;
                         }
@@ -78,5 +87,11 @@ public sealed class StateAutomaton
                     return;
             }
         }
+    }
+
+    public void ChangeState(State<T> state)
+    {
+        CurrentState = state;
+        _hasEntered = false;
     }
 }

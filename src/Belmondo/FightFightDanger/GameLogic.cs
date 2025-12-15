@@ -1,5 +1,3 @@
-using System.Runtime.InteropServices;
-
 namespace Belmondo.FightFightDanger;
 
 using Position = (int X, int Y);
@@ -22,7 +20,7 @@ public static class GameLogic
         }
 
         world.Player.Transform.Direction = Direction.Clamped(world.Player.Transform.Direction);
-        world.CameraDirectionLerpT = MathF.Min(world.CameraDirectionLerpT + (float)gameContext.Delta, 1);
+        world.CameraDirectionLerpT = MathF.Min(world.CameraDirectionLerpT + (float)gameContext.TimeContext.Delta, 1);
 
         int? moveDirection = null;
 
@@ -54,13 +52,13 @@ public static class GameLogic
         }
 
         world.Player.Value.Current.WalkCooldown = Math.Max(
-            world.Player.Value.Current.WalkCooldown - gameContext.Delta,
+            world.Player.Value.Current.WalkCooldown - gameContext.TimeContext.Delta,
             0);
 
         world.CameraPositionLerpT = MathF.Min(
             world.CameraPositionLerpT
                 + ((1.0F / (float)world.Player.Value.Default.WalkCooldown)
-                * (float)gameContext.Delta),
+                * (float)gameContext.TimeContext.Delta),
             1);
     }
 
@@ -72,7 +70,7 @@ public static class GameLogic
 
             if (chest.Value.Status == ChestStatus.Opening)
             {
-                chest.Value.Openness += (float)gameContext.Delta * 2;
+                chest.Value.Openness += (float)gameContext.TimeContext.Delta * 2;
 
                 if (chest.Value.Openness >= 1)
                 {

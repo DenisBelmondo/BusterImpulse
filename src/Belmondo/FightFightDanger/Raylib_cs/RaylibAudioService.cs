@@ -14,11 +14,12 @@ public sealed class RaylibAudioService : IAudioService
         Sound? maybeSound = soundEffect switch
         {
             SoundEffect.BattleStart => RaylibResources.BattleStartSound,
+            SoundEffect.Item => RaylibResources.ItemSound,
+            SoundEffect.MachineGun => RaylibResources.MachineGunSound,
             SoundEffect.OpenChest => RaylibResources.OpenChestSound,
             SoundEffect.Smack => RaylibResources.SmackSound,
             SoundEffect.Step => RaylibResources.StepSound,
             SoundEffect.Talk => RaylibResources.TalkSound,
-            SoundEffect.Item => RaylibResources.ItemSound,
             _ => null,
         };
 

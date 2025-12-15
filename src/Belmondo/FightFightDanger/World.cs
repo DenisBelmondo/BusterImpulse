@@ -26,6 +26,9 @@ public class World
     //
 
     public readonly List<Spawned<Chest>> Chests = [];
+
+    // [TODO]: allow this to be dependency injected from the outside cuz we
+    // probably want the player to exist outside just the world.
     public Spawned<Player> Player = new(new());
 
     //

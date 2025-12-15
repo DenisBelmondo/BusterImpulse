@@ -6,417 +6,251 @@ using static Raylib_cs.BleedingEdge.Raylib;
 using static Raylib_cs.BleedingEdge.Raymath;
 using static Belmondo.Mathematics.Extensions;
 
-static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
-static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
-
-static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 position)
+internal class Program
 {
-    var scaleFactor = screenSize.Y / 240f;
-    var scaledFontSize = 15 * scaleFactor;
+    private const int VIRTUAL_SCREEN_WIDTH = 320;
+    private const int VIRTUAL_SCREEN_HEIGHT = 240;
 
-    DrawTextEx(font, text, position + Vector2.One * scaleFactor, scaledFontSize, 1, Color.DarkBlue);
-    DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
-}
+    private const int VIRTUAL_SCREEN_HALF_WIDTH = VIRTUAL_SCREEN_WIDTH / 2;
+    private const int VIRTUAL_SCREEN_HALF_HEIGHT = VIRTUAL_SCREEN_HEIGHT / 2;
 
-SetConfigFlags(ConfigFlags.WindowResizable);
+    //
+    // render stuff
+    //
+    private static Camera3D _camera;
+    private static Camera3D _battleCamera;
+    private static RenderTexture2D _renderTexture;
+    private static Vector3 _cameraDirection;
 
-InitWindow(1024, 768, "Fight Fight Danger");
-InitAudioDevice();
-RaylibResources.CacheAndInitializeAll();
+    private static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
+    private static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
 
-{
-    RaylibAudioService raylibAudioService = new();
-    RaylibInputService raylibInputService = new();
-
-    GameContext gameContext = new()
+    private static void TextDraw(Font font, string text, Vector2 screenSize, Vector2 virtualScreenSize, Vector2 position)
     {
-        AudioService = raylibAudioService,
-        InputService = raylibInputService,
-    };
+        var scaleFactor = screenSize.Y / virtualScreenSize.Y;
+        var scaledFontSize = 15 * scaleFactor;
 
-    ViewModel viewModel = new()
-    {
-        GameContext = gameContext,
-    };
-
-    Game game = new()
-    {
-        GameContext = gameContext,
-    };
-
-    game.EnemyDamaged += viewModel.ShakeBattleEnemy;
-    game.EnemyDied += viewModel.KillBattleEnemy;
-    game.PlayerDamaged += viewModel.ShakeScreen;
-
-    World world = new();
-
-    world.TileMap = new int[,]
-    {
-        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
-        { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
-        { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
-        { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
-        { 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
-        { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
-        { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
-        { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-        { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
-        { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
-        { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
-        { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
-        { 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
-        { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
-        { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
-        { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
-    };
-
-    world.SpawnChest(
-        new()
-        {
-            Items = new Dictionary<int, int>()
-            {
-                [(int)ItemType.ChickenLeg] = 1,
-            },
-        },
-        new()
-        {
-            Position = (6, 5),
-        });
-
-    world.SpawnChest(
-        new()
-        {
-            Items = new Dictionary<int, int>()
-            {
-                [(int)ItemType.WholeChicken] = 1,
-            },
-        },
-        new()
-        {
-            Position = (7, 5),
-        });
-
-    world.SpawnChest(
-        new()
-        {
-            Items = new Dictionary<int, int>()
-            {
-                [(int)ItemType.ChickenLeg] = 1,
-            },
-        },
-        new()
-        {
-            Position = (5, 7),
-        });
-
-    world.ChestOpened += chestID =>
-    {
-        var items = world.Chests[chestID].Value.Items;
-
-        foreach (var kvp in items)
-        {
-            viewModel.ShowPopUp($"{ItemTypeNames.Get((ItemType)kvp.Key)} x{1}");
-        }
-    };
-
-    world.Player.Transform.Position = (5, 5);
-    game.World = world;
-    game.Initialize();
-
-    Camera3D camera = new()
-    {
-        FovY = 90,
-        Projection = CameraProjection.Perspective,
-        Up = Vector3.UnitY,
-    };
-
-    world.OldPlayerX = world.Player.Transform.Position.X;
-    world.OldPlayerY = world.Player.Transform.Position.Y;
-
-    camera.Position.X = world.Player.Transform.Position.X;
-    camera.Position.Z = world.Player.Transform.Position.Y;
-
-    Vector3 cameraDirection;
-    {
-        var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
-        cameraDirection = new(X, 0, Y);
+        DrawTextEx(font, text, position + Vector2.One * scaleFactor, scaledFontSize, 1, Color.DarkBlue);
+        DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
     }
 
-    // [INFO]: for all shape drawing routines, raylib actually samples the "blank character texture" in its default
-    // character set. for some reason this throws off the fragTexCoord (uv) varyings in shaders. you need to actually
-    // inform raylib that all shapes should be drawn with this empty 1x1 texture instead.
-    // https://github.com/raysan5/raylib/issues/1730
+    private static void Main(string[] args)
     {
-        Texture2D texture = new()
+        SetConfigFlags(ConfigFlags.WindowResizable);
+
+        InitWindow(1024, 768, "Fight Fight Danger");
+        InitAudioDevice();
+        RaylibResources.CacheAndInitializeAll();
+
         {
-            Format = PixelFormat.UncompressedR8G8B8A8,
-            Height = 1,
-            Id = Rlgl.GetTextureIdDefault(),
-            Mipmaps = 1,
-            Width = 1,
-        };
+            RaylibAudioService raylibAudioService = new();
+            RaylibInputService raylibInputService = new();
 
-        SetShapesTexture(texture, new(0, 0, 1, 1));
-    }
+            TimeContext timeContext = new();
 
-    RenderTexture2D renderTexture = LoadRenderTexture(320, 240);
+            GameContext gameContext = new()
+            {
+                AudioService = raylibAudioService,
+                InputService = raylibInputService,
+                TimeContext = timeContext,
+            };
 
-    double oldTime = GetTime();
+            ViewModel viewModel = new(gameContext);
+            Game game = new(gameContext);
 
-    game.StateAutomaton.CurrentState = game.ExploreState;
+            game.EnemyDamaged += viewModel.ShakeBattleEnemy;
+            game.EnemyDied += viewModel.KillBattleEnemy;
+            game.PlayerDamaged += viewModel.ShakeScreen;
 
-    var plasmaShaderTimeLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iTime");
-    var plasmaShaderResolutionLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iResolution");
+            World world = new();
 
-    var screenTransitionShaderTimeLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iTime");
-    var screenTransitionShaderResolutionLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iResolution");
+            world.TileMap = new int[,]
+            {
+                { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+                { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
+                { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
+                { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+                { 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
+                { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
+                { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
+                { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                { 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+                { 1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+                { 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 0, 0, 0, 1, 1 },
+                { 1, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 1, 0, 1, 1, 1, 1 },
+                { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1 },
+                { 1, 0, 0, 0, 0, 1, 1, 0, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1 },
+                { 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 1, 1, 1, 1, 1, 0, 0, 1 },
+                { 1, 0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 1, 1, 1, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1 },
+                { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 },
+            };
 
-    var downmixedShaderLUTLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTexture");
-    var downmixedShaderLUTSizeLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTextureSize");
+            world.SpawnChest(
+                new()
+                {
+                    Items = new Dictionary<int, int>()
+                    {
+                        [(int)ItemType.ChickenLeg] = 1,
+                    },
+                },
+                new()
+                {
+                    Position = (6, 5),
+                });
 
-    var lutSize = new Vector2(RaylibResources.LUTTexture.Width, RaylibResources.LUTTexture.Height);
+            world.SpawnChest(
+                new()
+                {
+                    Items = new Dictionary<int, int>()
+                    {
+                        [(int)ItemType.WholeChicken] = 1,
+                    },
+                },
+                new()
+                {
+                    Position = (7, 5),
+                });
 
-    while (!WindowShouldClose())
-    {
-        raylibAudioService.Update();
+            world.SpawnChest(
+                new()
+                {
+                    Items = new Dictionary<int, int>()
+                    {
+                        [(int)ItemType.ChickenLeg] = 1,
+                    },
+                },
+                new()
+                {
+                    Position = (5, 7),
+                });
 
-        double newTime = GetTime();
-        double delta = newTime - oldTime;
+            world.ChestOpened += chestID =>
+            {
+                var items = world.Chests[chestID].Value.Items;
 
-        oldTime = newTime;
+                foreach (var kvp in items)
+                {
+                    viewModel.ShowPopUp($"{ItemTypeNames.Get((ItemType)kvp.Key)} x{1}");
+                }
+            };
 
-        gameContext.Delta = delta;
-        gameContext.Time += delta;
-        game.Update();
-        viewModel.Update(gameContext);
+            world.Player.Transform.Position = (5, 5);
+            game.World = world;
 
-        // [FIXME]: BRUTAL fucking hack
-        var isInBattle = false
-            || (game.StateAutomaton.CurrentState == game.BattleScreenWipe && game.BattleState.ScreenWipeState.T > 0.75f)
-            || game.StateAutomaton.CurrentState == game.BattleStart
-            || game.StateAutomaton.CurrentState == game.BattleStartPlayerAttack
-            || game.StateAutomaton.CurrentState == game.BattlePlayerAiming
-            || game.StateAutomaton.CurrentState == game.BattlePlayerMissed
-            || game.StateAutomaton.CurrentState == game.BattleEnemyStartAttack
-            || game.StateAutomaton.CurrentState == game.BattleEnemyAttack
-            || game.StateAutomaton.CurrentState == game.BattlePlayerAttack
-            || game.StateAutomaton.CurrentState == game.BattlePlayerItem;
+            _camera = new()
+            {
+                FovY = 90,
+                Projection = CameraProjection.Perspective,
+                Up = Vector3.UnitY,
+            };
 
-        //
-        // render
-        //
+            _battleCamera = new()
+            {
+                FovY = 90,
+                Projection = CameraProjection.Perspective,
+                Up = Vector3.UnitY,
+            };
 
-        BeginTextureMode(renderTexture);
-        {
-            ClearBackground(Color.Black);
+            world.OldPlayerX = world.Player.Transform.Position.X;
+            world.OldPlayerY = world.Player.Transform.Position.Y;
 
-            Vector3 playerDirection3d;
+            game.StateAutomaton.CurrentState = Game.ExploreState;
+
+            _camera.Position.X = world.Player.Transform.Position.X;
+            _camera.Position.Z = world.Player.Transform.Position.Y;
 
             {
                 var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
-                playerDirection3d = new(X, 0, Y);
+                _cameraDirection = new(X, 0, Y);
             }
 
-            camera.Position = Vector3.Lerp(
-                new Vector3(world.OldPlayerX, 0, world.OldPlayerY),
-                new Vector3(world.Player.Transform.Position.X, 0, world.Player.Transform.Position.Y),
-                world.CameraPositionLerpT);
+            // [INFO]: for all shape drawing routines, raylib actually samples the "blank character texture" in its default
+            // character set. for some reason this throws off the fragTexCoord (uv) varyings in shaders. you need to actually
+            // inform raylib that all shapes should be drawn with this empty 1x1 texture instead.
+            // https://github.com/raysan5/raylib/issues/1730
+            {
+                Texture2D texture = new()
+                {
+                    Format = PixelFormat.UncompressedR8G8B8A8,
+                    Height = 1,
+                    Id = Rlgl.GetTextureIdDefault(),
+                    Mipmaps = 1,
+                    Width = 1,
+                };
 
-            Quaternion cameraRotation = QuaternionFromAxisAngle(
-                Vector3.UnitY,
-                cameraDirection.SignedAngleTo(playerDirection3d, Vector3.UnitY)
-                    * 10
-                    * (float)delta);
+                SetShapesTexture(texture, new(0, 0, 1, 1));
+            }
 
-            cameraDirection = Vector3RotateByQuaternion(cameraDirection, cameraRotation);
-            camera.Target = camera.Position + cameraDirection;
+            _renderTexture = LoadRenderTexture(320, 240);
+
+            double oldTime = GetTime();
 
             Vector2 screenResolution = new(320, 240);
-            float fTime = (float)gameContext.Time;
-            float screenWipeT = game.BattleState.ScreenWipeState.T;
 
-            unsafe
+            while (!WindowShouldClose())
             {
-                SetShaderValue(
-                    RaylibResources.PlasmaShader,
-                    plasmaShaderTimeLoc,
-                    &fTime,
-                    ShaderUniformDataType.Float);
+                raylibAudioService.Update();
 
-                SetShaderValue(
-                    RaylibResources.PlasmaShader,
-                    plasmaShaderResolutionLoc,
-                    &screenResolution,
-                    ShaderUniformDataType.Vec2);
+                double newTime = GetTime();
+                double delta = newTime - oldTime;
 
-                SetShaderValue(
-                    RaylibResources.ScreenTransitionShader,
-                    screenTransitionShaderTimeLoc,
-                    &screenWipeT,
-                    ShaderUniformDataType.Float);
+                oldTime = newTime;
 
-                SetShaderValue(
-                    RaylibResources.ScreenTransitionShader,
-                    screenTransitionShaderResolutionLoc,
-                    &screenResolution,
-                    ShaderUniformDataType.Vec2);
+                timeContext.Delta = delta;
+                timeContext.Time += delta;
+
+                game.Update();
+                viewModel.Update();
+
+                Render(game, timeContext, viewModel);
             }
 
-            if (isInBattle)
+            UnloadRenderTexture(_renderTexture);
+        }
+
+        RaylibResources.UnloadAll();
+        CloseAudioDevice();
+        CloseWindow();
+    }
+
+    private static void Render(in Game game, in TimeContext timeContext, in ViewModel viewModel)
+    {
+        BeginTextureMode(_renderTexture);
+        {
+            ClearBackground(Color.Black);
+
+            if (game.StateAutomaton.CurrentState == Game.ExploreState)
             {
-                BeginShaderMode(RaylibResources.PlasmaShader);
+                if (game.World is not null)
                 {
-                    DrawRectangle(0, 0, 320, 240, Color.White);
-                }
-                EndShaderMode();
-            }
-
-            BeginMode3D(camera);
-            {
-                if (!isInBattle)
-                {
-                    Rlgl.DisableBackfaceCulling();
-                    {
-                        DrawModel(RaylibResources.FloorModel, Vector3.UnitY * -0.5F, 1, Color.White);
-                        DrawModel(RaylibResources.CeilingModel, Vector3.UnitY * 0.5F, 1, Color.White);
-                    }
-                    Rlgl.EnableBackfaceCulling();
-
-                    for (int y = 0; y < world.TileMap.GetLength(0); y++)
-                    {
-                        for (int x = 0; x < world.TileMap.GetLength(1); x++)
-                        {
-                            if (world.TileMap[y, x] != 0)
-                            {
-                                DrawModel(RaylibResources.TileModel, Make3D(new(x, y)), 1, Color.White);
-                            }
-                        }
-                    }
-
-                    BeginShaderMode(RaylibResources.BaseShader);
-                    {
-                        foreach (var spawnedChest in world.Chests)
-                        {
-                            int subFrame = (int)(spawnedChest.Value.Openness * 3);
-
-                            DrawBillboardPro(
-                                camera,
-                                RaylibResources.ChestAtlas,
-                                new Rectangle(subFrame * 32, 0, 32, 32),
-                                Make3D(new(spawnedChest.Transform.Position.X, spawnedChest.Transform.Position.Y)),
-                                Vector3.UnitY,
-                                Vector2.One / 2f,
-                                new Vector2(0.25f, 0.5f),
-                                0,
-                                Color.White
-                            );
-                        }
-                    }
-                    EndShaderMode();
-                }
-
-                if (isInBattle)
-                {
-                    (float X, float Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
-
-                    X /= 1.5f;
-                    Y /= 1.5f;
-                    X += world.Player.Transform.Position.X;
-                    Y += world.Player.Transform.Position.Y;
-
-                    var offs = Vector3.Zero;
-
-                    if (viewModel.BattleEnemyBillboardShakeT > 0)
-                    {
-                        offs = new((Random.Shared.NextSingle() * 2 - 1) / 20f, 0, (Random.Shared.NextSingle() * 2 - 1) / 20f);
-                    }
-
-                    if (game.BattleState.Foe.Current.Health <= 0)
-                    {
-                        offs.Y = Kryz.Tweening.EasingFunctions.InOutCubic(Kryz.Tweening.EasingFunctions.InOutCubic(viewModel.BattleEnemyDieT)) - 1f;
-                    }
-
-                    Rlgl.DisableDepthTest();
-                    {
-                        DrawBillboardPro(
-                            camera,
-                            RaylibResources.EnemyAtlas,
-                            new(viewModel.BattleEnemyFrame * 64, 0, 64, 64),
-                            Make3D(new(X, Y))
-                                + offs,
-                            Vector3.UnitY,
-                            Vector2.One,
-                            Vector2.One / 2f,
-                            0,
-                            Color.White);
-                    }
-                    Rlgl.EnableDepthTest();
+                    RenderWandering(game.World, timeContext);
                 }
             }
-            EndMode3D();
-
-            if (game.StateAutomaton.CurrentState == game.BattleScreenWipe)
+            else if (game.StateAutomaton.CurrentState == Game.BattleState)
             {
-                BeginShaderMode(RaylibResources.ScreenTransitionShader);
+                if (game.Battle is not null)
                 {
-                    DrawRectangle(0, 0, 320, 240, Color.Black);
+                    RenderBattle(game.Battle, timeContext);
                 }
-                EndShaderMode();
             }
 
-            if (game.StateAutomaton.CurrentState == game.BattlePlayerAiming)
-            {
-                DrawCircle(
-                    (int)(160 + (game.BattleState.PlayerAimingState.CurrentAimValue * 160)),
-                    120,
-                    8,
-                    game.BattleState.PlayerAimingState.IsInRange()
-                        ? Color.Green
-                        : Color.RayWhite);
-            }
-
-            for (int i = 0; i < game.Log.Lines.Count; i++)
-            {
-                TextDraw(
-                    RaylibResources.Font,
-                    game.Log.Lines[i],
-                    new Vector2(
-                        renderTexture.Texture.Width,
-                        renderTexture.Texture.Height),
-                    new Vector2(
-                        0,
-                        i * 15));
-            }
-
-            if (game.DialogStateAutomaton.CurrentState is not null)
-            {
-                DrawRectangle(0, renderTexture.Texture.Height - 48, renderTexture.Texture.Width, 48, Color.Black);
-                TextDraw(
-                    RaylibResources.Font,
-                    game.DialogState.RunningLine.ToString(),
-                    new Vector2(
-                        renderTexture.Texture.Width,
-                        renderTexture.Texture.Height
-                    ),
-                    new Vector2(
-                        0,
-                        renderTexture.Texture.Height - 48
-                    )
-                );
-            }
-
+            //
             // draw hud
-            DrawRectangle(0, 240 - 32, 320, 32, new(16, 16, 16));
-            DrawTexture(RaylibResources.MugshotTexture, 0, 240 - 32, Color.White);
-            DrawTextEx(
-                RaylibResources.Font,
-                world.Player.Value.RunningHealth.ToString(),
-                new(32, 240 - 15),
-                15,
-                1,
-                Color.RayWhite);
+            //
+
+            if (game.World is not null)
+            {
+                DrawRectangle(0, 240 - 32, 320, 32, new(16, 16, 16));
+                DrawTexture(RaylibResources.MugshotTexture, 0, 240 - 32, Color.White);
+                DrawTextEx(
+                    RaylibResources.Font,
+                    Math.Floor(game.World.Player.Value.RunningHealth).ToString(),
+                    new(32, 240 - 15),
+                    15,
+                    1,
+                    Color.RayWhite);
+            }
 
             // draw pop  ups
             if (viewModel.PopUpT > 0)
@@ -441,12 +275,12 @@ RaylibResources.CacheAndInitializeAll();
 
             BeginShaderMode(RaylibResources.DownmixedShader);
             {
-                SetShaderValue(RaylibResources.DownmixedShader, downmixedShaderLUTLoc, RaylibResources.LUTTexture);
+                SetShaderValue(RaylibResources.DownmixedShader, RaylibResources.DownmixedShaderLUTLoc, RaylibResources.LUTTexture);
 
                 SetShaderValue(
                     RaylibResources.DownmixedShader,
-                    downmixedShaderLUTSizeLoc,
-                    lutSize,
+                    RaylibResources.DownmixedShaderLUTSizeLoc,
+                    RaylibResources.LUTSize,
                     ShaderUniformDataType.Vec2);
 
                 Vector2 shakeOffs = Vector2.Zero;
@@ -457,7 +291,7 @@ RaylibResources.CacheAndInitializeAll();
                 }
 
                 DrawTexturePro(
-                    renderTexture.Texture,
+                    _renderTexture.Texture,
                     new Rectangle()
                     {
                         Width = 320,
@@ -472,7 +306,7 @@ RaylibResources.CacheAndInitializeAll();
                     },
                     // [TODO]: cache screen size values.
                     // [INFO]: the x coordinates are flipped so plus goes left and minus goes right
-                    new Vector2((-GetScreenWidth() / 2f) + (320 / 2f * (GetScreenHeight() / 240f)), 0) + shakeOffs,
+                    new Vector2(-GetScreenWidth() / 2f + 320 / 2f * (GetScreenHeight() / 240f), 0) + shakeOffs,
                     0,
                     Color.White
                 );
@@ -482,9 +316,198 @@ RaylibResources.CacheAndInitializeAll();
         EndDrawing();
     }
 
-    UnloadRenderTexture(renderTexture);
-}
+    private static void RenderWandering(in World world, in TimeContext timeContext)
+    {
+        Vector3 playerDirection3d;
 
-RaylibResources.UnloadAll();
-CloseAudioDevice();
-CloseWindow();
+        {
+            var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
+            playerDirection3d = new(X, 0, Y);
+        }
+
+        _camera.Position = Vector3.Lerp(
+            new Vector3(world.OldPlayerX, 0, world.OldPlayerY),
+            new Vector3(world.Player.Transform.Position.X, 0, world.Player.Transform.Position.Y),
+            world.CameraPositionLerpT);
+
+        Quaternion cameraRotation = QuaternionFromAxisAngle(
+            Vector3.UnitY,
+            _cameraDirection.SignedAngleTo(playerDirection3d, Vector3.UnitY)
+                * 10
+                * (float)timeContext.Delta);
+
+        _cameraDirection = Vector3RotateByQuaternion(_cameraDirection, cameraRotation);
+        _camera.Target = _camera.Position + _cameraDirection;
+
+        Vector2 screenResolution = new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
+
+        unsafe
+        {
+            SetShaderValue(
+                RaylibResources.PlasmaShader,
+                RaylibResources.PlasmaShaderResolutionLoc,
+                &screenResolution,
+                ShaderUniformDataType.Vec2);
+
+            SetShaderValue(
+                RaylibResources.ScreenTransitionShader,
+                RaylibResources.ScreenTransitionShaderResolutionLoc,
+                &screenResolution,
+                ShaderUniformDataType.Vec2);
+        }
+
+        BeginMode3D(_camera);
+        {
+            Rlgl.DisableBackfaceCulling();
+            {
+                DrawModel(RaylibResources.FloorModel, Vector3.UnitY * -0.5F, 1, Color.White);
+                DrawModel(RaylibResources.CeilingModel, Vector3.UnitY * 0.5F, 1, Color.White);
+            }
+            Rlgl.EnableBackfaceCulling();
+
+            if (world.TileMap is not null)
+            {
+                for (int y = 0; y < world.TileMap.GetLength(0); y++)
+                {
+                    for (int x = 0; x < world.TileMap.GetLength(1); x++)
+                    {
+                        if (world.TileMap[y, x] != 0)
+                        {
+                            DrawModel(RaylibResources.TileModel, Make3D(new(x, y)), 1, Color.White);
+                        }
+                    }
+                }
+            }
+
+            BeginShaderMode(RaylibResources.BaseShader);
+            {
+                foreach (var spawnedChest in world.Chests)
+                {
+                    int subFrame = (int)(spawnedChest.Value.Openness * 3);
+
+                    DrawBillboardPro(
+                        _camera,
+                        RaylibResources.ChestAtlas,
+                        new Rectangle(subFrame * 32, 0, 32, 32),
+                        Make3D(new(spawnedChest.Transform.Position.X, spawnedChest.Transform.Position.Y)),
+                        Vector3.UnitY,
+                        Vector2.One / 2f,
+                        new Vector2(0.25f, 0.5f),
+                        0,
+                        Color.White
+                    );
+                }
+            }
+            EndShaderMode();
+        }
+        EndMode3D();
+    }
+
+    private static void RenderBattle(in Battle battle, in TimeContext timeContext)
+    {
+        var enemyPosition = Vector3.UnitZ;
+        var enemyFrameNumber = 0;
+
+        if (battle.StateAutomaton.CurrentState == Battle.PlayingState)
+        {
+            enemyPosition = Vector3.UnitZ * 2;
+
+            if (battle.CurrentBattleGoon is not null)
+            {
+                if (battle.CurrentBattleGoon.ShakeStateAutomaton.CurrentState == BattleGoon.ShakeState)
+                {
+                    enemyPosition.X = battle.CurrentBattleGoon.CurrentShakeContext.Offset;
+                }
+
+                if (battle.CurrentBattleGoon.Animation == 0 || battle.CurrentBattleGoon.Animation == 1)
+                {
+                    enemyFrameNumber = 0;
+                }
+                else if (battle.CurrentBattleGoon.Animation == 2)
+                {
+                    enemyFrameNumber = 1;
+                }
+                else if (battle.CurrentBattleGoon.Animation == 3)
+                {
+                    enemyFrameNumber = 2;
+                }
+            }
+        }
+
+        float x = Math2.SampleParabola(battle.CurrentPlayingContext.PlayerDodgeT, MathF.Sign(battle.CurrentPlayingContext.PlayerDodgeT), -1, 0);
+
+        _battleCamera.Position.X = x;
+        _battleCamera.Target = _battleCamera.Position + Vector3.UnitZ;
+
+        BeginMode3D(_battleCamera);
+        {
+            DrawBillboardRec(
+                _battleCamera,
+                RaylibResources.EnemyAtlas,
+                new()
+                {
+                    X = enemyFrameNumber * 64,
+                    Y = 0,
+                    Width = 64,
+                    Height = 64,
+                },
+                enemyPosition,
+                Vector2.One,
+                Color.White);
+
+            if (battle.CurrentBattleGoon is not null)
+            {
+                foreach (var bullet in battle.CurrentBattleGoon.Bullets)
+                {
+                    var bulletOffset = -Vector3.UnitY / 10f;
+                    var bulletDestination = Vector3.Zero + Vector3.UnitX * bullet.HorizontalDirection / 10f;
+
+                    var bulletPosition = Vector3Lerp(
+                        enemyPosition + bulletOffset,
+                        bulletDestination + bulletOffset,
+                        bullet.Closeness);
+
+                    DrawCubeV(
+                        bulletPosition,
+                        (Vector3.One + Vector3.UnitZ * 2) / 50f,
+                        Color.White);
+                }
+            }
+        }
+        EndMode3D();
+
+        if (battle.StateAutomaton.CurrentState == Battle.ChoosingState)
+        {
+            DrawTextEx(RaylibResources.Font, "A: Advance", new(0, 0), 15, 1, Color.White);
+            DrawTextEx(RaylibResources.Font, "I: Item", new(0, 15), 15, 1, Color.White);
+            DrawTextEx(RaylibResources.Font, "R: Run", new(0, 15 * 2), 15, 1, Color.White);
+        }
+        else if (battle.StateAutomaton.CurrentState == Battle.PlayingState)
+        {
+            DrawTextEx(RaylibResources.Font, "Dodge left and right!", new(0, 0), 15, 1, Color.White);
+            DrawTextEx(RaylibResources.Font, "Align the crosshair with the enemy and press space!", new(0, 15), 15, 1, Color.White);
+
+            if (battle.CrosshairStateAutomaton.CurrentState == Battle.CrosshairAimingState)
+            {
+                var crosshairColor = Color.White;
+
+                if (battle.CurrentPlayingContext.CrosshairIsInRange(-0.125f, 0.125f))
+                {
+                    crosshairColor = Color.Red;
+                }
+
+                DrawTextEx(
+                    RaylibResources.Font,
+                    "X",
+                    new(
+                        (int)(
+                            VIRTUAL_SCREEN_HALF_WIDTH * (battle.CurrentPlayingContext.CrosshairT + 1))
+                        - 8 / 2,
+                        VIRTUAL_SCREEN_HALF_HEIGHT),
+                    15,
+                    1,
+                    crosshairColor);
+            }
+        }
+    }
+}

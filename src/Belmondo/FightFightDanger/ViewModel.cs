@@ -1,7 +1,14 @@
 namespace Belmondo.FightFightDanger;
 
-public class ViewModel
+public class ViewModel(GameContext gameContext)
 {
+    public static StateAutomaton<ViewModel> PopUpStateAutomaton = new();
+    public static State<ViewModel> PopUpAppearState;
+    public static State<ViewModel> PopUpStickAroundState;
+    public static State<ViewModel> PopUpDisappearState;
+
+    private readonly GameContext _gameContext = gameContext;
+
     public float BattleEnemyBillboardShakeT;
     public float BattleEnemyDieT;
     public int BattleEnemyFrame;
@@ -10,67 +17,60 @@ public class ViewModel
     public float PopUpWaitT;
     public string? CurrentPopUpMessage;
 
-    public required GameContext GameContext;
-
-    public StateAutomaton PopUpStateAutomaton = new();
-    public State? PopUpAppearState;
-    public State? PopUpStickAroundState;
-    public State? PopUpDisappearState;
-
-    public ViewModel()
+    static ViewModel()
     {
         PopUpAppearState = new()
         {
-            EnterFunction = () =>
+            EnterFunction = self =>
             {
-                PopUpT = 0;
+                self.PopUpT = 0;
             },
 
-            UpdateFunction = () =>
+            UpdateFunction = self =>
             {
-                PopUpT += (float)(GameContext?.Delta).GetValueOrDefault() * 5;
+                self.PopUpT += (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault() * 5;
 
-                if (PopUpT >= 1)
+                if (self.PopUpT >= 1)
                 {
-                    return State.Goto(PopUpStickAroundState!);
+                    return State<ViewModel>.Goto(PopUpStickAroundState!);
                 }
 
-                return State.Continue;
+                return State<ViewModel>.Continue;
             },
         };
 
         PopUpStickAroundState = new()
         {
-            EnterFunction = () =>
+            EnterFunction = self =>
             {
-                PopUpWaitT = 0;
+                self.PopUpWaitT = 0;
             },
 
-            UpdateFunction = () =>
+            UpdateFunction = self =>
             {
-                PopUpWaitT += (float)(GameContext?.Delta).GetValueOrDefault();
+                self.PopUpWaitT += (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault();
 
-                if (PopUpWaitT >= 3)
+                if (self.PopUpWaitT >= 3)
                 {
-                    return State.Goto(PopUpDisappearState!);
+                    return State<ViewModel>.Goto(PopUpDisappearState!);
                 }
 
-                return State.Continue;
+                return State<ViewModel>.Continue;
             },
         };
 
         PopUpDisappearState = new()
         {
-            UpdateFunction = () =>
+            UpdateFunction = self =>
             {
-                PopUpT -= (float)(GameContext?.Delta).GetValueOrDefault() * 5;
+                self.PopUpT -= (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault() * 5;
 
-                if (PopUpT <= 0)
+                if (self.PopUpT <= 0)
                 {
-                    return State.Stop;
+                    return State<ViewModel>.Stop;
                 }
 
-                return State.Continue;
+                return State<ViewModel>.Continue;
             },
         };
     }
@@ -98,17 +98,17 @@ public class ViewModel
         ScreenShakeT = 0.25f;
     }
 
-    public void Update(in GameContext gameContext)
+    public void Update()
     {
-        BattleEnemyBillboardShakeT = Math.Max(BattleEnemyBillboardShakeT - ((float)gameContext.Delta), 0);
-        BattleEnemyDieT = Math.Max(BattleEnemyDieT - ((float)gameContext.Delta / 2f), 0);
-        ScreenShakeT = Math.Max(ScreenShakeT - ((float)gameContext.Delta), 0);
+        BattleEnemyBillboardShakeT = Math.Max(BattleEnemyBillboardShakeT - ((float)_gameContext.TimeContext.Delta), 0);
+        BattleEnemyDieT = Math.Max(BattleEnemyDieT - ((float)_gameContext.TimeContext.Delta / 2f), 0);
+        ScreenShakeT = Math.Max(ScreenShakeT - ((float)_gameContext.TimeContext.Delta), 0);
 
         if (BattleEnemyBillboardShakeT <= 0 && BattleEnemyDieT == 0)
         {
             BattleEnemyFrame = 0;
         }
 
-        PopUpStateAutomaton.Update();
+        PopUpStateAutomaton.Update(this);
     }
 }
