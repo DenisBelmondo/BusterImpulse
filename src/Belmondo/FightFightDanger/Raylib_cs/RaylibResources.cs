@@ -187,7 +187,6 @@ public static class RaylibResources
             return (2.0 * near * far) / (far + near - depth * (far - near));
         }
 
-
         // NOTE: Add your custom variables here
 
         void main() {
@@ -364,20 +363,134 @@ public static class RaylibResources
         }
         """;
 
+    private const string SCREEN_TRANSITION_2_FRAGMENT_SHADER_SOURCE = """
+    #version 330
+
+    // Input vertex attributes (from vertex shader)
+    in vec2 fragTexCoord;
+    in vec4 fragColor;
+    in vec3 fragNormal;
+
+    // Input uniform values
+    uniform float iTime;
+    uniform vec2 iResolution;
+
+    // Output fragment color
+    out vec4 finalColor;
+
+    // World Famous
+    float rand(vec2 co) {
+        return fract(sin(dot(co.xy, vec2(12.9898,78.233))) * 43758.5453);
+    }
+
+    vec3 get_color(vec2 a) {
+        int c = int(rand(a) * 7.);
+
+        switch (c) {
+            case 0:
+                return vec3(1.,0.,0.);
+            case 1:
+                return vec3(0.,1.,0.);
+            case 2:
+                return vec3(0.,0.,1.);
+            case 3:
+                return vec3(1.,.5,0.);
+            case 4:
+                return vec3(1.,1.,0.);
+            case 5:
+                return vec3(1.,0.,1.);
+            case 6:
+                return vec3(0.,1.,1.);
+        }
+
+        return vec3(1.);
+    }
+
+    // Thanks to The6P4C for the help with maths
+    vec2 rotate(vec2 uv) {
+        float theta = radians(-11.25);
+        mat2 rot = mat2(
+            cos(theta), -sin(theta),
+            sin(theta), cos(theta)
+        );
+
+        vec2 center = iResolution.xy/2.;
+        uv = (uv - center) * rot + center;
+        return uv;
+    }
+
+    // All components are in the range [0...1], including hue.
+    vec3 rgb2hsv(vec3 c) {
+        vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+        vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+        vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+        float d = q.x - min(q.w, q.y);
+        float e = 1.0e-10;
+        return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+    }
+
+    // All components are in the range [0…1], including hue.
+    vec3 hsv2rgb(vec3 c) {
+        vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+        return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+    }
+
+    float linearize(float depth, float near, float far) {
+        return (2.0 * near * far) / (far + near - depth * (far - near));
+    }
+
+    void main() {
+        vec2 fragCoord = fragTexCoord * iResolution;
+
+        // Loop every ~5s for demonstration purposes
+        // In game this should be done with real time
+        float t = mod(iTime, 5.) / 2.;
+
+        // Normalized coordinates, quantized to 16x16 squares
+        // There's probably a nicer way to express this
+        fragCoord = rotate(fragCoord);
+        vec2 uv = (fragCoord-mod(fragCoord, 16.)) / iResolution.xy;
+
+        // Average of x and y creates a diagonal gradient from bottom left to top right
+        // Make y smaller to give the gradient a steeper angle
+        // This may need aspect ratio correction? Not sure
+        float a = (uv.x + uv.y*0.25) / 2.;
+
+        // Add a bit of randomness to make it look swankier :3
+        a += rand(uv) * 0.05;
+
+        // Colorful! Like Tetrominoes
+        // vec3 color = get_color(uv)+0.25;
+        //color = vec3(0.,a*1.5,1.);
+        vec3 color = vec3(.1, .1, .1);
+
+        // Use that gradient as a measure of when to color each square
+        if (t > a && t < a+1.) {
+            finalColor = vec4(color, 1.0);
+        } else {
+            finalColor = vec4(0.);
+        }
+    }
+    """;
+
     public static Shader BaseShader { get; private set; }
-    public static Shader SurfaceShader { get; private set; }
+    public static Shader DownmixedShader { get; private set; }
     public static Shader PlasmaShader { get; private set; }
     public static Shader ScreenTransitionShader { get; private set; }
-    public static Shader DownmixedShader { get; private set; }
-    public static Texture2D TileTexture { get; private set; }
-    public static Texture2D FloorTexture { get; private set; }
+    public static Shader ScreenTransitionShader2 { get; private set; }
+    public static Shader SurfaceShader { get; private set; }
     public static Texture2D CeilingTexture { get; private set; }
     public static Texture2D ChestAtlas { get; private set; }
-    public static Texture2D EnemyTexture { get; private set; }
+    public static Texture2D CrosshairAtlasTexture { get; private set; }
     public static Texture2D EnemyAtlas { get; private set; }
-    public static Texture2D UIAtlasTexture { get; private set; }
+    public static Texture2D EnemyTexture { get; private set; }
+    public static Texture2D FloorTexture { get; private set; }
     public static Texture2D LUTTexture { get; private set; }
     public static Texture2D MugshotTexture { get; private set; }
+    public static Texture2D TileTexture { get; private set; }
+    public static Texture2D UIAtlasTexture { get; private set; }
     public static Material TileMaterial { get; private set; }
     public static Material FloorMaterial { get; private set; }
     public static Mesh TileMesh { get; private set; }
@@ -386,23 +499,31 @@ public static class RaylibResources
     public static Model FloorModel { get; private set; }
     public static Model CeilingModel { get; private set; }
     public static Sound BattleStartSound { get; private set; }
+    public static Sound ClapSound { get; private set; }
+    public static Sound CritSound { get; private set; }
+    public static Sound DieSound { get; private set; }
+    public static Sound HoughSound { get; private set; }
     public static Sound ItemSound { get; private set; }
     public static Sound MachineGunSound { get; private set; }
+    public static Sound MissSound { get; private set; }
     public static Sound OpenChestSound { get; private set; }
     public static Sound SmackSound { get; private set; }
     public static Sound StepSound { get; private set; }
     public static Sound TalkSound { get; private set; }
     public static Music Stage1WanderingMusic { get; private set; }
     public static Music Stage2WanderingMusic { get; private set; }
+    public static Music VictoryMusic { get; private set; }
     public static Music BattleMusic { get; private set; }
     public static Font Font { get; private set; }
 
-    public static int PlasmaShaderTimeLoc { get; private set; }
-    public static int PlasmaShaderResolutionLoc { get; private set; }
-    public static int ScreenTransitionShaderTimeLoc { get; private set; }
-    public static int ScreenTransitionShaderResolutionLoc { get; private set; }
     public static int DownmixedShaderLUTLoc { get; private set; }
     public static int DownmixedShaderLUTSizeLoc { get; private set; }
+    public static int PlasmaShaderResolutionLoc { get; private set; }
+    public static int PlasmaShaderTimeLoc { get; private set; }
+    public static int ScreenTransitionShader2ResolutionLoc { get; private set; }
+    public static int ScreenTransitionShader2TimeLoc { get; private set; }
+    public static int ScreenTransitionShaderResolutionLoc { get; private set; }
+    public static int ScreenTransitionShaderTimeLoc { get; private set; }
     public static Vector2 LUTSize { get; private set; }
 
     public static void CacheAndInitializeAll()
@@ -411,6 +532,7 @@ public static class RaylibResources
         SurfaceShader = LoadShaderFromMemory(SURFACE_VERTEX_SHADER_SOURCE, SURFACE_FRAGMENT_SHADER_SOURCE);
         PlasmaShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, PLASMA_FRAGMENT_SHADER_SOURCE);
         ScreenTransitionShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE);
+        ScreenTransitionShader2 = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_2_FRAGMENT_SHADER_SOURCE);
         DownmixedShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, DOWNMIXED_FRAGMENT_SHADER_SOURCE);
 
         Image img = LoadImage("static/textures/cobolt-stone-0-moss-0.png");
@@ -419,13 +541,14 @@ public static class RaylibResources
         TileTexture = LoadTextureFromImage(img);
         UnloadImage(img);
 
-        FloorTexture = LoadTexture("static/textures/cobolt-stone-1-floor-0.png");
         CeilingTexture = LoadTexture("static/textures/cobolt-stone-0-floor-0.png");
         ChestAtlas = LoadTexture("static/textures/chest-wooden-0.png");
-        UIAtlasTexture = LoadTexture("static/textures/ui.png");
+        CrosshairAtlasTexture = LoadTexture("static/textures/crosshair.png");
         EnemyTexture = LoadTexture("static/textures/enemy.png");
+        FloorTexture = LoadTexture("static/textures/cobolt-stone-1-floor-0.png");
         LUTTexture = LoadTexture("static/textures/lut.png");
         MugshotTexture = LoadTexture("static/textures/mugshot.png");
+        UIAtlasTexture = LoadTexture("static/textures/ui.png");
         EnemyAtlas = LoadTexture("static/textures/enemy-atlas.png");
         TileMaterial = LoadMaterialDefault();
         FloorMaterial = LoadMaterialDefault();
@@ -436,11 +559,25 @@ public static class RaylibResources
         CeilingModel = LoadModelFromMesh(PlaneMesh);
         Stage1WanderingMusic = LoadMusicStream("static/music/ronde.mp3");
         Stage2WanderingMusic = LoadMusicStream("static/music/draculas-tears.mp3");
+
+        {
+            var victoryMusic = LoadMusicStream("static/music/victory.mp3");
+
+            victoryMusic.Looping = false;
+            VictoryMusic = victoryMusic;
+        }
+
         BattleMusic = LoadMusicStream("static/music/morgan.mp3");
         Font = LoadFont("static/fonts/pixel-font-15.png");
+
         BattleStartSound = LoadSound("static/sounds/battle_start.wav");
+        ClapSound = LoadSound("static/sounds/clap.wav");
+        CritSound = LoadSound("static/sounds/crit.wav");
+        DieSound = LoadSound("static/sounds/die.wav");
+        HoughSound = LoadSound("static/sounds/hough.wav");
         ItemSound = LoadSound("static/sounds/item.ogg");
         MachineGunSound = LoadSound("static/sounds/machine_gun.wav");
+        MissSound = LoadSound("static/sounds/miss.ogg");
         OpenChestSound = LoadSound("static/sounds/open_chest.wav");
         SmackSound = LoadSound("static/sounds/smack.wav");
         StepSound = LoadSound("static/sounds/step.wav");
@@ -456,40 +593,50 @@ public static class RaylibResources
             CeilingModel.Materials[0].Shader = SurfaceShader;
         }
 
-            PlasmaShaderTimeLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iTime");
-            PlasmaShaderResolutionLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iResolution");
-            ScreenTransitionShaderTimeLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iTime");
-            ScreenTransitionShaderResolutionLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iResolution");
-            DownmixedShaderLUTLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTexture");
-            DownmixedShaderLUTSizeLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTextureSize");
-            LUTSize = new Vector2(RaylibResources.LUTTexture.Width, RaylibResources.LUTTexture.Height);
+        DownmixedShaderLUTLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTexture");
+        DownmixedShaderLUTSizeLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTextureSize");
+        PlasmaShaderResolutionLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iResolution");
+        PlasmaShaderTimeLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iTime");
+        ScreenTransitionShader2ResolutionLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader2, "iResolution");
+        ScreenTransitionShader2TimeLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader2, "iTime");
+        ScreenTransitionShaderResolutionLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iResolution");
+        ScreenTransitionShaderTimeLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iTime");
+        LUTSize = new Vector2(RaylibResources.LUTTexture.Width, RaylibResources.LUTTexture.Height);
     }
 
     public static void UnloadAll()
     {
         UnloadFont(Font);
         UnloadSound(BattleStartSound);
+        UnloadSound(ClapSound);
+        UnloadSound(CritSound);
+        UnloadSound(DieSound);
+        UnloadSound(HoughSound);
         UnloadSound(ItemSound);
         UnloadSound(MachineGunSound);
+        UnloadSound(MissSound);
         UnloadSound(OpenChestSound);
         UnloadSound(SmackSound);
         UnloadSound(StepSound);
         UnloadSound(TalkSound);
+        UnloadMusicStream(BattleMusic);
         UnloadMusicStream(Stage1WanderingMusic);
         UnloadMusicStream(Stage2WanderingMusic);
-        UnloadMusicStream(BattleMusic);
-        UnloadTexture(EnemyTexture);
-        UnloadTexture(EnemyAtlas);
+        UnloadMusicStream(VictoryMusic);
         UnloadTexture(ChestAtlas);
-        UnloadTexture(UIAtlasTexture);
+        UnloadTexture(CrosshairAtlasTexture);
+        UnloadTexture(EnemyAtlas);
+        UnloadTexture(EnemyTexture);
         UnloadTexture(LUTTexture);
         UnloadTexture(MugshotTexture);
+        UnloadTexture(UIAtlasTexture);
         UnloadModel(TileModel);
         UnloadModel(FloorModel);
         UnloadShader(BaseShader);
-        UnloadShader(SurfaceShader);
+        UnloadShader(DownmixedShader);
         UnloadShader(PlasmaShader);
         UnloadShader(ScreenTransitionShader);
-        UnloadShader(DownmixedShader);
+        UnloadShader(ScreenTransitionShader2);
+        UnloadShader(SurfaceShader);
     }
 }

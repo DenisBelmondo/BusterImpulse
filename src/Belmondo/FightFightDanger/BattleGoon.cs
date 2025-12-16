@@ -21,20 +21,23 @@ public class BattleGoon(GameContext gameContext)
     public static State<BattleGoon> BeginAttackState = State<BattleGoon>.Empty;
     public static State<BattleGoon> AttackState = State<BattleGoon>.Empty;
     public static State<BattleGoon> DamagedState = State<BattleGoon>.Empty;
+    public static State<BattleGoon> DyingState = State<BattleGoon>.Empty;
+    public static State<BattleGoon> FlyOffscreenState = State<BattleGoon>.Empty;
 
     public static State<BattleGoon> ShakeState = State<BattleGoon>.Empty;
 
     private readonly GameContext _gameContext = gameContext;
-    private double _interval = 0.5;
+    private double _shootInterval = 0.5;
 
-    public List<Bullet> Bullets = [];
-
+    public readonly List<Bullet> Bullets = [];
     public readonly StateAutomaton<BattleGoon> StateAutomaton = new();
     public readonly StateAutomaton<BattleGoon> ShakeStateAutomaton = new();
-    public ShakeContext CurrentShakeContext;
 
+    public ShakeContext CurrentShakeContext;
+    public float Health = 2;
     public int Animation;
     public float AnimationT;
+    public float FlyOffscreenAnimationT;
 
     static BattleGoon()
     {
@@ -90,11 +93,11 @@ public class BattleGoon(GameContext gameContext)
                 }
 
                 self.AnimationT += (float)self._gameContext.TimeContext.Delta;
-                self._interval += self._gameContext.TimeContext.Delta;
+                self._shootInterval += self._gameContext.TimeContext.Delta;
 
-                if (self._interval >= 0.4)
+                if (self._shootInterval >= 0.4)
                 {
-                    self._interval = 0;
+                    self._shootInterval = 0;
 
                     var horizontalDirection = Random.Shared.Next(-1, 2);
 
@@ -126,6 +129,7 @@ public class BattleGoon(GameContext gameContext)
             {
                 self.Animation = 3;
                 self.AnimationT = 0;
+                self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Hough);
             },
 
             UpdateFunction = static self =>
@@ -175,6 +179,51 @@ public class BattleGoon(GameContext gameContext)
                 self.CurrentShakeContext.Offset = 0;
             },
         };
+
+        DyingState = new()
+        {
+            EnterFunction = static self =>
+            {
+                self.Animation = 3;
+                self.AnimationT = 0;
+            },
+
+            UpdateFunction = static self =>
+            {
+                self.AnimationT += (float)self._gameContext.TimeContext.Delta;
+
+                if (self.AnimationT >= 1)
+                {
+                    self.AnimationT = 1;
+                    return State<BattleGoon>.Goto(FlyOffscreenState);
+                }
+
+                return State<BattleGoon>.Continue;
+            },
+        };
+
+        FlyOffscreenState = new()
+        {
+            EnterFunction = static self =>
+            {
+                self.Animation = 4;
+                self.FlyOffscreenAnimationT = 0;
+                self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Die);
+            },
+
+            UpdateFunction = static self =>
+            {
+                self.FlyOffscreenAnimationT += (float)self._gameContext.TimeContext.Delta / 1.5f;
+
+                if (self.FlyOffscreenAnimationT >= 1)
+                {
+                    self.FlyOffscreenAnimationT = 1;
+                    return State<BattleGoon>.Stop;
+                }
+
+                return State<BattleGoon>.Continue;
+            },
+        };
     }
 
     public void Update()
@@ -183,10 +232,18 @@ public class BattleGoon(GameContext gameContext)
         ShakeStateAutomaton.Update(this);
     }
 
-    public void Damage()
+    public void Damage(float amount)
     {
+        Health -= amount;
         Bullets.Clear();
+
         StateAutomaton.ChangeState(DamagedState);
+
+        if (Health <= 0)
+        {
+            StateAutomaton.ChangeState(DyingState);
+        }
+
         ShakeStateAutomaton.ChangeState(ShakeState);
     }
 }

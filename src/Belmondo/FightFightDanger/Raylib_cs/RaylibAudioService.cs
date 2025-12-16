@@ -14,8 +14,13 @@ public sealed class RaylibAudioService : IAudioService
         Sound? maybeSound = soundEffect switch
         {
             SoundEffect.BattleStart => RaylibResources.BattleStartSound,
+            SoundEffect.Clap => RaylibResources.ClapSound,
+            SoundEffect.Crit => RaylibResources.CritSound,
+            SoundEffect.Die => RaylibResources.DieSound,
+            SoundEffect.Hough => RaylibResources.HoughSound,
             SoundEffect.Item => RaylibResources.ItemSound,
             SoundEffect.MachineGun => RaylibResources.MachineGunSound,
+            SoundEffect.Miss => RaylibResources.MissSound,
             SoundEffect.OpenChest => RaylibResources.OpenChestSound,
             SoundEffect.Smack => RaylibResources.SmackSound,
             SoundEffect.Step => RaylibResources.StepSound,
@@ -33,9 +38,10 @@ public sealed class RaylibAudioService : IAudioService
     {
         Music? maybeNewMusic = musicTrack switch
         {
+            MusicTrack.Battle => RaylibResources.BattleMusic,
+            MusicTrack.Victory => RaylibResources.VictoryMusic,
             MusicTrack.WanderingStage1 => RaylibResources.Stage1WanderingMusic,
             MusicTrack.WanderingStage2 => RaylibResources.Stage2WanderingMusic,
-            MusicTrack.Battle => RaylibResources.BattleMusic,
             _ => null,
         };
 
@@ -56,6 +62,14 @@ public sealed class RaylibAudioService : IAudioService
 
             _maybeCurrentMusicAndTrack = (MusicAndTrack?)(musicTrack, music);
             PlayMusicStream(music);
+        }
+    }
+
+    public void StopMusic()
+    {
+        if (_maybeCurrentMusicAndTrack is MusicAndTrack musicAndTrack)
+        {
+            StopMusicStream(musicAndTrack.Music);
         }
     }
 

@@ -4,4 +4,5 @@ public interface IAudioService
 {
     public void PlaySoundEffect(SoundEffect soundEffect);
     public void ChangeMusic(MusicTrack musicTrack);
+    public void StopMusic();
 }

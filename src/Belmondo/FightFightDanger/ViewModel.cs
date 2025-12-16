@@ -3,9 +3,13 @@ namespace Belmondo.FightFightDanger;
 public class ViewModel(GameContext gameContext)
 {
     public static StateAutomaton<ViewModel> PopUpStateAutomaton = new();
-    public static State<ViewModel> PopUpAppearState;
-    public static State<ViewModel> PopUpStickAroundState;
-    public static State<ViewModel> PopUpDisappearState;
+    public static State<ViewModel> PopUpAppearState = State<ViewModel>.Empty;
+    public static State<ViewModel> PopUpStickAroundState = State<ViewModel>.Empty;
+    public static State<ViewModel> PopUpDisappearState = State<ViewModel>.Empty;
+
+    public static StateAutomaton<ViewModel> TransitionStateAutomaton = new();
+    public static State<ViewModel> TransitionFadeInState = State<ViewModel>.Empty;
+    public static State<ViewModel> TransitionFadeOutState = State<ViewModel>.Empty;
 
     private readonly GameContext _gameContext = gameContext;
 
@@ -16,17 +20,18 @@ public class ViewModel(GameContext gameContext)
     public float PopUpT;
     public float PopUpWaitT;
     public string? CurrentPopUpMessage;
+    public float ScreenTransitionT;
 
     static ViewModel()
     {
         PopUpAppearState = new()
         {
-            EnterFunction = self =>
+            EnterFunction = static self =>
             {
                 self.PopUpT = 0;
             },
 
-            UpdateFunction = self =>
+            UpdateFunction = static self =>
             {
                 self.PopUpT += (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault() * 5;
 
@@ -41,12 +46,12 @@ public class ViewModel(GameContext gameContext)
 
         PopUpStickAroundState = new()
         {
-            EnterFunction = self =>
+            EnterFunction = static self =>
             {
                 self.PopUpWaitT = 0;
             },
 
-            UpdateFunction = self =>
+            UpdateFunction = static self =>
             {
                 self.PopUpWaitT += (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault();
 
@@ -61,11 +66,41 @@ public class ViewModel(GameContext gameContext)
 
         PopUpDisappearState = new()
         {
-            UpdateFunction = self =>
+            UpdateFunction = static self =>
             {
                 self.PopUpT -= (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault() * 5;
 
                 if (self.PopUpT <= 0)
+                {
+                    return State<ViewModel>.Stop;
+                }
+
+                return State<ViewModel>.Continue;
+            },
+        };
+
+        TransitionFadeInState = new()
+        {
+            UpdateFunction = static self =>
+            {
+                self.ScreenTransitionT += (float)self._gameContext.TimeContext.Delta;
+
+                if (self.ScreenTransitionT >= 1f)
+                {
+                    return State<ViewModel>.Stop;
+                }
+
+                return State<ViewModel>.Continue;
+            },
+        };
+
+        TransitionFadeOutState = new()
+        {
+            UpdateFunction = static self =>
+            {
+                self.ScreenTransitionT += (float)self._gameContext.TimeContext.Delta;
+
+                if (self.ScreenTransitionT >= 2f)
                 {
                     return State<ViewModel>.Stop;
                 }

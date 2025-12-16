@@ -27,6 +27,7 @@ public class Game(GameContext gameContext)
     //
     public StateAutomaton<Game> StateAutomaton = new();
     public Log Log = new(8);
+    public float TransitionT;
 
     static Game()
     {

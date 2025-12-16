@@ -21,10 +21,12 @@ public class Battle : IResettable
 
     public static State<Battle> ChoosingState = State<Battle>.Empty;
     public static State<Battle> PlayingState = State<Battle>.Empty;
-    public static State<Battle> WaitState = State<Battle>.Empty;
+    public static State<Battle> VictoryState = State<Battle>.Empty;
     public static State<Battle> CrosshairWaitingState = State<Battle>.Empty;
     public static State<Battle> CrosshairAimingState = State<Battle>.Empty;
     public static State<Battle> CrosshairCountdownState = State<Battle>.Empty;
+    public static State<Battle> CrosshairMissState = State<Battle>.Empty;
+    public static State<Battle> CrosshairTargetState = State<Battle>.Empty;
 
     public static State<Battle> PlayerReadyState = State<Battle>.Empty;
     public static State<Battle> PlayerDodgeState = State<Battle>.Empty;
@@ -79,16 +81,31 @@ public class Battle : IResettable
                         return State<Battle>.Goto(ChoosingState);
                     }
 
-                    if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm) && self.CrosshairStateAutomaton.CurrentState == Battle.CrosshairAimingState && self.CurrentPlayingContext.CrosshairIsInRange(-0.125f, 0.125f))
+                    if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm) && self.CrosshairStateAutomaton.CurrentState == CrosshairAimingState)
                     {
-                        self.CurrentBattleGoon.Damage();
-                        self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Smack);
-                        self.CrosshairStateAutomaton.ChangeState(CrosshairWaitingState);
-
-                        if (self.CurrentBattleGoon.StateAutomaton.CurrentState == BattleGoon.IdleState)
+                        if (self.CurrentPlayingContext.CrosshairIsInRange(-0.125f, 0.125f))
                         {
-                            return State<Battle>.Goto(ChoosingState);
+                            if (self.CurrentPlayingContext.CrosshairIsInRange(-0.01f, 0.01f))
+                            {
+                                self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Crit);
+                            }
+
+                            self.CurrentBattleGoon.Bullets.Clear();
+                            self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Clap);
+                            self.CrosshairStateAutomaton.ChangeState(CrosshairTargetState);
+                            self.CurrentBattleGoon.StateAutomaton.ChangeState(State<BattleGoon>.Empty);
                         }
+                        else
+                        {
+                            self.CrosshairStateAutomaton.ChangeState(State<Battle>.Empty);
+                            self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Miss);
+                        }
+                    }
+
+                    if (self.CurrentBattleGoon.StateAutomaton.PreviousState == BattleGoon.FlyOffscreenState && self.CurrentBattleGoon.FlyOffscreenAnimationT >= 1)
+                    {
+                        self._gameContext.AudioService.ChangeMusic(MusicTrack.Victory);
+                        return State<Battle>.Goto(VictoryState);
                     }
                 }
 
@@ -101,6 +118,19 @@ public class Battle : IResettable
             ExitFunction = static self =>
             {
                 self.CurrentPlayingContext.PlayerDodgeT = 0;
+            },
+        };
+
+        VictoryState = new()
+        {
+            UpdateFunction = static self =>
+            {
+                if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
+                {
+                    return State<Battle>.Stop;
+                }
+
+                return State<Battle>.Continue;
             },
         };
 
@@ -182,6 +212,42 @@ public class Battle : IResettable
             UpdateFunction = static self =>
             {
                 self.CurrentPlayingContext.CrosshairT = MathF.Sin((float)self._gameContext.TimeContext.Time * 2);
+                return State<Battle>.Continue;
+            },
+        };
+
+        CrosshairTargetState = new()
+        {
+            EnterFunction = static self =>
+            {
+                self.CurrentPlayingContext.CrosshairCountdownSecondsLeft = 0.5f;
+                self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Clap);
+            },
+
+            UpdateFunction = static self =>
+            {
+                self.CurrentPlayingContext.CrosshairCountdownSecondsLeft -= self._gameContext.TimeContext.Delta;
+
+                if (self.CurrentPlayingContext.CrosshairCountdownSecondsLeft <= 0)
+                {
+                    self.CurrentPlayingContext.CrosshairCountdownSecondsLeft = 0;
+
+                    if (self.CurrentBattleGoon is not null)
+                    {
+                        var damage = 1;
+
+                        if (self.CurrentPlayingContext.CrosshairIsInRange(-0.01f, 0.01f))
+                        {
+                            damage = 2;
+                        }
+
+                        self.CurrentBattleGoon.Damage(damage);
+                        self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Smack);
+                    }
+
+                    return State<Battle>.Stop;
+                }
+
                 return State<Battle>.Continue;
             },
         };

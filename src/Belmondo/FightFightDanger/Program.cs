@@ -17,6 +17,8 @@ internal class Program
     //
     // render stuff
     //
+    private static readonly Vector3[] _goonDieControlPoints;
+
     private static Camera3D _camera;
     private static Camera3D _battleCamera;
     private static RenderTexture2D _renderTexture;
@@ -32,6 +34,15 @@ internal class Program
 
         DrawTextEx(font, text, position + Vector2.One * scaleFactor, scaledFontSize, 1, Color.DarkBlue);
         DrawTextEx(font, text, position, scaledFontSize, 1, Color.White);
+    }
+
+    static Program()
+    {
+        _goonDieControlPoints = [
+            Vector3.Zero,
+            -Vector3.UnitX + Vector3.UnitY,
+            -Vector3.UnitX * 2 - Vector3.UnitY * 4
+        ];
     }
 
     private static void Main(string[] args)
@@ -266,6 +277,23 @@ internal class Program
                     1,
                     Color.White);
             }
+
+            BeginShaderMode(RaylibResources.ScreenTransitionShader2);
+            {
+                unsafe
+                {
+                    float time = (float)timeContext.Time * 4;
+
+                    SetShaderValue(
+                        RaylibResources.ScreenTransitionShader2,
+                        RaylibResources.ScreenTransitionShader2TimeLoc,
+                        &time,
+                        ShaderUniformDataType.Float);
+                }
+
+                // DrawRectangle(0, 0, VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT, Color.White);
+            }
+            EndShaderMode();
         }
         EndTextureMode();
 
@@ -354,6 +382,12 @@ internal class Program
                 RaylibResources.ScreenTransitionShaderResolutionLoc,
                 &screenResolution,
                 ShaderUniformDataType.Vec2);
+
+            SetShaderValue(
+                RaylibResources.ScreenTransitionShader2,
+                RaylibResources.ScreenTransitionShader2ResolutionLoc,
+                &screenResolution,
+                ShaderUniformDataType.Vec2);
         }
 
         BeginMode3D(_camera);
@@ -406,14 +440,18 @@ internal class Program
     private static void RenderBattle(in Battle battle, in TimeContext timeContext)
     {
         var enemyPosition = Vector3.UnitZ;
+        var enemyDeathOffset = Vector3.Zero;
         var enemyFrameNumber = 0;
+        var shouldDraw = true;
 
-        if (battle.StateAutomaton.CurrentState == Battle.PlayingState)
+        if (battle.StateAutomaton.CurrentState != Battle.ChoosingState)
         {
             enemyPosition = Vector3.UnitZ * 2;
 
             if (battle.CurrentBattleGoon is not null)
             {
+                enemyDeathOffset = Math2.SampleCatmullRom(_goonDieControlPoints, battle.CurrentBattleGoon.FlyOffscreenAnimationT);
+
                 if (battle.CurrentBattleGoon.ShakeStateAutomaton.CurrentState == BattleGoon.ShakeState)
                 {
                     enemyPosition.X = battle.CurrentBattleGoon.CurrentShakeContext.Offset;
@@ -431,6 +469,10 @@ internal class Program
                 {
                     enemyFrameNumber = 2;
                 }
+                else if (battle.CurrentBattleGoon.Animation == 4)
+                {
+                    enemyFrameNumber = 3;
+                }
             }
         }
 
@@ -441,19 +483,22 @@ internal class Program
 
         BeginMode3D(_battleCamera);
         {
-            DrawBillboardRec(
-                _battleCamera,
-                RaylibResources.EnemyAtlas,
-                new()
-                {
-                    X = enemyFrameNumber * 64,
-                    Y = 0,
-                    Width = 64,
-                    Height = 64,
-                },
-                enemyPosition,
-                Vector2.One,
-                Color.White);
+            if (shouldDraw)
+            {
+                DrawBillboardRec(
+                    _battleCamera,
+                    RaylibResources.EnemyAtlas,
+                    new()
+                    {
+                        X = enemyFrameNumber * 64,
+                        Y = 0,
+                        Width = 64,
+                        Height = 64,
+                    },
+                    enemyPosition + enemyDeathOffset,
+                    Vector2.One,
+                    Color.White);
+            }
 
             if (battle.CurrentBattleGoon is not null)
             {
@@ -469,8 +514,8 @@ internal class Program
 
                     DrawCubeV(
                         bulletPosition,
-                        (Vector3.One + Vector3.UnitZ * 2) / 50f,
-                        Color.White);
+                        (Vector3.One + Vector3.UnitZ * 2) / 60f,
+                        Color.Yellow);
                 }
             }
         }
@@ -478,7 +523,7 @@ internal class Program
 
         if (battle.StateAutomaton.CurrentState == Battle.ChoosingState)
         {
-            DrawTextEx(RaylibResources.Font, "A: Advance", new(0, 0), 15, 1, Color.White);
+            DrawTextEx(RaylibResources.Font, "P: Attack Phase", new(0, 0), 15, 1, Color.White);
             DrawTextEx(RaylibResources.Font, "I: Item", new(0, 15), 15, 1, Color.White);
             DrawTextEx(RaylibResources.Font, "R: Run", new(0, 15 * 2), 15, 1, Color.White);
         }
@@ -496,18 +541,53 @@ internal class Program
                     crosshairColor = Color.Red;
                 }
 
-                DrawTextEx(
-                    RaylibResources.Font,
-                    "X",
-                    new(
-                        (int)(
-                            VIRTUAL_SCREEN_HALF_WIDTH * (battle.CurrentPlayingContext.CrosshairT + 1))
-                        - 8 / 2,
-                        VIRTUAL_SCREEN_HALF_HEIGHT),
-                    15,
-                    1,
+                DrawTexturePro(
+                    RaylibResources.CrosshairAtlasTexture,
+                    new()
+                    {
+                        Width = 16,
+                        Height = 16,
+                    },
+                    new()
+                    {
+                        X = VIRTUAL_SCREEN_HALF_WIDTH * (battle.CurrentPlayingContext.CrosshairT + 1) - 8,
+                        Y = VIRTUAL_SCREEN_HALF_HEIGHT - 8,
+                        Width = 16,
+                        Height = 16,
+                    },
+                    Vector2.Zero,
+                    0,
                     crosshairColor);
             }
+            else if (battle.CrosshairStateAutomaton.CurrentState == Battle.CrosshairTargetState)
+            {
+                var sizeMod = battle.CurrentPlayingContext.CrosshairCountdownSecondsLeft * 10;
+                var texWidth = RaylibResources.CrosshairAtlasTexture.Height * sizeMod;
+                var texHeight = RaylibResources.CrosshairAtlasTexture.Height * sizeMod;
+
+                DrawTexturePro(
+                    RaylibResources.CrosshairAtlasTexture,
+                    new()
+                    {
+                        X = 16,
+                        Width = 16,
+                        Height = 16,
+                    },
+                    new()
+                    {
+                        X = (float)((VIRTUAL_SCREEN_HALF_WIDTH * (battle.CurrentPlayingContext.CrosshairT + 1)) - texWidth / 2),
+                        Y = (float)(VIRTUAL_SCREEN_HALF_HEIGHT - texHeight / 2),
+                        Width = (float)texWidth,
+                        Height = (float)texHeight,
+                    },
+                    Vector2.Zero,
+                    0,
+                    Color.Green);
+            }
+        }
+        else if (battle.StateAutomaton.CurrentState == Battle.VictoryState)
+        {
+            DrawTextEx(RaylibResources.Font, "You won!", new(0, 0), 15, 1, Color.White);
         }
     }
 }
