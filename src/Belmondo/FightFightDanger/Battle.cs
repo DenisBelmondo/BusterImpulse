@@ -12,7 +12,7 @@ public class Battle : IResettable
         public float PlayerDodgeT;
         public double PlayerInvulnerabilityT;
         public float CrosshairT;
-        public double CrosshairCountdownSecondsLeft;
+        public TimerContext CrosshairTimerContext;
 
         public readonly bool CrosshairIsInRange(float minT, float maxT) => CrosshairT > minT && CrosshairT < maxT;
     }
@@ -102,7 +102,7 @@ public class Battle : IResettable
                         }
                     }
 
-                    if (self.CurrentBattleGoon.StateAutomaton.PreviousState == BattleGoon.FlyOffscreenState && self.CurrentBattleGoon.FlyOffscreenAnimationT >= 1)
+                    if (self.CurrentBattleGoon.StateAutomaton.PreviousState == BattleGoon.FlyOffscreenState && self.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                     {
                         self._gameContext.AudioService.ChangeMusic(MusicTrack.Victory);
                         return State<Battle>.Goto(VictoryState);
@@ -191,14 +191,14 @@ public class Battle : IResettable
         {
             EnterFunction = static self =>
             {
-                self.CurrentPlayingContext.CrosshairCountdownSecondsLeft = 3;
+                self.CurrentPlayingContext.CrosshairTimerContext.Start(3);
             },
 
             UpdateFunction = static self =>
             {
-                self.CurrentPlayingContext.CrosshairCountdownSecondsLeft -= self._gameContext.TimeContext.Delta;
+                self.CurrentPlayingContext.CrosshairTimerContext.Update();
 
-                if (self.CurrentPlayingContext.CrosshairCountdownSecondsLeft <= 0)
+                if (self.CurrentPlayingContext.CrosshairTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
                     return State<Battle>.Goto(CrosshairAimingState);
                 }
@@ -220,18 +220,16 @@ public class Battle : IResettable
         {
             EnterFunction = static self =>
             {
-                self.CurrentPlayingContext.CrosshairCountdownSecondsLeft = 0.5f;
+                self.CurrentPlayingContext.CrosshairTimerContext.Start(0.5);
                 self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Clap);
             },
 
             UpdateFunction = static self =>
             {
-                self.CurrentPlayingContext.CrosshairCountdownSecondsLeft -= self._gameContext.TimeContext.Delta;
+                self.CurrentPlayingContext.CrosshairTimerContext.Update();
 
-                if (self.CurrentPlayingContext.CrosshairCountdownSecondsLeft <= 0)
+                if (self.CurrentPlayingContext.CrosshairTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
-                    self.CurrentPlayingContext.CrosshairCountdownSecondsLeft = 0;
-
                     if (self.CurrentBattleGoon is not null)
                     {
                         var damage = 1;
@@ -256,6 +254,7 @@ public class Battle : IResettable
     public Battle(GameContext gameContext)
     {
         _gameContext = gameContext;
+        CurrentPlayingContext.CrosshairTimerContext = new(gameContext.TimeContext);
         Reset();
     }
 

@@ -8,12 +8,16 @@ public class Game(GameContext gameContext)
 
     public static State<Game> ExploreState = State<Game>.Empty;
     public static State<Game> BattleState = State<Game>.Empty;
+    public static State<Game> ScreenTransitionFadeInState = State<Game>.Empty;
+    public static State<Game> ScreenTransitionFadeOutState = State<Game>.Empty;
+    public static State<Game> BattleCountdownTimerState = State<Game>.Empty;
 
     //
     // instance vars
     //
 
     private readonly GameContext _gameContext = gameContext;
+    private float _countdown;
 
     public event Action? PlayerDamaged;
     public event Action? EnemyDamaged;
@@ -25,8 +29,10 @@ public class Game(GameContext gameContext)
     //
     // temp
     //
-    public StateAutomaton<Game> StateAutomaton = new();
-    public Log Log = new(8);
+    public readonly StateAutomaton<Game> StateAutomaton = new();
+    public readonly StateAutomaton<Game> ScreenTransitionStateAutomaton = new();
+    public readonly StateAutomaton<Game> BattleCountdownStateAutomaton = new();
+    public readonly Log Log = new(8);
     public float TransitionT;
 
     static Game()
@@ -117,10 +123,58 @@ public class Game(GameContext gameContext)
                 return State<Game>.Continue;
             },
         };
+
+        ScreenTransitionFadeInState = new()
+        {
+            UpdateFunction = static self =>
+            {
+                self.TransitionT += (float)self._gameContext.TimeContext.Delta;
+
+                if (self.TransitionT >= 1)
+                {
+                    self.TransitionT = 1;
+                }
+
+                return State<Game>.Continue;
+            },
+        };
+
+        ScreenTransitionFadeOutState = new()
+        {
+            UpdateFunction = static self =>
+            {
+                self.TransitionT += (float)self._gameContext.TimeContext.Delta;
+
+                if (self.TransitionT >= 2)
+                {
+                    self.TransitionT = 2;
+                }
+
+                return State<Game>.Continue;
+            },
+        };
+
+        BattleCountdownTimerState = new()
+        {
+            UpdateFunction = static self =>
+            {
+                self._countdown -= (float)self._gameContext.TimeContext.Delta;
+
+                if (self._countdown <= 0)
+                {
+                    self._countdown = 0;
+                    return State<Game>.Stop;
+                }
+
+                return State<Game>.Continue;
+            },
+        };
     }
 
     public void Update()
     {
         StateAutomaton.Update(this);
+        ScreenTransitionStateAutomaton.Update(this);
+        BattleCountdownStateAutomaton.Update(this);
     }
 }

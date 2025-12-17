@@ -450,26 +450,37 @@ internal class Program
 
             if (battle.CurrentBattleGoon is not null)
             {
-                enemyDeathOffset = Math2.SampleCatmullRom(_goonDieControlPoints, battle.CurrentBattleGoon.FlyOffscreenAnimationT);
+                var animation = battle.CurrentBattleGoon.CurrentAnimationContext.Animation;
+                var animationDuration = battle.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimerContext.DurationSeconds;
+
+                if (animationDuration != 0)
+                {
+                    var animationSecondsRemaining = battle.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimerContext.SecondsRemaining;
+                    var t = (float)((animationDuration - animationSecondsRemaining) / animationDuration);
+
+                    enemyDeathOffset = Math2.SampleCatmullRom(
+                        _goonDieControlPoints,
+                        t);
+                }
 
                 if (battle.CurrentBattleGoon.ShakeStateAutomaton.CurrentState == BattleGoon.ShakeState)
                 {
                     enemyPosition.X = battle.CurrentBattleGoon.CurrentShakeContext.Offset;
                 }
 
-                if (battle.CurrentBattleGoon.Animation == 0 || battle.CurrentBattleGoon.Animation == 1)
+                if (animation == 0 || animation == 1)
                 {
                     enemyFrameNumber = 0;
                 }
-                else if (battle.CurrentBattleGoon.Animation == 2)
+                else if (animation == 2)
                 {
                     enemyFrameNumber = 1;
                 }
-                else if (battle.CurrentBattleGoon.Animation == 3)
+                else if (animation == 3)
                 {
                     enemyFrameNumber = 2;
                 }
-                else if (battle.CurrentBattleGoon.Animation == 4)
+                else if (animation == 4)
                 {
                     enemyFrameNumber = 3;
                 }
@@ -561,7 +572,7 @@ internal class Program
             }
             else if (battle.CrosshairStateAutomaton.CurrentState == Battle.CrosshairTargetState)
             {
-                var sizeMod = battle.CurrentPlayingContext.CrosshairCountdownSecondsLeft * 10;
+                var sizeMod = battle.CurrentPlayingContext.CrosshairTimerContext.SecondsRemaining * 10;
                 var texWidth = RaylibResources.CrosshairAtlasTexture.Height * sizeMod;
                 var texHeight = RaylibResources.CrosshairAtlasTexture.Height * sizeMod;
 

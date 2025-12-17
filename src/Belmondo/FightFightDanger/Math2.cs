@@ -21,25 +21,6 @@ public static class Math2
         );
     }
 
-    public static void CreateSpline(Vector3[] controlPoints, int segmentCount, in Span<Vector3> outSplinePoints)
-    {
-        int segsLimit = Math.Min(segmentCount, outSplinePoints.Length);
-
-        for (int i = 0; i < controlPoints.Length - 1; i++)
-        {
-            Vector3 p0 = (i == 0) ? controlPoints[0] : controlPoints[i - 1];
-            Vector3 p1 = controlPoints[i];
-            Vector3 p2 = controlPoints[i + 1];
-            Vector3 p3 = (i + 2 < controlPoints.Length) ? controlPoints[i + 2] : controlPoints[i + 1];
-
-            for (int j = 0; j < segsLimit; j++)
-            {
-                float t = j / (float)segmentCount;
-                outSplinePoints[j] = CatmullRom(p0, p1, p2, p3, t);
-            }
-        }
-    }
-
     public static Vector3 SampleCatmullRom(Vector3[] controlPoints, float t)
     {
         // Ensure t is within [0, 1]

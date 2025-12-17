@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace Belmondo.FightFightDanger;
 
-public class BattleGoon(GameContext gameContext)
+public class BattleGoon(GameContext gameContext) : IThinker
 {
     public struct Bullet
     {
@@ -15,6 +15,26 @@ public class BattleGoon(GameContext gameContext)
         public float Offset;
         public float Interval;
         public float SecondsLeft;
+    }
+
+    public struct AnimationContext(TimeContext timeContext) : IThinker, IResettable
+    {
+        public TimerContext AnimationTimerContext = new(timeContext);
+        public TimerContext FlyOffscreenTimerContext = new(timeContext);
+        public int Animation;
+
+        public void Reset()
+        {
+            AnimationTimerContext.Reset();
+            FlyOffscreenTimerContext.Reset();
+            Animation = 0;
+        }
+
+        public void Update()
+        {
+            AnimationTimerContext.Update();
+            FlyOffscreenTimerContext.Update();
+        }
     }
 
     public static State<BattleGoon> IdleState = State<BattleGoon>.Empty;
@@ -33,11 +53,10 @@ public class BattleGoon(GameContext gameContext)
     public readonly StateAutomaton<BattleGoon> StateAutomaton = new();
     public readonly StateAutomaton<BattleGoon> ShakeStateAutomaton = new();
 
+    public AnimationContext CurrentAnimationContext = new(gameContext.TimeContext);
     public ShakeContext CurrentShakeContext;
+
     public float Health = 2;
-    public int Animation;
-    public float AnimationT;
-    public float FlyOffscreenAnimationT;
 
     static BattleGoon()
     {
@@ -45,8 +64,8 @@ public class BattleGoon(GameContext gameContext)
         {
             EnterFunction = static self =>
             {
-                self.Animation = 0;
-                self.AnimationT = 0;
+                self.CurrentAnimationContext.Reset();
+                self.CurrentAnimationContext.Animation = 0;
             },
         };
 
@@ -54,15 +73,14 @@ public class BattleGoon(GameContext gameContext)
         {
             EnterFunction = static self =>
             {
-                self.Animation = 1;
-                self.AnimationT = 0;
+                self.CurrentAnimationContext.Reset();
+                self.CurrentAnimationContext.Animation = 1;
+                self.CurrentAnimationContext.AnimationTimerContext.Start(1);
             },
 
             UpdateFunction = static self =>
             {
-                self.AnimationT += (float)self._gameContext.TimeContext.Delta;
-
-                if (self.AnimationT >= 1)
+                if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
                     return State<BattleGoon>.Goto(AttackState);
                 }
@@ -75,8 +93,9 @@ public class BattleGoon(GameContext gameContext)
         {
             EnterFunction = static self =>
             {
-                self.Animation = 2;
-                self.AnimationT = 0;
+                self.CurrentAnimationContext.Reset();
+                self.CurrentAnimationContext.Animation = 2;
+                self.CurrentAnimationContext.AnimationTimerContext.Start(5);
             },
 
             UpdateFunction = static self =>
@@ -92,7 +111,6 @@ public class BattleGoon(GameContext gameContext)
                     bullet.Closeness += (float)self._gameContext.TimeContext.Delta;
                 }
 
-                self.AnimationT += (float)self._gameContext.TimeContext.Delta;
                 self._shootInterval += self._gameContext.TimeContext.Delta;
 
                 if (self._shootInterval >= 0.4)
@@ -109,7 +127,7 @@ public class BattleGoon(GameContext gameContext)
                     self._gameContext.AudioService.PlaySoundEffect(SoundEffect.MachineGun);
                 }
 
-                if (self.AnimationT >= 5)
+                if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
                     return State<BattleGoon>.Goto(IdleState);
                 }
@@ -127,16 +145,16 @@ public class BattleGoon(GameContext gameContext)
         {
             EnterFunction = static self =>
             {
-                self.Animation = 3;
-                self.AnimationT = 0;
+                self.CurrentAnimationContext.Reset();
+                self.CurrentAnimationContext.Animation = 3;
+                self.CurrentAnimationContext.AnimationTimerContext.Start(1);
+                self.Bullets.Clear();
                 self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Hough);
             },
 
             UpdateFunction = static self =>
             {
-                self.AnimationT += (float)self._gameContext.TimeContext.Delta;
-
-                if (self.AnimationT >= 1)
+                if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
                     return State<BattleGoon>.Goto(IdleState);
                 }
@@ -184,17 +202,15 @@ public class BattleGoon(GameContext gameContext)
         {
             EnterFunction = static self =>
             {
-                self.Animation = 3;
-                self.AnimationT = 0;
+                self.CurrentAnimationContext.Reset();
+                self.CurrentAnimationContext.Animation = 3;
+                self.CurrentAnimationContext.AnimationTimerContext.Start(1);
             },
 
             UpdateFunction = static self =>
             {
-                self.AnimationT += (float)self._gameContext.TimeContext.Delta;
-
-                if (self.AnimationT >= 1)
+                if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
-                    self.AnimationT = 1;
                     return State<BattleGoon>.Goto(FlyOffscreenState);
                 }
 
@@ -206,18 +222,16 @@ public class BattleGoon(GameContext gameContext)
         {
             EnterFunction = static self =>
             {
-                self.Animation = 4;
-                self.FlyOffscreenAnimationT = 0;
+                self.CurrentAnimationContext.Reset();
+                self.CurrentAnimationContext.Animation = 4;
+                self.CurrentAnimationContext.FlyOffscreenTimerContext.Start(1.5f);
                 self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Die);
             },
 
             UpdateFunction = static self =>
             {
-                self.FlyOffscreenAnimationT += (float)self._gameContext.TimeContext.Delta / 1.5f;
-
-                if (self.FlyOffscreenAnimationT >= 1)
+                if (self.CurrentAnimationContext.FlyOffscreenTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
-                    self.FlyOffscreenAnimationT = 1;
                     return State<BattleGoon>.Stop;
                 }
 
@@ -230,12 +244,12 @@ public class BattleGoon(GameContext gameContext)
     {
         StateAutomaton.Update(this);
         ShakeStateAutomaton.Update(this);
+        CurrentAnimationContext.Update();
     }
 
     public void Damage(float amount)
     {
         Health -= amount;
-        Bullets.Clear();
 
         StateAutomaton.ChangeState(DamagedState);
 
