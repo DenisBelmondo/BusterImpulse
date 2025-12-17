@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public struct TimerContext(TimeContext timeContext) : IThinker, IResettable
+public class TimerContext(TimeContext timeContext) : IThinker, IResettable
 {
     public enum Status
     {
