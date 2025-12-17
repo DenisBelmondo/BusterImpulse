@@ -8,8 +8,8 @@ using static Belmondo.Mathematics.Extensions;
 
 internal class Program
 {
-    private const int VIRTUAL_SCREEN_WIDTH = 320;
-    private const int VIRTUAL_SCREEN_HEIGHT = 240;
+    private const int VIRTUAL_SCREEN_WIDTH = 640;
+    private const int VIRTUAL_SCREEN_HEIGHT = 480;
 
     private const int VIRTUAL_SCREEN_HALF_WIDTH = VIRTUAL_SCREEN_WIDTH / 2;
     private const int VIRTUAL_SCREEN_HALF_HEIGHT = VIRTUAL_SCREEN_HEIGHT / 2;
@@ -21,8 +21,10 @@ internal class Program
 
     private static Camera3D _camera;
     private static Camera3D _battleCamera;
-    private static RenderTexture2D _renderTexture;
+    private static RenderTexture2D _gameWorldRenderTexture;
+    private static RenderTexture2D _outerRenderTexture;
     private static Vector3 _cameraDirection;
+    private static Vector2 _currentScreenSize;
 
     private static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
     private static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
@@ -158,7 +160,7 @@ internal class Program
 
             _battleCamera = new()
             {
-                FovY = 90,
+                FovY = 60,
                 Projection = CameraProjection.Perspective,
                 Up = Vector3.UnitY,
             };
@@ -193,14 +195,15 @@ internal class Program
                 SetShapesTexture(texture, new(0, 0, 1, 1));
             }
 
-            _renderTexture = LoadRenderTexture(320, 240);
+            _gameWorldRenderTexture = LoadRenderTexture(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
+            _outerRenderTexture = LoadRenderTexture(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
+            SetTextureFilter(_outerRenderTexture.Texture, TextureFilter.Bilinear);
 
             double oldTime = GetTime();
 
-            Vector2 screenResolution = new(320, 240);
-
             while (!WindowShouldClose())
             {
+                _currentScreenSize = new(GetScreenWidth(), GetScreenHeight());
                 raylibAudioService.Update();
 
                 double newTime = GetTime();
@@ -217,7 +220,8 @@ internal class Program
                 Render(game, timeContext, viewModel);
             }
 
-            UnloadRenderTexture(_renderTexture);
+            UnloadRenderTexture(_gameWorldRenderTexture);
+            UnloadRenderTexture(_outerRenderTexture);
         }
 
         RaylibResources.UnloadAll();
@@ -227,7 +231,7 @@ internal class Program
 
     private static void Render(in Game game, in TimeContext timeContext, in ViewModel viewModel)
     {
-        BeginTextureMode(_renderTexture);
+        BeginTextureMode(_gameWorldRenderTexture);
         {
             ClearBackground(Color.Black);
 
@@ -246,29 +250,68 @@ internal class Program
                 }
             }
 
+            var mat = Math2.FitContain(new(320, 240), new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT));
+
+            Console.WriteLine(mat);
+
             //
             // draw hud
             //
 
             if (game.World is not null)
             {
-                DrawRectangle(0, 240 - 32, 320, 32, new(16, 16, 16));
-                DrawTexture(RaylibResources.MugshotTexture, 0, 240 - 32, Color.White);
+                DrawRectanglePro(
+                    new()
+                    {
+                        X = mat.M31,
+                        Y = (240 - 32) * mat.M32 + (240 - 32) * mat.M22,
+                        Width = 320 * mat.M11,
+                        Height = 32 * mat.M22,
+                    },
+                    Vector2.Zero,
+                    0,
+                    new(16, 16, 16));
+
+                var virtualMugshotY = 240 - RaylibResources.MugshotTexture.Height;
+
+                DrawTexturePro(
+                    RaylibResources.MugshotTexture,
+                    new()
+                    {
+                        X = 0,
+                        Y = 0,
+                        Width = RaylibResources.MugshotTexture.Width,
+                        Height = RaylibResources.MugshotTexture.Height,
+                    },
+                    new()
+                    {
+                        X = mat.M31,
+                        Y = virtualMugshotY * mat.M32 + virtualMugshotY * mat.M22,
+                        Width = RaylibResources.MugshotTexture.Width * mat.M11,
+                        Height = RaylibResources.MugshotTexture.Height * mat.M22,
+                    },
+                    Vector2.Zero,
+                    0,
+                    Color.White);
+
                 DrawTextEx(
                     RaylibResources.Font,
                     Math.Floor(game.World.Player.Value.RunningHealth).ToString(),
-                    new(32, 240 - 15),
-                    15,
+                    new(32 * mat.M11 + mat.M31, (240 - 15) * mat.M32 + (240 - 15) * mat.M22),
+                    15 * mat.M22,
                     1,
                     Color.RayWhite);
             }
 
+            //
             // draw pop  ups
+            //
+
             if (viewModel.PopUpT > 0)
             {
                 var t = Kryz.Tweening.EasingFunctions.InOutCubic(viewModel.PopUpT);
 
-                DrawRectangle(0, (int)(t * 16) - 16, 320, 16, new(16, 16, 16));
+                DrawRectangle(0, (int)(t * 16) - 16, VIRTUAL_SCREEN_WIDTH, 16, new(16, 16, 16));
                 DrawTextEx(
                     RaylibResources.Font,
                     viewModel.CurrentPopUpMessage,
@@ -290,8 +333,16 @@ internal class Program
                         &time,
                         ShaderUniformDataType.Float);
                 }
+            }
+            EndShaderMode();
+        }
+        EndTextureMode();
 
-                // DrawRectangle(0, 0, VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT, Color.White);
+        BeginTextureMode(_outerRenderTexture);
+        {
+            BeginShaderMode(RaylibResources.DownmixedShader);
+            {
+                DrawTexture(_gameWorldRenderTexture.Texture, 0, 0, Color.White);
             }
             EndShaderMode();
         }
@@ -301,45 +352,33 @@ internal class Program
         {
             ClearBackground(Color.Black);
 
-            BeginShaderMode(RaylibResources.DownmixedShader);
-            {
-                SetShaderValue(RaylibResources.DownmixedShader, RaylibResources.DownmixedShaderLUTLoc, RaylibResources.LUTTexture);
+            SetShaderValue(RaylibResources.DownmixedShader, RaylibResources.DownmixedShaderLUTLoc, RaylibResources.LUTTexture);
 
-                SetShaderValue(
-                    RaylibResources.DownmixedShader,
-                    RaylibResources.DownmixedShaderLUTSizeLoc,
-                    RaylibResources.LUTSize,
-                    ShaderUniformDataType.Vec2);
+            SetShaderValue(
+                RaylibResources.DownmixedShader,
+                RaylibResources.DownmixedShaderLUTSizeLoc,
+                RaylibResources.LUTSize,
+                ShaderUniformDataType.Vec2);
 
-                Vector2 shakeOffs = Vector2.Zero;
+            var mat = Math2.FitContain(new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT), _currentScreenSize);
 
-                if (viewModel.ScreenShakeT > 0)
+            DrawTexturePro(
+                _outerRenderTexture.Texture,
+                new Rectangle()
                 {
-                    shakeOffs = new Vector2(Random.Shared.NextSingle(), Random.Shared.NextSingle()) * 8;
-                }
-
-                DrawTexturePro(
-                    _renderTexture.Texture,
-                    new Rectangle()
-                    {
-                        Width = 320,
-                        Height = -240,
-                        Position = Vector2.Zero,
-                    },
-                    new Rectangle()
-                    {
-                        Width = 320 * (GetScreenHeight() / 240f),
-                        Height = GetScreenHeight(),
-                        Position = Vector2.Zero,
-                    },
-                    // [TODO]: cache screen size values.
-                    // [INFO]: the x coordinates are flipped so plus goes left and minus goes right
-                    new Vector2(-GetScreenWidth() / 2f + 320 / 2f * (GetScreenHeight() / 240f), 0) + shakeOffs,
-                    0,
-                    Color.White
-                );
-            }
-            EndShaderMode();
+                    Width = VIRTUAL_SCREEN_WIDTH,
+                    Height = VIRTUAL_SCREEN_HEIGHT,
+                },
+                new Rectangle()
+                {
+                    X = mat.M31,
+                    Y = mat.M32,
+                    Width = VIRTUAL_SCREEN_WIDTH * mat.M11,
+                    Height = VIRTUAL_SCREEN_HEIGHT * mat.M22,
+                },
+                Vector2.Zero,
+                0,
+                Color.White);
         }
         EndDrawing();
     }
@@ -354,8 +393,8 @@ internal class Program
         }
 
         _camera.Position = Vector3.Lerp(
-            new Vector3(world.OldPlayerX, 0, world.OldPlayerY),
-            new Vector3(world.Player.Transform.Position.X, 0, world.Player.Transform.Position.Y),
+            Make3D(new(world.OldPlayerX, world.OldPlayerY)),
+            Make3D(new(world.Player.Transform.Position.X, world.Player.Transform.Position.Y)),
             world.CameraPositionLerpT);
 
         Quaternion cameraRotation = QuaternionFromAxisAngle(
@@ -367,26 +406,26 @@ internal class Program
         _cameraDirection = Vector3RotateByQuaternion(_cameraDirection, cameraRotation);
         _camera.Target = _camera.Position + _cameraDirection;
 
-        Vector2 screenResolution = new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
+        Vector2 virtualScreenSize = new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
 
         unsafe
         {
             SetShaderValue(
                 RaylibResources.PlasmaShader,
                 RaylibResources.PlasmaShaderResolutionLoc,
-                &screenResolution,
+                &virtualScreenSize,
                 ShaderUniformDataType.Vec2);
 
             SetShaderValue(
                 RaylibResources.ScreenTransitionShader,
                 RaylibResources.ScreenTransitionShaderResolutionLoc,
-                &screenResolution,
+                &virtualScreenSize,
                 ShaderUniformDataType.Vec2);
 
             SetShaderValue(
                 RaylibResources.ScreenTransitionShader2,
                 RaylibResources.ScreenTransitionShader2ResolutionLoc,
-                &screenResolution,
+                &virtualScreenSize,
                 ShaderUniformDataType.Vec2);
         }
 
@@ -439,15 +478,13 @@ internal class Program
 
     private static void RenderBattle(in Battle battle, in TimeContext timeContext)
     {
-        var enemyPosition = Vector3.UnitZ;
+        var enemyPosition = Vector3.UnitZ * 2;
         var enemyDeathOffset = Vector3.Zero;
         var enemyFrameNumber = 0;
         var shouldDraw = true;
 
         if (battle.StateAutomaton.CurrentState != Battle.ChoosingState)
         {
-            enemyPosition = Vector3.UnitZ * 2;
-
             if (battle.CurrentBattleGoon is not null)
             {
                 var animation = battle.CurrentBattleGoon.CurrentAnimationContext.Animation;
@@ -495,6 +532,7 @@ internal class Program
         BeginMode3D(_battleCamera);
         {
             Rlgl.DisableBackfaceCulling();
+            Rlgl.DisableDepthTest();
             {
                 BeginShaderMode(RaylibResources.SurfaceShader);
                 {
@@ -502,6 +540,7 @@ internal class Program
                 }
                 EndShaderMode();
             }
+            Rlgl.EnableDepthTest();
             Rlgl.EnableBackfaceCulling();
 
             if (shouldDraw)

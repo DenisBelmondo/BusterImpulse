@@ -46,4 +46,29 @@ public static class Math2
         // Return the sampled point from the Catmull-Rom spline
         return CatmullRom(p0, p1, p2, p3, localT);
     }
+
+    public static Matrix3x2 FitContain(Vector2 imageSize, Vector2 containerSize)
+    {
+        Vector2 scale;
+
+        // Calculate scaling factors
+        float widthScale = containerSize.X / imageSize.X;
+        float heightScale = containerSize.Y / imageSize.Y;
+
+        // Use the smaller scale factor to maintain aspect ratio
+        float minScale = Math.Min(widthScale, heightScale);
+
+        // Calculate scale vector
+        scale = new Vector2(minScale, minScale);
+
+        // Calculate the translation to center the image
+        Vector2 translation = new Vector2(
+            (containerSize.X - (imageSize.X * scale.X)) / 2,
+            (containerSize.Y - (imageSize.Y * scale.Y)) / 2
+        );
+
+        // Create transformation matrix
+        Matrix3x2 transformationMatrix = Matrix3x2.CreateScale(scale) * Matrix3x2.CreateTranslation(translation);
+        return transformationMatrix;
+    }
 }

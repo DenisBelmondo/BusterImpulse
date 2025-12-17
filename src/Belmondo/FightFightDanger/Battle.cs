@@ -220,7 +220,7 @@ public class Battle : IResettable
         {
             EnterFunction = static self =>
             {
-                self.CurrentPlayingContext.CrosshairTimerContext.Start(0.5);
+                self.CurrentPlayingContext.CrosshairTimerContext.Start(0.25);
                 self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Clap);
             },
 
