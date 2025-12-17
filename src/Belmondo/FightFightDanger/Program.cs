@@ -40,8 +40,8 @@ internal class Program
     {
         _goonDieControlPoints = [
             Vector3.Zero,
-            -Vector3.UnitX + Vector3.UnitY,
-            -Vector3.UnitX * 2 - Vector3.UnitY * 4
+            -Vector3.UnitX / 2 + Vector3.UnitY + Vector3.UnitZ,
+            -Vector3.UnitX - Vector3.UnitY * 4 + Vector3.UnitZ * 2
         ];
     }
 
@@ -494,6 +494,16 @@ internal class Program
 
         BeginMode3D(_battleCamera);
         {
+            Rlgl.DisableBackfaceCulling();
+            {
+                BeginShaderMode(RaylibResources.SurfaceShader);
+                {
+                    DrawCube(Vector3.Zero, 5, 3, 40, Color.DarkBlue);
+                }
+                EndShaderMode();
+            }
+            Rlgl.EnableBackfaceCulling();
+
             if (shouldDraw)
             {
                 DrawBillboardRec(
