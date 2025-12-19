@@ -408,7 +408,7 @@ public static class RaylibResources
 
     // Thanks to The6P4C for the help with maths
     vec2 rotate(vec2 uv) {
-        float theta = radians(-11.25);
+        float theta = radians(45.);
         mat2 rot = mat2(
             cos(theta), -sin(theta),
             sin(theta), cos(theta)
@@ -441,30 +441,69 @@ public static class RaylibResources
         return (2.0 * near * far) / (far + near - depth * (far - near));
     }
 
-    void main() {
-        vec2 fragCoord = fragTexCoord * iResolution;
+    // Max size of square in pixels
+    #define SIZE 50.0
+    // The bigger, the flatter tiles are
+    #define CORNER 20.0
+    // Light direction
+    #define LIGHT_DIR vec3(0.65, 0.57, 2.0)
 
+    #define pi 3.1415926535897932384626433832795
+    #define hfpi 1.5707963267948966192313216916398
+    #define PI pi
+    #define HFPI hfpi
+
+    vec3 TileSquare(vec2 posSample) {
+        float size = 24;
+        float halfSize = size / 2.0;
+
+        vec2 screenPos = posSample*iResolution.xy - (iResolution.xy / 2.0) - vec2(halfSize);
+        vec2 pos = mod(screenPos, vec2(size)) - vec2(halfSize);
+
+        vec2 uv = posSample - pos/iResolution.xy;
+
+        vec3 texColorSample = vec3(1., .7, .1);
+
+        vec3 normal = normalize(vec3(tan((pos.x/size) * PI), tan((pos.y/size) * PI), CORNER));
+        //vec3 normal = normalize(vec3(pos.x/halfSize, pos.y/halfSize, smoothstep(0.0, halfSize, halfSize - sqrt(pos.x*pos.x + pos.y*pos.y))*CORNER)); //nice
+
+        float bright = dot(normal, normalize(LIGHT_DIR));
+
+        bright = pow(bright, 0.5);
+
+        vec3 colFinal = texColorSample * bright;
+
+        vec3 heif = normalize(LIGHT_DIR + vec3(0.0, 0.0, 0.1));
+
+        float spec = pow(dot(heif, normal), 96.0);
+
+        colFinal += vec3(spec);
+
+        // Set the final fragment color.
+        return colFinal;
+    }
+
+    void main() {
         // Loop every ~5s for demonstration purposes
         // In game this should be done with real time
         float t = mod(iTime, 5.) / 2.;
 
         // Normalized coordinates, quantized to 16x16 squares
         // There's probably a nicer way to express this
-        fragCoord = rotate(fragCoord);
-        vec2 uv = (fragCoord-mod(fragCoord, 16.)) / iResolution.xy;
+        vec2 fragCoord = rotate(fragTexCoord * iResolution.xy);
+        vec2 uv = (fragCoord-mod(fragCoord, 24.)) / iResolution.xy;
 
         // Average of x and y creates a diagonal gradient from bottom left to top right
         // Make y smaller to give the gradient a steeper angle
         // This may need aspect ratio correction? Not sure
-        float a = (uv.x + uv.y*0.25) / 2.;
+        float a = (uv.x + uv.y) / 2.;
 
         // Add a bit of randomness to make it look swankier :3
         a += rand(uv) * 0.05;
 
         // Colorful! Like Tetrominoes
-        // vec3 color = get_color(uv)+0.25;
+        vec3 color = TileSquare(rotate(fragTexCoord));
         //color = vec3(0.,a*1.5,1.);
-        vec3 color = vec3(.1, .1, .1);
 
         // Use that gradient as a measure of when to color each square
         if (t > a && t < a+1.) {
@@ -475,7 +514,76 @@ public static class RaylibResources
     }
     """;
 
+    private const string BATTLE_BG_SHAPE_FRAGMENT_SHADER_SOURCE =
+    """
+        #version 330
+
+        #define fog_start 0
+        #define fog_end 20
+
+        // Input vertex attributes (from vertex shader)
+        in vec2 fragTexCoord;
+        in vec4 fragColor;
+
+        // Input uniform values
+        uniform sampler2D texture0;
+        uniform vec4 colDiffuse;
+        uniform float iTime;
+
+        // Output fragment color
+        out vec4 finalColor;
+
+        // NOTE: Add your custom variables here
+
+        // All components are in the range [0...1], including hue.
+        vec3 rgb2hsv(vec3 c) {
+            vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+            vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+            vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+
+            float d = q.x - min(q.w, q.y);
+            float e = 1.0e-10;
+            return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+        }
+
+        // All components are in the range [0…1], including hue.
+        vec3 hsv2rgb(vec3 c) {
+            vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+            vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+            return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+        }
+
+        float linearize(float depth, float near, float far) {
+            return (2.0 * near * far) / (far + near - depth * (far - near));
+        }
+
+        void main() {
+            // Texel color fetching from texture sampler
+            vec4 texelColor = texture(texture0, fragTexCoord);
+
+            // NOTE: Implement here your fragment shader code
+
+            // final color is the color from the texture
+            //    times the tint color (colDiffuse)
+            //    times the fragment color (interpolated vertex color)
+            vec4 rgba = texelColor*colDiffuse*fragColor;
+            vec3 rgb = rgba.rgb;
+
+            float linearDepth = linearize(gl_FragCoord.z, 0.05, 4000.0);
+            float fog_factor = (linearDepth - fog_start) / (fog_end - fog_start);
+            fog_factor = clamp(fog_factor, 0.0, 1.0); // Clamp to ensure valid range
+
+            float offs = mod(iTime, 1.);
+
+            rgba.rgb = mix(rgba.rgb, rgba.rgb * 1.05, float(fog_factor >= offs && fog_factor <= offs + .1 ));
+            rgba.rgb = mix(rgba.rgb, vec3(0), fog_factor);
+
+            finalColor = rgba;
+        }
+        """;
+
     public static Shader BaseShader { get; private set; }
+    public static Shader BattleBackgroundShapeShader { get; private set; }
     public static Shader DownmixedShader { get; private set; }
     public static Shader PlasmaShader { get; private set; }
     public static Shader ScreenTransitionShader { get; private set; }
@@ -516,6 +624,7 @@ public static class RaylibResources
     public static Music BattleMusic { get; private set; }
     public static Font Font { get; private set; }
 
+    public static int BattleBackgroundShapeShaderTimeLoc { get; private set; }
     public static int DownmixedShaderLUTLoc { get; private set; }
     public static int DownmixedShaderLUTSizeLoc { get; private set; }
     public static int PlasmaShaderResolutionLoc { get; private set; }
@@ -529,11 +638,12 @@ public static class RaylibResources
     public static void CacheAndInitializeAll()
     {
         BaseShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, BASE_FRAGMENT_SHADER_SOURCE);
-        SurfaceShader = LoadShaderFromMemory(SURFACE_VERTEX_SHADER_SOURCE, SURFACE_FRAGMENT_SHADER_SOURCE);
+        BattleBackgroundShapeShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, BATTLE_BG_SHAPE_FRAGMENT_SHADER_SOURCE);
+        DownmixedShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, DOWNMIXED_FRAGMENT_SHADER_SOURCE);
         PlasmaShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, PLASMA_FRAGMENT_SHADER_SOURCE);
         ScreenTransitionShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_FRAGMENT_SHADER_SOURCE);
         ScreenTransitionShader2 = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, SCREEN_TRANSITION_2_FRAGMENT_SHADER_SOURCE);
-        DownmixedShader = LoadShaderFromMemory(BASE_VERTEX_SHADER_SOURCE, DOWNMIXED_FRAGMENT_SHADER_SOURCE);
+        SurfaceShader = LoadShaderFromMemory(SURFACE_VERTEX_SHADER_SOURCE, SURFACE_FRAGMENT_SHADER_SOURCE);
 
         Image img = LoadImage("static/textures/cobolt-stone-0-moss-0.png");
 
@@ -593,6 +703,7 @@ public static class RaylibResources
             CeilingModel.Materials[0].Shader = SurfaceShader;
         }
 
+        BattleBackgroundShapeShaderTimeLoc = GetShaderLocation(BattleBackgroundShapeShader, "iTime");
         DownmixedShaderLUTLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTexture");
         DownmixedShaderLUTSizeLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTextureSize");
         PlasmaShaderResolutionLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iResolution");
@@ -633,6 +744,7 @@ public static class RaylibResources
         UnloadModel(TileModel);
         UnloadModel(FloorModel);
         UnloadShader(BaseShader);
+        UnloadShader(BattleBackgroundShapeShader);
         UnloadShader(DownmixedShader);
         UnloadShader(PlasmaShader);
         UnloadShader(ScreenTransitionShader);

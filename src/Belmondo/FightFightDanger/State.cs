@@ -65,27 +65,30 @@ public sealed class StateAutomaton<T>
 
         if (maybeResult is State<T>.Result result)
         {
+            var exitFunction = CurrentState.ExitFunction;
+
             switch (result.Flow)
             {
                 case StateFlow.Continue:
                     return;
                 case StateFlow.Stop:
                     CurrentState = State<T>.Empty;
-                    return;
+                    break;
                 case StateFlow.Reset:
                     _hasEntered = false;
-                    return;
+                    break;
                 case StateFlow.Goto:
                     {
                         if (result.NextState is State<T> nextState)
                         {
-                            CurrentState.ExitFunction?.Invoke(arg);
                             CurrentState = nextState;
                             _hasEntered = false;
                         }
                     }
-                    return;
+                    break;
             }
+
+            exitFunction?.Invoke(arg);
         }
     }
 

@@ -13,6 +13,10 @@ public class TimerContext(TimeContext timeContext) : IThinker, IResettable
     public Status CurrentStatus;
     public double DurationSeconds;
     public double SecondsRemaining;
+    public bool JustStarted;
+    public bool JustTimedOut;
+
+    public double GetProgress() => (DurationSeconds - SecondsRemaining) / DurationSeconds;
 
     public void Start(double seconds = -1)
     {
@@ -23,12 +27,16 @@ public class TimerContext(TimeContext timeContext) : IThinker, IResettable
 
         SecondsRemaining = DurationSeconds;
         CurrentStatus = Status.Running;
+        JustStarted = true;
     }
 
     public void Update()
     {
-        if (CurrentStatus == Status.Stopped)
+        JustTimedOut = false;
+
+        if (CurrentStatus != Status.Running)
         {
+            JustStarted = false;
             return;
         }
 
@@ -38,8 +46,11 @@ public class TimerContext(TimeContext timeContext) : IThinker, IResettable
         {
             SecondsRemaining = 0;
             CurrentStatus = Status.Stopped;
+            JustTimedOut = true;
             TimedOut?.Invoke();
         }
+
+        JustStarted = false;
     }
 
     public void Reset()

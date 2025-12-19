@@ -45,6 +45,7 @@ public class World
     public void SpawnChest(Chest chest, Transform transform)
     {
         ChestMap.Add(transform.Position, Chests.Count);
+
         Chests.Add(new()
         {
             ID = Chests.Count,

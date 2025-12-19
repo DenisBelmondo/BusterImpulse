@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Runtime.InteropServices;
 
 namespace Belmondo.FightFightDanger;
@@ -10,30 +11,27 @@ public class BattleGoon(GameContext gameContext) : IThinker
         public float Closeness;
     }
 
-    public struct ShakeContext
-    {
-        public float Offset;
-        public float Interval;
-        public float SecondsLeft;
-    }
-
     public struct AnimationContext(TimeContext timeContext) : IThinker, IResettable
     {
         public TimerContext AnimationTimerContext = new(timeContext);
         public TimerContext FlyOffscreenTimerContext = new(timeContext);
+        public TimerContext ShakeTimerContext = new(timeContext);
+        public Vector2 ShakeOffset;
         public int Animation;
 
         public void Reset()
         {
             AnimationTimerContext.Reset();
             FlyOffscreenTimerContext.Reset();
+            ShakeOffset = Vector2.Zero;
             Animation = 0;
         }
 
-        public void Update()
+        public readonly void Update()
         {
             AnimationTimerContext.Update();
             FlyOffscreenTimerContext.Update();
+            ShakeTimerContext.Update();
         }
     }
 
@@ -54,7 +52,6 @@ public class BattleGoon(GameContext gameContext) : IThinker
     public readonly StateAutomaton<BattleGoon> ShakeStateAutomaton = new();
 
     public AnimationContext CurrentAnimationContext = new(gameContext.TimeContext);
-    public ShakeContext CurrentShakeContext;
 
     public float Health = 2;
 
@@ -167,34 +164,20 @@ public class BattleGoon(GameContext gameContext) : IThinker
         {
             EnterFunction = static self =>
             {
-                self.CurrentShakeContext.Offset = 0.05f;
-                self.CurrentShakeContext.Interval = 0;
-                self.CurrentShakeContext.SecondsLeft = 0.125f;
+                self.CurrentAnimationContext.ShakeTimerContext.Start(0.125f);
             },
 
             UpdateFunction = static self =>
             {
-                self.CurrentShakeContext.Interval += (float)self._gameContext.TimeContext.Delta;
-                self.CurrentShakeContext.SecondsLeft -= (float)self._gameContext.TimeContext.Delta;
-
-                if (self.CurrentShakeContext.Interval >= 0.05)
+                if (self.CurrentAnimationContext.ShakeTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
-                    self.CurrentShakeContext.Interval = 0;
-                    self.CurrentShakeContext.Offset = -self.CurrentShakeContext.Offset;
-                }
-
-                if (self.CurrentShakeContext.SecondsLeft <= 0)
-                {
-                    self.CurrentShakeContext.SecondsLeft = 0;
                     return State<BattleGoon>.Stop;
                 }
 
-                return State<BattleGoon>.Continue;
-            },
+                self.CurrentAnimationContext.ShakeOffset = Vector2.UnitX
+                    * ((float)Math2.SampleTriangleWave(self._gameContext.TimeContext.Time * 50) / 15f);
 
-            ExitFunction = static self =>
-            {
-                self.CurrentShakeContext.Offset = 0;
+                return State<BattleGoon>.Continue;
             },
         };
 
@@ -224,7 +207,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
             {
                 self.CurrentAnimationContext.Reset();
                 self.CurrentAnimationContext.Animation = 4;
-                self.CurrentAnimationContext.FlyOffscreenTimerContext.Start(1.5f);
+                self.CurrentAnimationContext.FlyOffscreenTimerContext.Start(2f);
                 self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Die);
             },
 

@@ -71,4 +71,20 @@ public static class Math2
         Matrix3x2 transformationMatrix = Matrix3x2.CreateScale(scale) * Matrix3x2.CreateTranslation(translation);
         return transformationMatrix;
     }
+
+    public static double SampleSquareWave(double time)
+    {
+        return (Math.Sign(Math.Sin(time)) + 1) / 2 * 2 - 1;
+    }
+
+    public static double SampleSawtoothWave(double time)
+    {
+        return 2.0 * (time - Math.Floor(time + 0.5)); // normalize to range -1 to 1
+    }
+
+    public static double SampleTriangleWave(double time)
+    {
+        double normalized = time - Math.Floor(time + 0.5); // Normalize to range -0.5 to 0.5
+        return 1.0 - 4.0 * Math.Abs(normalized); // Scale and convert to range -1 to 1
+    }
 }

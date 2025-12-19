@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public class Game(GameContext gameContext)
+public class Game
 {
     //
     // playsim states
@@ -8,32 +8,24 @@ public class Game(GameContext gameContext)
 
     public static State<Game> ExploreState = State<Game>.Empty;
     public static State<Game> BattleState = State<Game>.Empty;
-    public static State<Game> ScreenTransitionFadeInState = State<Game>.Empty;
-    public static State<Game> ScreenTransitionFadeOutState = State<Game>.Empty;
-    public static State<Game> BattleCountdownTimerState = State<Game>.Empty;
 
     //
     // instance vars
     //
 
-    private readonly GameContext _gameContext = gameContext;
-    private float _countdown;
+    private readonly GameContext _gameContext;
 
     public event Action? PlayerDamaged;
     public event Action? EnemyDamaged;
     public event Action? EnemyDied;
 
     public World? World;
-    public Battle Battle = new(gameContext);
+    public Battle Battle;
 
-    //
-    // temp
-    //
     public readonly StateAutomaton<Game> StateAutomaton = new();
-    public readonly StateAutomaton<Game> ScreenTransitionStateAutomaton = new();
-    public readonly StateAutomaton<Game> BattleCountdownStateAutomaton = new();
+    public readonly TimerContext BattleWaitTimerContext;
+    public readonly TimerContext ScreenTransitionTimerContext;
     public readonly Log Log = new(8);
-    public float TransitionT;
 
     static Game()
     {
@@ -47,6 +39,16 @@ public class Game(GameContext gameContext)
 
             UpdateFunction = static self =>
             {
+                if (self._gameContext.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen) && self.BattleWaitTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                {
+                    self.StartBattle();
+                }
+
+                if (self.BattleWaitTimerContext.CurrentStatus == TimerContext.Status.Running)
+                {
+                    return State<Game>.Continue;
+                }
+
                 if (self.World is not null)
                 {
                     if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
@@ -60,12 +62,6 @@ public class Game(GameContext gameContext)
 
                     GameLogic.UpdatePlayer(self._gameContext, ref self.World);
                     GameLogic.UpdateChests(self._gameContext, ref self.World);
-                }
-
-                if (self._gameContext.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
-                {
-                    self.Battle?.Reset();
-                    return State<Game>.Goto(BattleState);
                 }
 
                 return State<Game>.Continue;
@@ -123,58 +119,33 @@ public class Game(GameContext gameContext)
                 return State<Game>.Continue;
             },
         };
+    }
 
-        ScreenTransitionFadeInState = new()
+    public Game(GameContext gameContext)
+    {
+        _gameContext = gameContext;
+        Battle = new(gameContext);
+        BattleWaitTimerContext = new(gameContext.TimeContext);
+        ScreenTransitionTimerContext = new(gameContext.TimeContext);
+
+        BattleWaitTimerContext.TimedOut += () =>
         {
-            UpdateFunction = static self =>
-            {
-                self.TransitionT += (float)self._gameContext.TimeContext.Delta;
-
-                if (self.TransitionT >= 1)
-                {
-                    self.TransitionT = 1;
-                }
-
-                return State<Game>.Continue;
-            },
+            StateAutomaton.ChangeState(BattleState);
         };
+    }
 
-        ScreenTransitionFadeOutState = new()
-        {
-            UpdateFunction = static self =>
-            {
-                self.TransitionT += (float)self._gameContext.TimeContext.Delta;
-
-                if (self.TransitionT >= 2)
-                {
-                    self.TransitionT = 2;
-                }
-
-                return State<Game>.Continue;
-            },
-        };
-
-        BattleCountdownTimerState = new()
-        {
-            UpdateFunction = static self =>
-            {
-                self._countdown -= (float)self._gameContext.TimeContext.Delta;
-
-                if (self._countdown <= 0)
-                {
-                    self._countdown = 0;
-                    return State<Game>.Stop;
-                }
-
-                return State<Game>.Continue;
-            },
-        };
+    public void StartBattle()
+    {
+        Battle?.Reset();
+        BattleWaitTimerContext.Start(1);
+        ScreenTransitionTimerContext.Start(2);
+        _gameContext.AudioService.PlaySoundEffect(SoundEffect.BattleStart);
     }
 
     public void Update()
     {
         StateAutomaton.Update(this);
-        ScreenTransitionStateAutomaton.Update(this);
-        BattleCountdownStateAutomaton.Update(this);
+        ScreenTransitionTimerContext.Update();
+        BattleWaitTimerContext.Update();
     }
 }
