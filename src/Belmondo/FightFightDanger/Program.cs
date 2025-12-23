@@ -163,7 +163,7 @@ internal static class Program
             world.OldPlayerX = world.Player.Transform.Position.X;
             world.OldPlayerY = world.Player.Transform.Position.Y;
 
-            game.StateAutomaton.CurrentState = Game.State.Explore;
+            game.StateAutomaton.CurrentState = Game.State.Exploring;
 
             _camera.Position.X = world.Player.Transform.Position.X;
             _camera.Position.Z = world.Player.Transform.Position.Y;
@@ -239,14 +239,14 @@ internal static class Program
         {
             ClearBackground(Color.Black);
 
-            if (game.StateAutomaton.CurrentState == Game.State.Explore)
+            if (game.StateAutomaton.CurrentState == Game.State.Exploring)
             {
                 if (game.World is not null)
                 {
                     RenderWandering(game.World, timeContext);
                 }
             }
-            else if (game.StateAutomaton.CurrentState == Game.State.Battle)
+            else if (game.StateAutomaton.CurrentState == Game.State.Battling)
             {
                 if (game.Battle is not null)
                 {

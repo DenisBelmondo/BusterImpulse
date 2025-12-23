@@ -11,8 +11,8 @@ public class Game
 
     public enum State
     {
-        Explore,
-        Battle,
+        Exploring,
+        Battling,
     }
 
     //
@@ -42,11 +42,11 @@ public class Game
     {
         switch (currentState)
         {
-            case State.Explore:
+            case State.Exploring:
                 self.Log.Clear();
                 self._gameContext.AudioService.ChangeMusic(MusicTrack.WanderingStage1);
                 break;
-            case State.Battle:
+            case State.Battling:
                 self._gameContext.AudioService.ChangeMusic(MusicTrack.Battle);
                 break;
         }
@@ -58,7 +58,7 @@ public class Game
     {
         switch (currentState)
         {
-            case State.Explore:
+            case State.Exploring:
             {
                 if (self._gameContext.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen) && self.BattleWaitTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
@@ -88,7 +88,7 @@ public class Game
                 break;
             }
 
-            case State.Battle:
+            case State.Battling:
             {
                 if (self.World is not null)
                 {
@@ -101,7 +101,7 @@ public class Game
 
                     if (self.Battle.StateAutomaton.CurrentState is null)
                     {
-                        return PlaysimStateResult.Goto(State.Explore);
+                        return PlaysimStateResult.Goto(State.Exploring);
                     }
 
                     if (self.Battle.CurrentBattleGoon is not null)
@@ -145,7 +145,7 @@ public class Game
 
         BattleWaitTimerContext.TimedOut += () =>
         {
-            StateAutomaton.ChangeState(State.Battle);
+            StateAutomaton.ChangeState(State.Battling);
         };
     }
 
