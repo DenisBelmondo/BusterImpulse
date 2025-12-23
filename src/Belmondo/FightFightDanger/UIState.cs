@@ -1,138 +1,178 @@
 namespace Belmondo.FightFightDanger;
 
+using PopUpStateAutomaton = StateAutomaton<UIState, UIState.PopUpState>;
+using BattleVictoryScreenAutomaton = StateAutomaton<UIState, UIState.BattleVictoryScreenState>;
+
 public class UIState(GameContext gameContext) : IThinker
 {
-    public static State<UIState> BattleVictoryScreenEnterState = State<UIState>.Empty;
-    public static State<UIState> BattleVictoryScreenExitState = State<UIState>.Empty;
+    public enum PopUpState
+    {
+        Appearing,
+        StickingAround,
+        Disappearing,
+    }
 
-    public static State<UIState> PopUpAppearState = State<UIState>.Empty;
-    public static State<UIState> PopUpStickAroundState = State<UIState>.Empty;
-    public static State<UIState> PopUpDisappearState = State<UIState>.Empty;
+    public enum BattleVictoryScreenState
+    {
+        Appearing,
+        StickingAround,
+        Disappearing,
+    }
 
     private readonly GameContext _gameContext = gameContext;
-    public readonly StateAutomaton<UIState> PopUpStateAutomaton = new();
-    public readonly StateAutomaton<UIState> BattleVictoryStateAutomaton = new();
-    public readonly StateAutomaton<UIState> BattleVictoryLabelsStateAutomaton = new();
+
+    public readonly PopUpStateAutomaton PopUpStateAutomaton = new()
+    {
+        EnterFunction = static (self, currentState) =>
+        {
+            switch (currentState)
+            {
+                case PopUpState.Appearing:
+                {
+                    self.PopUpT = 0;
+                    break;
+                }
+
+                case PopUpState.StickingAround:
+                {
+                    self.PopUpWaitT = 0;
+                    break;
+                }
+
+                case PopUpState.Disappearing:
+                {
+                    break;
+                }
+            }
+
+            return PopUpStateAutomaton.Result.Continue;
+        },
+
+        UpdateFunction = static (self, currentState) =>
+        {
+            switch (currentState)
+            {
+                case PopUpState.Appearing:
+                {
+                    self.PopUpT += (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault() * 5;
+
+                    if (self.PopUpT >= 1)
+                    {
+                        return PopUpStateAutomaton.Result.Goto(PopUpState.StickingAround);
+                    }
+
+                    break;
+                }
+
+                case PopUpState.StickingAround:
+                {
+                    self.PopUpWaitT += (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault();
+
+                    if (self.PopUpWaitT >= 3)
+                    {
+                        return PopUpStateAutomaton.Result.Goto(PopUpState.Disappearing);
+                    }
+
+                    break;
+                }
+
+                case PopUpState.Disappearing:
+                {
+                    self.PopUpT -= (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault() * 5;
+
+                    if (self.PopUpT <= 0)
+                    {
+                        return PopUpStateAutomaton.Result.Stop;
+                    }
+
+                    break;
+                }
+            }
+
+            return PopUpStateAutomaton.Result.Continue;
+        },
+    };
+
+    public readonly BattleVictoryScreenAutomaton BattleVictoryStateAutomaton = new()
+    {
+        EnterFunction = static (self, currentState) =>
+        {
+            switch (currentState)
+            {
+                case BattleVictoryScreenState.Appearing:
+                {
+                    if (currentState == BattleVictoryScreenState.Appearing)
+                    {
+                        self.BattleVictoryWipeT = 0;
+                    }
+
+                    break;
+                }
+
+                case BattleVictoryScreenState.Disappearing:
+                {
+                    self.BattleVictoryWipeT = 0.5;
+                    break;
+                }
+            }
+
+            return BattleVictoryScreenAutomaton.Result.Continue;
+        },
+
+        UpdateFunction = static (self, currentState) =>
+        {
+            switch (currentState)
+            {
+                case BattleVictoryScreenState.Appearing:
+                {
+                    self.BattleVictoryWipeT += self._gameContext.TimeContext.Delta / 2;
+
+                    if (self.BattleVictoryWipeT >= 0.5)
+                    {
+                        self.BattleVictoryWipeT = 0.5;
+                        return BattleVictoryScreenAutomaton.Result.Stop;
+                    }
+
+                    break;
+                }
+
+                case BattleVictoryScreenState.Disappearing:
+                {
+                    self.BattleVictoryWipeT += self._gameContext.TimeContext.Delta / 2;
+
+                    if (self.BattleVictoryWipeT >= 1.0)
+                    {
+                        self.BattleVictoryWipeT = 0;
+                        return BattleVictoryScreenAutomaton.Result.Stop;
+                    }
+
+                    break;
+                }
+            }
+
+            return BattleVictoryScreenAutomaton.Result.Continue;
+        },
+    };
 
     public string? CurrentPopUpMessage;
     public double BattleVictoryWipeT;
     public float PopUpT;
     public float PopUpWaitT;
 
-    static UIState()
-    {
-        BattleVictoryScreenEnterState = new()
-        {
-            EnterFunction = static self =>
-            {
-                self.BattleVictoryWipeT = 0;
-            },
-
-            UpdateFunction = static self =>
-            {
-                self.BattleVictoryWipeT += self._gameContext.TimeContext.Delta / 2;
-
-                if (self.BattleVictoryWipeT >= 0.5)
-                {
-                    self.BattleVictoryWipeT = 0.5;
-                    return State<UIState>.Stop;
-                }
-
-                return State<UIState>.Continue;
-            },
-        };
-
-        BattleVictoryScreenExitState = new()
-        {
-            EnterFunction = static self =>
-            {
-                self.BattleVictoryWipeT = 0.5;
-            },
-
-            UpdateFunction = static self =>
-            {
-                self.BattleVictoryWipeT += self._gameContext.TimeContext.Delta / 2;
-
-                if (self.BattleVictoryWipeT >= 1.0)
-                {
-                    self.BattleVictoryWipeT = 0;
-                    return State<UIState>.Stop;
-                }
-
-                return State<UIState>.Continue;
-            },
-        };
-
-        PopUpAppearState = new()
-        {
-            EnterFunction = static self =>
-            {
-                self.PopUpT = 0;
-            },
-
-            UpdateFunction = static self =>
-            {
-                self.PopUpT += (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault() * 5;
-
-                if (self.PopUpT >= 1)
-                {
-                    return State<UIState>.Goto(PopUpStickAroundState!);
-                }
-
-                return State<UIState>.Continue;
-            },
-        };
-
-        PopUpStickAroundState = new()
-        {
-            EnterFunction = static self =>
-            {
-                self.PopUpWaitT = 0;
-            },
-
-            UpdateFunction = static self =>
-            {
-                self.PopUpWaitT += (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault();
-
-                if (self.PopUpWaitT >= 3)
-                {
-                    return State<UIState>.Goto(PopUpDisappearState!);
-                }
-
-                return State<UIState>.Continue;
-            },
-        };
-
-        PopUpDisappearState = new()
-        {
-            UpdateFunction = static self =>
-            {
-                self.PopUpT -= (float)(self._gameContext?.TimeContext.Delta).GetValueOrDefault() * 5;
-
-                if (self.PopUpT <= 0)
-                {
-                    return State<UIState>.Stop;
-                }
-
-                return State<UIState>.Continue;
-            },
-        };
-    }
-
     public void ShowPopUp(string message)
     {
         CurrentPopUpMessage = message;
-        PopUpStateAutomaton.CurrentState = PopUpAppearState;
+        PopUpStateAutomaton.ChangeState(PopUpState.Appearing);
     }
 
     public void StartBattleVictoryScreen()
     {
-        BattleVictoryStateAutomaton.ChangeState(BattleVictoryScreenEnterState);
+        BattleVictoryStateAutomaton.ChangeState(BattleVictoryScreenState.Appearing);
     }
 
     public void WipeAwayBattleVictoryScreen()
     {
-        BattleVictoryStateAutomaton.ChangeState(BattleVictoryScreenExitState);
+        BattleVictoryStateAutomaton.ChangeState(BattleVictoryScreenState.Disappearing);
     }
 
     public void Update()

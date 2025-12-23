@@ -1,13 +1,19 @@
 namespace Belmondo.FightFightDanger;
 
+using GameStateAutomaton = StateAutomaton<Game, Game.State>;
+using PlaysimStateResult = StateAutomaton<Game, Game.State>.Result;
+
 public class Game
 {
     //
     // playsim states
     //
 
-    public static State<Game> ExploreState = State<Game>.Empty;
-    public static State<Game> BattleState = State<Game>.Empty;
+    public enum State
+    {
+        Explore,
+        Battle,
+    }
 
     //
     // instance vars
@@ -22,22 +28,37 @@ public class Game
     public World? World;
     public Battle Battle;
 
-    public readonly StateAutomaton<Game> StateAutomaton = new();
+    public readonly GameStateAutomaton StateAutomaton = new()
+    {
+        EnterFunction = EnterFunction,
+        UpdateFunction = UpdateFunction,
+    };
+
     public readonly TimerContext BattleWaitTimerContext;
     public readonly TimerContext ScreenTransitionTimerContext;
     public readonly Log Log = new(8);
 
-    static Game()
+    private static PlaysimStateResult EnterFunction(Game self, State currentState)
     {
-        ExploreState = new()
+        switch (currentState)
         {
-            EnterFunction = static self =>
-            {
+            case State.Explore:
                 self.Log.Clear();
                 self._gameContext.AudioService.ChangeMusic(MusicTrack.WanderingStage1);
-            },
+                break;
+            case State.Battle:
+                self._gameContext.AudioService.ChangeMusic(MusicTrack.Battle);
+                break;
+        }
 
-            UpdateFunction = static self =>
+        return PlaysimStateResult.Continue;
+    }
+
+    private static PlaysimStateResult UpdateFunction(Game self, State currentState)
+    {
+        switch (currentState)
+        {
+            case State.Explore:
             {
                 if (self._gameContext.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen) && self.BattleWaitTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
@@ -46,7 +67,7 @@ public class Game
 
                 if (self.BattleWaitTimerContext.CurrentStatus == TimerContext.Status.Running)
                 {
-                    return State<Game>.Continue;
+                    return PlaysimStateResult.Continue;
                 }
 
                 if (self.World is not null)
@@ -64,18 +85,10 @@ public class Game
                     GameLogic.UpdateChests(self._gameContext, ref self.World);
                 }
 
-                return State<Game>.Continue;
+                break;
             }
-        };
 
-        BattleState = new()
-        {
-            EnterFunction = static self =>
-            {
-                self._gameContext.AudioService.ChangeMusic(MusicTrack.Battle);
-            },
-
-            UpdateFunction = static self =>
+            case State.Battle:
             {
                 if (self.World is not null)
                 {
@@ -86,9 +99,9 @@ public class Game
                 {
                     self.Battle.Update();
 
-                    if (self.Battle.StateAutomaton.CurrentState == State<Battle>.Empty)
+                    if (self.Battle.StateAutomaton.CurrentState is null)
                     {
-                        return State<Game>.Goto(ExploreState);
+                        return PlaysimStateResult.Goto(State.Explore);
                     }
 
                     if (self.Battle.CurrentBattleGoon is not null)
@@ -116,9 +129,11 @@ public class Game
                     }
                 }
 
-                return State<Game>.Continue;
-            },
-        };
+                break;
+            }
+        }
+
+        return PlaysimStateResult.Continue;
     }
 
     public Game(GameContext gameContext)
@@ -130,7 +145,7 @@ public class Game
 
         BattleWaitTimerContext.TimedOut += () =>
         {
-            StateAutomaton.ChangeState(BattleState);
+            StateAutomaton.ChangeState(State.Battle);
         };
     }
 

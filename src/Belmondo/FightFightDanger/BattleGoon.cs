@@ -3,8 +3,21 @@ using System.Runtime.InteropServices;
 
 namespace Belmondo.FightFightDanger;
 
+using BattleGoonStateAutomaton = StateAutomaton<BattleGoon, BattleGoon.State>;
+using ShakeStateAutomaton = StateAutomaton<BattleGoon, BinaryState>;
+
 public class BattleGoon(GameContext gameContext) : IThinker
 {
+    public enum State
+    {
+        Idle,
+        BeginAttacking,
+        Attacking,
+        Hurt,
+        Dying,
+        FlyingOffscreen,
+    }
+
     public struct Bullet
     {
         public int HorizontalDirection;
@@ -35,193 +48,205 @@ public class BattleGoon(GameContext gameContext) : IThinker
         }
     }
 
-    public static State<BattleGoon> IdleState = State<BattleGoon>.Empty;
-    public static State<BattleGoon> BeginAttackState = State<BattleGoon>.Empty;
-    public static State<BattleGoon> AttackState = State<BattleGoon>.Empty;
-    public static State<BattleGoon> DamagedState = State<BattleGoon>.Empty;
-    public static State<BattleGoon> DyingState = State<BattleGoon>.Empty;
-    public static State<BattleGoon> FlyOffscreenState = State<BattleGoon>.Empty;
-
-    public static State<BattleGoon> ShakeState = State<BattleGoon>.Empty;
-
     private readonly GameContext _gameContext = gameContext;
     private double _shootInterval = 0.5;
 
     public readonly List<Bullet> Bullets = [];
-    public readonly StateAutomaton<BattleGoon> StateAutomaton = new();
-    public readonly StateAutomaton<BattleGoon> ShakeStateAutomaton = new();
 
-    public AnimationContext CurrentAnimationContext = new(gameContext.TimeContext);
-
-    public float Health = 2;
-
-    static BattleGoon()
+    public readonly BattleGoonStateAutomaton StateAutomaton = new()
     {
-        IdleState = new()
+        EnterFunction = static (self, currentState) =>
         {
-            EnterFunction = static self =>
+            switch (currentState)
             {
-                self.CurrentAnimationContext.Reset();
-                self.CurrentAnimationContext.Animation = 0;
-            },
-        };
-
-        BeginAttackState = new()
-        {
-            EnterFunction = static self =>
-            {
-                self.CurrentAnimationContext.Reset();
-                self.CurrentAnimationContext.Animation = 1;
-                self.CurrentAnimationContext.AnimationTimerContext.Start(1);
-            },
-
-            UpdateFunction = static self =>
-            {
-                if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                case State.Idle:
                 {
-                    return State<BattleGoon>.Goto(AttackState);
+                    self.CurrentAnimationContext.Reset();
+                    self.CurrentAnimationContext.Animation = 0;
+
+                    break;
                 }
 
-                return State<BattleGoon>.Continue;
-            },
-        };
-
-        AttackState = new()
-        {
-            EnterFunction = static self =>
-            {
-                self.CurrentAnimationContext.Reset();
-                self.CurrentAnimationContext.Animation = 2;
-                self.CurrentAnimationContext.AnimationTimerContext.Start(5);
-            },
-
-            UpdateFunction = static self =>
-            {
-                foreach (ref var bullet in CollectionsMarshal.AsSpan(self.Bullets))
+                case State.BeginAttacking:
                 {
-                    if (bullet.Closeness >= 1)
+                    self.CurrentAnimationContext.Reset();
+                    self.CurrentAnimationContext.Animation = 1;
+                    self.CurrentAnimationContext.AnimationTimerContext.Start(1);
+
+                    break;
+                }
+
+                case State.Attacking:
+                {
+                    self.CurrentAnimationContext.Reset();
+                    self.CurrentAnimationContext.Animation = 2;
+                    self.CurrentAnimationContext.AnimationTimerContext.Start(5);
+
+                    break;
+                }
+
+                case State.Hurt:
+                {
+                    self.CurrentAnimationContext.Reset();
+                    self.CurrentAnimationContext.Animation = 3;
+                    self.CurrentAnimationContext.AnimationTimerContext.Start(1);
+                    self.Bullets.Clear();
+                    self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Hough);
+
+                    break;
+                }
+
+                case State.Dying:
+                {
+                    self.CurrentAnimationContext.Reset();
+                    self.CurrentAnimationContext.Animation = 3;
+                    self.CurrentAnimationContext.AnimationTimerContext.Start(1);
+
+                    break;
+                }
+
+                case State.FlyingOffscreen:
+                {
+                    self.CurrentAnimationContext.Reset();
+                    self.CurrentAnimationContext.Animation = 4;
+                    self.CurrentAnimationContext.FlyOffscreenTimerContext.Start(2f);
+                    self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Die);
+
+                    break;
+                }
+            }
+
+            return BattleGoonStateAutomaton.Result.Continue;
+        },
+
+        UpdateFunction = static (self, currentState) =>
+        {
+            switch (currentState)
+            {
+                case State.BeginAttacking:
+                {
+                    if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                     {
-                        bullet.Closeness = 1;
-                        continue;
+                        return BattleGoonStateAutomaton.Result.Goto(State.Attacking);
                     }
 
-                    bullet.Closeness += (float)self._gameContext.TimeContext.Delta;
+                    break;
                 }
 
-                self._shootInterval += self._gameContext.TimeContext.Delta;
-
-                if (self._shootInterval >= 0.4)
+                case State.Attacking:
                 {
-                    self._shootInterval = 0;
-
-                    var horizontalDirection = Random.Shared.Next(-1, 2);
-
-                    self.Bullets.Add(new()
+                    foreach (ref var bullet in CollectionsMarshal.AsSpan(self.Bullets))
                     {
-                        HorizontalDirection = horizontalDirection,
-                    });
+                        if (bullet.Closeness >= 1)
+                        {
+                            bullet.Closeness = 1;
+                            continue;
+                        }
 
-                    self._gameContext.AudioService.PlaySoundEffect(SoundEffect.MachineGun);
+                        bullet.Closeness += (float)self._gameContext.TimeContext.Delta;
+                    }
+
+                    self._shootInterval += self._gameContext.TimeContext.Delta;
+
+                    if (self._shootInterval >= 0.4)
+                    {
+                        self._shootInterval = 0;
+
+                        var horizontalDirection = Random.Shared.Next(-1, 2);
+
+                        self.Bullets.Add(new()
+                        {
+                            HorizontalDirection = horizontalDirection,
+                        });
+
+                        self._gameContext.AudioService.PlaySoundEffect(SoundEffect.MachineGun);
+                    }
+
+                    if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    {
+                        return BattleGoonStateAutomaton.Result.Goto(State.Idle);
+                    }
+
+                    break;
                 }
 
-                if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                case State.Hurt:
                 {
-                    return State<BattleGoon>.Goto(IdleState);
+                    if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    {
+                        return BattleGoonStateAutomaton.Result.Goto(State.Idle);
+                    }
+
+                    break;
                 }
 
-                return State<BattleGoon>.Continue;
-            },
+                case State.Dying:
+                {
+                    if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    {
+                        return BattleGoonStateAutomaton.Result.Goto(State.FlyingOffscreen);
+                    }
 
-            ExitFunction = static self =>
+                    break;
+                }
+
+                case State.FlyingOffscreen:
+                {
+                    if (self.CurrentAnimationContext.FlyOffscreenTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    {
+                        return BattleGoonStateAutomaton.Result.Stop;
+                    }
+
+                    break;
+                }
+            }
+
+            return BattleGoonStateAutomaton.Result.Continue;
+        },
+
+        ExitFunction = static (self, currentState) =>
+        {
+            if (currentState == State.Attacking)
             {
                 self.Bullets.Clear();
-            },
-        };
+            }
 
-        DamagedState = new()
+            return BattleGoonStateAutomaton.Result.Continue;
+        },
+    };
+
+    public readonly ShakeStateAutomaton ShakeStateAutomaton = new()
+    {
+        EnterFunction = static (self, currentState) =>
         {
-            EnterFunction = static self =>
-            {
-                self.CurrentAnimationContext.Reset();
-                self.CurrentAnimationContext.Animation = 3;
-                self.CurrentAnimationContext.AnimationTimerContext.Start(1);
-                self.Bullets.Clear();
-                self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Hough);
-            },
-
-            UpdateFunction = static self =>
-            {
-                if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
-                {
-                    return State<BattleGoon>.Goto(IdleState);
-                }
-
-                return State<BattleGoon>.Continue;
-            },
-        };
-
-        ShakeState = new()
-        {
-            EnterFunction = static self =>
+            if (currentState == BinaryState.On)
             {
                 self.CurrentAnimationContext.ShakeTimerContext.Start(0.125f);
-            },
+            }
 
-            UpdateFunction = static self =>
+            return ShakeStateAutomaton.Result.Continue;
+        },
+
+        UpdateFunction = static (self, currentState) =>
+        {
+            if (currentState == BinaryState.On)
             {
                 if (self.CurrentAnimationContext.ShakeTimerContext.CurrentStatus == TimerContext.Status.Stopped)
                 {
-                    return State<BattleGoon>.Stop;
+                    return ShakeStateAutomaton.Result.Stop;
                 }
 
                 self.CurrentAnimationContext.ShakeOffset = Vector2.UnitX
                     * ((float)Math2.SampleTriangleWave(self._gameContext.TimeContext.Time * 50) / 15f);
+            }
 
-                return State<BattleGoon>.Continue;
-            },
-        };
+            return ShakeStateAutomaton.Result.Continue;
+        },
+    };
 
-        DyingState = new()
-        {
-            EnterFunction = static self =>
-            {
-                self.CurrentAnimationContext.Reset();
-                self.CurrentAnimationContext.Animation = 3;
-                self.CurrentAnimationContext.AnimationTimerContext.Start(1);
-            },
+    public AnimationContext CurrentAnimationContext = new(gameContext.TimeContext);
 
-            UpdateFunction = static self =>
-            {
-                if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
-                {
-                    return State<BattleGoon>.Goto(FlyOffscreenState);
-                }
-
-                return State<BattleGoon>.Continue;
-            },
-        };
-
-        FlyOffscreenState = new()
-        {
-            EnterFunction = static self =>
-            {
-                self.CurrentAnimationContext.Reset();
-                self.CurrentAnimationContext.Animation = 4;
-                self.CurrentAnimationContext.FlyOffscreenTimerContext.Start(2f);
-                self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Die);
-            },
-
-            UpdateFunction = static self =>
-            {
-                if (self.CurrentAnimationContext.FlyOffscreenTimerContext.CurrentStatus == TimerContext.Status.Stopped)
-                {
-                    return State<BattleGoon>.Stop;
-                }
-
-                return State<BattleGoon>.Continue;
-            },
-        };
-    }
+    public float Health = 2;
 
     public void Update()
     {
@@ -234,13 +259,13 @@ public class BattleGoon(GameContext gameContext) : IThinker
     {
         Health -= amount;
 
-        StateAutomaton.ChangeState(DamagedState);
+        StateAutomaton.ChangeState(State.Hurt);
 
         if (Health <= 0)
         {
-            StateAutomaton.ChangeState(DyingState);
+            StateAutomaton.ChangeState(State.Dying);
         }
 
-        ShakeStateAutomaton.ChangeState(ShakeState);
+        ShakeStateAutomaton.ChangeState(BinaryState.On);
     }
 }

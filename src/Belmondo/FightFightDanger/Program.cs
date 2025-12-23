@@ -163,7 +163,7 @@ internal static class Program
             world.OldPlayerX = world.Player.Transform.Position.X;
             world.OldPlayerY = world.Player.Transform.Position.Y;
 
-            game.StateAutomaton.CurrentState = Game.ExploreState;
+            game.StateAutomaton.CurrentState = Game.State.Explore;
 
             _camera.Position.X = world.Player.Transform.Position.X;
             _camera.Position.Z = world.Player.Transform.Position.Y;
@@ -239,14 +239,14 @@ internal static class Program
         {
             ClearBackground(Color.Black);
 
-            if (game.StateAutomaton.CurrentState == Game.ExploreState)
+            if (game.StateAutomaton.CurrentState == Game.State.Explore)
             {
                 if (game.World is not null)
                 {
                     RenderWandering(game.World, timeContext);
                 }
             }
-            else if (game.StateAutomaton.CurrentState == Game.BattleState)
+            else if (game.StateAutomaton.CurrentState == Game.State.Battle)
             {
                 if (game.Battle is not null)
                 {
@@ -544,7 +544,7 @@ internal static class Program
         var enemyFrameNumber = 0;
         var shouldDraw = true;
 
-        if (battle.StateAutomaton.CurrentState != Battle.ChoosingState)
+        if (battle.StateAutomaton.CurrentState != Battle.State.Choosing)
         {
             if (battle.CurrentBattleGoon is not null)
             {
@@ -563,7 +563,7 @@ internal static class Program
                 enemyShakeOffset.X = battle.CurrentBattleGoon.CurrentAnimationContext.ShakeOffset.X;
                 enemyShakeOffset.Y = battle.CurrentBattleGoon.CurrentAnimationContext.ShakeOffset.Y;
 
-                if (battle.CurrentBattleGoon.ShakeStateAutomaton.CurrentState == BattleGoon.ShakeState)
+                if (battle.CurrentBattleGoon.ShakeStateAutomaton.CurrentState == BinaryState.On)
                 {
                     enemyPosition.X = enemyShakeOffset.X;
                     enemyPosition.Y = enemyShakeOffset.Y;
@@ -651,13 +651,13 @@ internal static class Program
         }
         EndMode3D();
 
-        if (battle.StateAutomaton.CurrentState == Battle.ChoosingState)
+        if (battle.StateAutomaton.CurrentState == Battle.State.Choosing)
         {
             DrawTextEx(RaylibResources.Font, "P: Attack Phase", new(0, 0), 15, 1, Color.White);
             DrawTextEx(RaylibResources.Font, "I: Item", new(0, 15), 15, 1, Color.White);
             DrawTextEx(RaylibResources.Font, "R: Run", new(0, 15 * 2), 15, 1, Color.White);
         }
-        else if (battle.StateAutomaton.CurrentState == Battle.PlayingState)
+        else if (battle.StateAutomaton.CurrentState == Battle.State.Playing)
         {
             DrawTextEx(RaylibResources.Font, "Dodge left and right!", new(0, 0), 15, 1, Color.White);
             DrawTextEx(RaylibResources.Font, "Align the crosshair with the enemy and press space!", new(0, 15), 15, 1, Color.White);
@@ -678,7 +678,7 @@ internal static class Program
                     crosshairColor = Color.Red;
                 }
 
-                if (battle.CrosshairStateAutomaton.CurrentState == Battle.CrosshairTargetState)
+                if (battle.CrosshairStateAutomaton.CurrentState == Battle.CrosshairState.Targeting)
                 {
                     crosshairColor = Color.Green;
                 }
