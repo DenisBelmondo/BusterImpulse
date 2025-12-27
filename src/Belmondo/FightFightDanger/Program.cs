@@ -61,15 +61,9 @@ internal static class Program
             Game game = new(gameContext);
             UIState uiState = new(gameContext);
 
-            game.Battle.PlayerWon += () =>
-            {
-                uiState.StartBattleVictoryScreen();
-            };
-
-            game.Battle.Penis += () =>
-            {
-                uiState.WipeAwayBattleVictoryScreen();
-            };
+            game.Battle.PlayerWon += uiState.StartBattleVictoryScreen;
+            game.Battle.Penis += uiState.WipeAwayBattleVictoryScreen;
+            game.PlayerDamaged += uiState.ShakeMugshot;
 
             World world = new();
 
@@ -292,6 +286,7 @@ internal static class Program
                     0,
                     new(16, 16, 16));
 
+                var virtualMugshotX = uiState.CurrentMugshotStateContext.ShakeOffset.X;
                 var virtualMugshotY = 240 - RaylibResources.MugshotTexture.Height;
 
                 DrawTexturePro(
@@ -305,8 +300,8 @@ internal static class Program
                     },
                     new()
                     {
-                        X = _mat240pTo480p.M31,
-                        Y = virtualMugshotY * _mat240pTo480p.M32 + virtualMugshotY * _mat240pTo480p.M22,
+                        X = virtualMugshotX * _mat240pTo480p.M11 + _mat240pTo480p.M31,
+                        Y = virtualMugshotY * _mat240pTo480p.M22 + _mat240pTo480p.M32,
                         Width = RaylibResources.MugshotTexture.Width * _mat240pTo480p.M11,
                         Height = RaylibResources.MugshotTexture.Height * _mat240pTo480p.M22,
                     },

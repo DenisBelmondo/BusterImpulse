@@ -1,7 +1,10 @@
+using System.Numerics;
+
 namespace Belmondo.FightFightDanger;
 
 using PopUpStateAutomaton = StateAutomaton<UIState, UIState.PopUpState>;
 using BattleVictoryScreenAutomaton = StateAutomaton<UIState, UIState.BattleVictoryScreenState>;
+using MugshotStateAutomaton = StateAutomaton<UIState.MugshotStateContext, UIState.MugshotState>;
 
 public class UIState(GameContext gameContext) : IThinker
 {
@@ -17,6 +20,62 @@ public class UIState(GameContext gameContext) : IThinker
         Appearing,
         StickingAround,
         Disappearing,
+    }
+
+    public enum MugshotState
+    {
+        Shaking,
+    }
+
+    public class MugshotStateContext(TimeContext timeContext) : IThinker
+    {
+        private readonly TimeContext _timeContext = timeContext;
+        public readonly TimerContext ShakeTimerContext = new(timeContext);
+
+        public readonly MugshotStateAutomaton StateAutomaton = new()
+        {
+            EnterFunction = static (self, currentState) =>
+            {
+                self.ShakeTimerContext.Start(0.25);
+                return MugshotStateAutomaton.Result.Continue;
+            },
+
+            UpdateFunction = static (self, currentState) =>
+            {
+                if (currentState == MugshotState.Shaking)
+                {
+                    self.ShakeOffset =
+                        Vector2.One
+                        * (float)Math2.SampleTriangleWave(self._timeContext.Time * 50.0)
+                        * 2;
+                }
+
+                if (self.ShakeTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                {
+                    return MugshotStateAutomaton.Result.Stop;
+                }
+
+                return MugshotStateAutomaton.Result.Continue;
+            },
+
+            ExitFunction = static (self, currentState) =>
+            {
+                if (currentState == MugshotState.Shaking)
+                {
+                    self.ShakeOffset = Vector2.Zero;
+                }
+
+                return MugshotStateAutomaton.Result.Continue;
+            },
+        };
+
+        public Vector2 ShakeOffset;
+
+        public void Update()
+        {
+            StateAutomaton.Update(this);
+            ShakeTimerContext.Update();
+        }
     }
 
     private readonly GameContext _gameContext = gameContext;
@@ -154,6 +213,8 @@ public class UIState(GameContext gameContext) : IThinker
         },
     };
 
+    public readonly MugshotStateContext CurrentMugshotStateContext = new(gameContext.TimeContext);
+
     public string? CurrentPopUpMessage;
     public double BattleVictoryWipeT;
     public float PopUpT;
@@ -175,9 +236,15 @@ public class UIState(GameContext gameContext) : IThinker
         BattleVictoryStateAutomaton.ChangeState(BattleVictoryScreenState.Disappearing);
     }
 
+    public void ShakeMugshot()
+    {
+        CurrentMugshotStateContext.StateAutomaton.ChangeState(MugshotState.Shaking);
+    }
+
     public void Update()
     {
         BattleVictoryStateAutomaton.Update(this);
         PopUpStateAutomaton.Update(this);
+        CurrentMugshotStateContext.Update();
     }
 }

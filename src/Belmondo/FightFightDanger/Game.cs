@@ -173,6 +173,8 @@ public class Game
 
     private readonly GameContext _gameContext;
 
+    public event Action? PlayerDamaged;
+
     public World? World;
     public Battle Battle;
 
@@ -306,7 +308,26 @@ public class Game
             {
                 if (self.World is not null)
                 {
-                    self.World.Player.Value.RunningHealth += MathF.Sign(self.World.Player.Value.Current.Health - self.World.Player.Value.RunningHealth) * ((float)self._gameContext.TimeContext.Delta * 3);
+                    var bleedFreq = (float)self._gameContext.TimeContext.Delta * 3;
+
+                    if (self.World.Player.Value.RunningHealth < self.World.Player.Value.Current.Health)
+                    {
+                        self.World.Player.Value.RunningHealth += bleedFreq;
+
+                        if (self.World.Player.Value.RunningHealth <= self.World.Player.Value.Current.Health)
+                        {
+                            self.World.Player.Value.RunningHealth = self.World.Player.Value.Current.Health;
+                        }
+                    }
+                    else if (self.World.Player.Value.RunningHealth > self.World.Player.Value.Current.Health)
+                    {
+                        self.World.Player.Value.RunningHealth -= bleedFreq;
+
+                        if (self.World.Player.Value.RunningHealth <= self.World.Player.Value.Current.Health)
+                        {
+                            self.World.Player.Value.RunningHealth = self.World.Player.Value.Current.Health;
+                        }
+                    }
                 }
 
                 if (self.Battle is not null)
@@ -333,6 +354,7 @@ public class Game
                                     if (self.World is not null)
                                     {
                                         self.World.Player.Value.Current.Health -= 10;
+                                        self.PlayerDamaged?.Invoke();
                                     }
 
                                     self.Battle.CurrentPlayingContext.PlayerInvulnerabilityT = 1;
