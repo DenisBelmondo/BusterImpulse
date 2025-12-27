@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, Enum
+public partial class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, Enum
 {
     public enum Flow
     {
@@ -50,6 +50,8 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, Enu
 
         return CurrentState.Value.Equals(state);
     }
+
+    public bool IsRunning() => CurrentState is not null;
 
     public void ChangeState(TStateEnum newState)
     {

@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public class TimerContext(TimeContext timeContext) : IThinker, IResettable
+public class TimerContext(TimeContext timeContext) : IProgressTracker, IThinker, IResettable
 {
     public enum Status
     {
@@ -16,7 +16,34 @@ public class TimerContext(TimeContext timeContext) : IThinker, IResettable
     public bool JustStarted;
     public bool JustTimedOut;
 
-    public double GetProgress() => (DurationSeconds - SecondsRemaining) / DurationSeconds;
+    public static double GetProgress(params TimerContext[] timers)
+    {
+        double durationSeconds = 0;
+        double secondsRemaining = 0;
+
+        foreach (var timer in timers)
+        {
+            durationSeconds += timer.DurationSeconds;
+            secondsRemaining += timer.SecondsRemaining;
+        }
+
+        if (durationSeconds == 0)
+        {
+            return 0;
+        }
+
+        return (durationSeconds - secondsRemaining) / durationSeconds;
+    }
+
+    public double GetProgress()
+    {
+        if (DurationSeconds == 0)
+        {
+            return 0;
+        }
+
+        return (DurationSeconds - SecondsRemaining) / DurationSeconds;
+    }
 
     public void Start(double seconds = -1)
     {

@@ -1,4 +1,5 @@
 using System.Numerics;
+using Microsoft.VisualBasic.FileIO;
 using Raylib_cs.BleedingEdge;
 using static Raylib_cs.BleedingEdge.Raylib;
 
@@ -484,9 +485,7 @@ public static class RaylibResources
     }
 
     void main() {
-        // Loop every ~5s for demonstration purposes
-        // In game this should be done with real time
-        float t = mod(iTime, 5.) / 2.;
+        float t = iTime;
 
         // Normalized coordinates, quantized to 16x16 squares
         // There's probably a nicer way to express this
@@ -575,7 +574,7 @@ public static class RaylibResources
 
             float offs = mod(iTime, 1.);
 
-            rgba.rgb = mix(rgba.rgb, rgba.rgb * 1.05, float(fog_factor >= offs && fog_factor <= offs + .1 ));
+            rgba.rgb = mix(rgba.rgb, rgba.rgb * 1.2, float(fog_factor >= offs && fog_factor <= offs + .1 ));
             rgba.rgb = mix(rgba.rgb, vec3(0), fog_factor);
 
             finalColor = rgba;
@@ -618,11 +617,15 @@ public static class RaylibResources
     public static Sound SmackSound { get; private set; }
     public static Sound StepSound { get; private set; }
     public static Sound TalkSound { get; private set; }
+    public static Sound UICancelSound { get; private set; }
+    public static Sound UIConfirmSound { get; private set; }
+    public static Sound UIFocusSound { get; private set; }
     public static Music Stage1WanderingMusic { get; private set; }
     public static Music Stage2WanderingMusic { get; private set; }
     public static Music VictoryMusic { get; private set; }
     public static Music BattleMusic { get; private set; }
     public static Font Font { get; private set; }
+    public static Font MediumFont { get; private set; }
 
     public static int BattleBackgroundShapeShaderTimeLoc { get; private set; }
     public static int DownmixedShaderLUTLoc { get; private set; }
@@ -679,6 +682,7 @@ public static class RaylibResources
 
         BattleMusic = LoadMusicStream("static/music/morgan.mp3");
         Font = LoadFont("static/fonts/pixel-font-15.png");
+        MediumFont = LoadFont("static/fonts/pixel-font-11.png");
 
         BattleStartSound = LoadSound("static/sounds/battle_start.wav");
         ClapSound = LoadSound("static/sounds/clap.wav");
@@ -692,6 +696,9 @@ public static class RaylibResources
         SmackSound = LoadSound("static/sounds/smack.wav");
         StepSound = LoadSound("static/sounds/step.wav");
         TalkSound = LoadSound("static/sounds/talk.wav");
+        UICancelSound = LoadSound("static/sounds/ui_cancel.ogg");
+        UIConfirmSound = LoadSound("static/sounds/ui_confirm.wav");
+        UIFocusSound = LoadSound("static/sounds/ui_focus.ogg");
 
         unsafe
         {
@@ -704,20 +711,21 @@ public static class RaylibResources
         }
 
         BattleBackgroundShapeShaderTimeLoc = GetShaderLocation(BattleBackgroundShapeShader, "iTime");
-        DownmixedShaderLUTLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTexture");
-        DownmixedShaderLUTSizeLoc = GetShaderLocation(RaylibResources.DownmixedShader, "lutTextureSize");
-        PlasmaShaderResolutionLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iResolution");
-        PlasmaShaderTimeLoc = GetShaderLocation(RaylibResources.PlasmaShader, "iTime");
-        ScreenTransitionShader2ResolutionLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader2, "iResolution");
-        ScreenTransitionShader2TimeLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader2, "iTime");
-        ScreenTransitionShaderResolutionLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iResolution");
-        ScreenTransitionShaderTimeLoc = GetShaderLocation(RaylibResources.ScreenTransitionShader, "iTime");
-        LUTSize = new Vector2(RaylibResources.LUTTexture.Width, RaylibResources.LUTTexture.Height);
+        DownmixedShaderLUTLoc = GetShaderLocation(DownmixedShader, "lutTexture");
+        DownmixedShaderLUTSizeLoc = GetShaderLocation(DownmixedShader, "lutTextureSize");
+        PlasmaShaderResolutionLoc = GetShaderLocation(PlasmaShader, "iResolution");
+        PlasmaShaderTimeLoc = GetShaderLocation(PlasmaShader, "iTime");
+        ScreenTransitionShader2ResolutionLoc = GetShaderLocation(ScreenTransitionShader2, "iResolution");
+        ScreenTransitionShader2TimeLoc = GetShaderLocation(ScreenTransitionShader2, "iTime");
+        ScreenTransitionShaderResolutionLoc = GetShaderLocation(ScreenTransitionShader, "iResolution");
+        ScreenTransitionShaderTimeLoc = GetShaderLocation(ScreenTransitionShader, "iTime");
+        LUTSize = new Vector2(LUTTexture.Width, LUTTexture.Height);
     }
 
     public static void UnloadAll()
     {
         UnloadFont(Font);
+        UnloadFont(MediumFont);
         UnloadSound(BattleStartSound);
         UnloadSound(ClapSound);
         UnloadSound(CritSound);
@@ -730,6 +738,9 @@ public static class RaylibResources
         UnloadSound(SmackSound);
         UnloadSound(StepSound);
         UnloadSound(TalkSound);
+        UnloadSound(UICancelSound);
+        UnloadSound(UIConfirmSound);
+        UnloadSound(UIFocusSound);
         UnloadMusicStream(BattleMusic);
         UnloadMusicStream(Stage1WanderingMusic);
         UnloadMusicStream(Stage2WanderingMusic);

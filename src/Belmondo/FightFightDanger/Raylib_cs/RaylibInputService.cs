@@ -44,8 +44,8 @@ public sealed class RaylibInputService : IInputService, IThinker
         _inputMap[(int)InputAction.MoveLeft]          = new() { KeyboardKey1 = KeyboardKey.A, };
         _inputMap[(int)InputAction.LookLeft]          = new() { KeyboardKey1 = KeyboardKey.Left, };
         _inputMap[(int)InputAction.LookRight]         = new() { KeyboardKey1 = KeyboardKey.Right, };
-        _inputMap[(int)InputAction.Confirm]           = new() { KeyboardKey1 = KeyboardKey.Space, };
-        _inputMap[(int)InputAction.Cancel]            = new() { KeyboardKey1 = KeyboardKey.Backspace, };
+        _inputMap[(int)InputAction.Confirm]           = new() { KeyboardKey1 = KeyboardKey.Space, KeyboardKey2 = KeyboardKey.Enter, };
+        _inputMap[(int)InputAction.Cancel]            = new() { KeyboardKey1 = KeyboardKey.Backspace, KeyboardKey2 = KeyboardKey.Escape, };
         _inputMap[(int)InputAction.BattleAttack]      = new() { KeyboardKey1 = KeyboardKey.P, };
         _inputMap[(int)InputAction.BattleDefend]      = new() { KeyboardKey1 = KeyboardKey.H, };
         _inputMap[(int)InputAction.BattleRun]         = new() { KeyboardKey1 = KeyboardKey.R, };

@@ -15,4 +15,7 @@ public enum SoundEffect
     Smack,
     Step,
     Talk,
+    UICancel,
+    UIConfirm,
+    UIFocus,
 }

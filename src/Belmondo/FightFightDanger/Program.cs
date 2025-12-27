@@ -42,6 +42,7 @@ internal static class Program
 
         InitWindow(1024, 768, "Fight Fight Danger");
         InitAudioDevice();
+        SetExitKey(KeyboardKey.Null);
         RaylibResources.CacheAndInitializeAll();
 
         {
@@ -99,7 +100,7 @@ internal static class Program
                 {
                     Items = new Dictionary<int, int>()
                     {
-                        [(int)ItemType.ChickenLeg] = 1,
+                        [(int)Items.Type.ChickenLeg] = 1,
                     },
                 },
                 new()
@@ -112,7 +113,7 @@ internal static class Program
                 {
                     Items = new Dictionary<int, int>()
                     {
-                        [(int)ItemType.WholeChicken] = 1,
+                        [(int)Items.Type.WholeChicken] = 1,
                     },
                 },
                 new()
@@ -125,7 +126,7 @@ internal static class Program
                 {
                     Items = new Dictionary<int, int>()
                     {
-                        [(int)ItemType.ChickenLeg] = 1,
+                        [(int)Items.Type.ChickenLeg] = 1,
                     },
                 },
                 new()
@@ -139,7 +140,7 @@ internal static class Program
 
                 foreach (var kvp in items)
                 {
-                    uiState.ShowPopUp($"{ItemTypeNames.Get((ItemType)kvp.Key)} x{1}");
+                    uiState.ShowPopUp($"{Names.Get((Items.Type)kvp.Key)} x{1}");
                 }
             };
 
@@ -239,14 +240,14 @@ internal static class Program
         {
             ClearBackground(Color.Black);
 
-            if (game.StateAutomaton.CurrentState == Game.State.Exploring)
+            if (game.CurrentRenderHint == Game.RenderHint.Exploring)
             {
                 if (game.World is not null)
                 {
                     RenderWandering(game.World, timeContext);
                 }
             }
-            else if (game.StateAutomaton.CurrentState == Game.State.Battling)
+            else if (game.CurrentRenderHint == Game.RenderHint.Battling)
             {
                 if (game.Battle is not null)
                 {
@@ -267,6 +268,11 @@ internal static class Program
                     Color.White);
             }
             EndShaderMode();
+
+            if (game.StateAutomaton.CurrentState == Game.State.Menu)
+            {
+                DrawRectangle(0, 0, 640, 480, new(0, 0, 0, 128));
+            }
 
             //
             // draw hud
@@ -359,25 +365,15 @@ internal static class Program
             {
                 unsafe
                 {
-                    float time;
+                    float time2;
 
-                    if (game.ScreenTransitionTimerContext.CurrentStatus == TimerContext.Status.Running)
-                    {
-                        time = (float)game.ScreenTransitionTimerContext.GetProgress();
-                        time = Kryz.Tweening.EasingFunctions.InOutCubic(time);
-                        time *= 4;
-                    }
-                    else
-                    {
-                        time = (float)uiState.BattleVictoryWipeT;
-                        time = Kryz.Tweening.EasingFunctions.InOutCubic(time);
-                        time *= 4;
-                    }
+                    time2 = (float)game.CurrentTransitionContext.FadeT;
+                    time2 = Kryz.Tweening.EasingFunctions.InOutCubic(time2);
 
                     SetShaderValue(
                         RaylibResources.ScreenTransitionShader2,
                         RaylibResources.ScreenTransitionShader2TimeLoc,
-                        &time,
+                        &time2,
                         ShaderUniformDataType.Float);
                 }
             }
@@ -394,6 +390,11 @@ internal static class Program
                     30,
                     2,
                     Color.White);
+            }
+
+            if (game.StateAutomaton.CurrentState == Game.State.Menu)
+            {
+                DrawMenu(in game);
             }
         }
         EndTextureMode();
@@ -441,6 +442,32 @@ internal static class Program
                 Color.White);
         }
         EndDrawing();
+    }
+
+    private static void DrawMenu(in Game game)
+    {
+        DrawRectangle(640 - 256, 0, 256, 480, new(16, 16, 16));
+
+        if (game.CurrentMenuContext.MenuStack.TryPeek(out Menu? menu))
+        {
+            for (int i = 0; i < menu.Items.Count; i++)
+            {
+                var color = Color.DarkGray;
+
+                if (i == menu.CurrentItem)
+                {
+                    color = Color.RayWhite;
+                }
+
+                DrawTextEx(
+                    RaylibResources.Font,
+                    menu.Items[i].Name,
+                    new(640 - 256 + 8, i * 30 + 8),
+                    30,
+                    2,
+                    color);
+            }
+        }
     }
 
     private static void RenderWandering(in World world, in TimeContext timeContext)

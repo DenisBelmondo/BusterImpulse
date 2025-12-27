@@ -25,6 +25,9 @@ public sealed class RaylibAudioService : IAudioService
             SoundEffect.Smack => RaylibResources.SmackSound,
             SoundEffect.Step => RaylibResources.StepSound,
             SoundEffect.Talk => RaylibResources.TalkSound,
+            SoundEffect.UICancel => RaylibResources.UICancelSound,
+            SoundEffect.UIConfirm => RaylibResources.UIConfirmSound,
+            SoundEffect.UIFocus => RaylibResources.UIFocusSound,
             _ => null,
         };
 
