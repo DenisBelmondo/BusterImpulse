@@ -5,6 +5,7 @@ using Raylib_cs.BleedingEdge;
 using static Raylib_cs.BleedingEdge.Raylib;
 using static Raylib_cs.BleedingEdge.Raymath;
 using static Belmondo.Mathematics.Extensions;
+using System.Text;
 
 internal static class Program
 {
@@ -15,6 +16,7 @@ internal static class Program
     // render stuff
     //
     private static readonly Matrix3x2 _mat240pTo480p = Math2.FitContain(new(320, 240), new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT));
+    private static readonly StringBuilder _sb = new();
     private static readonly Vector3[] _goonDieControlPoints;
 
     private static Camera3D _camera;
@@ -23,6 +25,7 @@ internal static class Program
     private static RenderTexture2D _outerRenderTexture;
     private static Vector3 _cameraDirection;
     private static Vector2 _currentScreenSize;
+    private static bool _shouldQuit;
 
     static Program()
     {
@@ -64,6 +67,7 @@ internal static class Program
             game.Battle.PlayerWon += uiState.StartBattleVictoryScreen;
             game.Battle.Penis += uiState.WipeAwayBattleVictoryScreen;
             game.PlayerDamaged += uiState.ShakeMugshot;
+            game.Quit += () => _shouldQuit = true;
 
             World world = new();
 
@@ -92,54 +96,42 @@ internal static class Program
             world.SpawnChest(
                 new()
                 {
-                    Items = new Dictionary<int, int>()
-                    {
-                        [(int)Items.Type.ChickenLeg] = 1,
-                    },
-                },
-                new()
-                {
                     Position = (6, 5),
                 });
 
+            world.Chests[^1].Value.Inventory.Snacks[SnackType.ChickenLeg] = 1;
+
             world.SpawnChest(
-                new()
-                {
-                    Items = new Dictionary<int, int>()
-                    {
-                        [(int)Items.Type.WholeChicken] = 1,
-                    },
-                },
                 new()
                 {
                     Position = (7, 5),
                 });
 
+            world.Chests[^1].Value.Inventory.Snacks[SnackType.WholeChicken] = 1;
+
             world.SpawnChest(
-                new()
-                {
-                    Items = new Dictionary<int, int>()
-                    {
-                        [(int)Items.Type.ChickenLeg] = 1,
-                    },
-                },
                 new()
                 {
                     Position = (5, 7),
                 });
 
+            world.Chests[^1].Value.Inventory.Snacks[SnackType.ChickenLeg] = 1;
+
             world.ChestOpened += chestID =>
             {
-                var items = world.Chests[chestID].Value.Items;
+                var inventory = world.Chests[chestID].Value.Inventory;
 
-                foreach (var kvp in items)
+                foreach ((var snackType, var quantity) in inventory.Snacks)
                 {
-                    uiState.ShowPopUp($"{Names.Get((Items.Type)kvp.Key)} x{1}");
+                    if (quantity > 0)
+                    {
+                        uiState.ShowPopUp($"{Names.Get(snackType)} x{quantity}");
+                    }
                 }
             };
 
             world.Player.Transform.Position = (5, 5);
-            game.World = world;
+            game.SetWorld(world);
 
             _camera = new()
             {
@@ -191,8 +183,9 @@ internal static class Program
 
             double oldTime = GetTime();
 
-            while (!WindowShouldClose())
+            while (!_shouldQuit)
             {
+                _shouldQuit |= WindowShouldClose();
                 _currentScreenSize = new(GetScreenWidth(), GetScreenHeight());
 
                 double newTime = GetTime();
@@ -349,7 +342,7 @@ internal static class Program
                     RaylibResources.Font,
                     uiState.CurrentPopUpMessage,
                     new(
-                        _mat240pTo480p.M31,
+                        4 + _mat240pTo480p.M31,
                         (int)((t * 16) - 16 + 1) * _mat240pTo480p.M22 + _mat240pTo480p.M32),
                     15 * _mat240pTo480p.M22,
                     1 * _mat240pTo480p.M11,
@@ -445,22 +438,52 @@ internal static class Program
 
         if (game.CurrentMenuContext.MenuStack.TryPeek(out Menu? menu))
         {
-            for (int i = 0; i < menu.Items.Count; i++)
+            var emptyText = string.Empty;
+
+            if (menu.ID == ((int)Menus.ID.SnacksMenu))
             {
-                var color = Color.DarkGray;
+                emptyText = "Urgh... so hungry...\nGotta find food\nsomewhere...";
+            }
 
-                if (i == menu.CurrentItem)
-                {
-                    color = Color.RayWhite;
-                }
-
+            if (menu.Items.Count == 0)
+            {
                 DrawTextEx(
                     RaylibResources.Font,
-                    menu.Items[i].Name,
-                    new(640 - 256 + 8, i * 30 + 8),
+                    emptyText,
+                    new Vector2(640 - 256 + 8, 8),
                     30,
                     2,
-                    color);
+                    Color.DarkGray);
+            }
+            else
+            {
+                for (int i = 0; i < menu.Items.Count; i++)
+                {
+                    // [FIXME]: dear god are you re-generating the string every
+                    // render frame?
+                    _sb.Clear();
+                    _sb.Append(menu.Items[i].Label);
+
+                    if (menu.Items[i].Quantity is int quantity)
+                    {
+                        _sb.Append($" x{quantity}");
+                    }
+
+                    var color = Color.DarkGray;
+
+                    if (i == menu.CurrentItem)
+                    {
+                        color = Color.RayWhite;
+                    }
+
+                    DrawTextEx(
+                        RaylibResources.Font,
+                        _sb.ToString(),
+                        new(640 - 256 + 8, i * 30 + 8),
+                        30,
+                        2,
+                        color);
+                }
             }
         }
     }

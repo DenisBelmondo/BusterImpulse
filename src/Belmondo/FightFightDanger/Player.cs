@@ -8,9 +8,11 @@ public struct Player
         public float Health = 100;
     }
 
+    public event Action? InventoryUpdated;
+
     public Defaults Default = new();
     public Defaults Current = new();
-    public Dictionary<int, int> Inventory = [];
+    public Inventory Inventory = new();
     public float RunningHealth;
 
     public Player()

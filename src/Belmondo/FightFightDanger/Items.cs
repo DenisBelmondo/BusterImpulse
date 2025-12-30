@@ -2,9 +2,6 @@ namespace Belmondo.FightFightDanger;
 
 public static class Items
 {
-    public enum Type
-    {
-        ChickenLeg,
-        WholeChicken,
-    }
+    public static readonly int SnackTypeCount = Enum.GetNames<SnackType>().Length;
+    public static readonly int CharmTypeCount = Enum.GetNames<Charms.Type>().Length;
 }

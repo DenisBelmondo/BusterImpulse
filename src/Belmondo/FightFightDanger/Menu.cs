@@ -4,11 +4,14 @@ public class Menu : IResettable
 {
     public struct Item
     {
-        public string Name;
+        public int ID;
+        public string Label;
         public string Description;
+        public int? Quantity;
     }
 
-    public string? Name;
+    public int ID;
+    public string? Label;
     public string? Description;
     public int CurrentItem;
 

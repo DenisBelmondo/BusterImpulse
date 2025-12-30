@@ -42,7 +42,7 @@ public class World
     public float CameraPositionLerpT = 0;
     public float CameraDirectionLerpT = 0;
 
-    public void SpawnChest(Chest chest, Transform transform)
+    public void SpawnChest(Transform transform)
     {
         ChestMap.Add(transform.Position, Chests.Count);
 
@@ -50,7 +50,7 @@ public class World
         {
             ID = Chests.Count,
             Transform = transform,
-            Value = chest,
+            Value = new(),
         });
     }
 

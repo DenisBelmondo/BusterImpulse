@@ -32,9 +32,7 @@ public class Game
 
         public static event Action<TransitionContext>? FadedOut;
 
-        public TimerContext FadeOutTimer = new(timeContext);
-        public TimerContext StickAroundTimer = new(timeContext);
-        public TimerContext FadeInTimer = new(timeContext);
+        public TimerContext Timer = new(timeContext);
         public double FadeT;
 
         public TransitionStateAutomaton StateAutomaton = new()
@@ -44,22 +42,16 @@ public class Game
                 switch (currentState)
                 {
                     case State.FadingOut:
-                    {
-                        self.FadeOutTimer.Start(1);
+                        self.Timer.Start(1);
                         break;
-                    }
 
                     case State.StickingAround:
-                    {
-                        self.StickAroundTimer.Start(0.5);
+                        self.Timer.Start(0.5);
                         break;
-                    }
 
                     case State.FadingIn:
-                    {
-                        self.FadeInTimer.Start(1);
+                        self.Timer.Start(1);
                         break;
-                    }
                 }
 
                 return TransitionStateAutomaton.Result.Continue;
@@ -70,38 +62,32 @@ public class Game
                 switch (currentState)
                 {
                     case State.FadingOut:
-                    {
-                        self.FadeT = self.FadeOutTimer.GetProgress();
+                        self.FadeT = self.Timer.GetProgress();
 
-                        if (self.FadeOutTimer.CurrentStatus == TimerContext.Status.Stopped)
+                        if (self.Timer.CurrentStatus == TimerContext.Status.Stopped)
                         {
                             return TransitionStateAutomaton.Result.Goto(State.StickingAround);
                         }
 
                         break;
-                    }
 
                     case State.StickingAround:
-                    {
-                        if (self.FadeOutTimer.CurrentStatus == TimerContext.Status.Stopped)
+                        if (self.Timer.CurrentStatus == TimerContext.Status.Stopped)
                         {
                             return TransitionStateAutomaton.Result.Goto(State.FadingIn);
                         }
 
                         break;
-                    }
 
                     case State.FadingIn:
-                    {
-                        self.FadeT = 1 + self.FadeInTimer.GetProgress();
+                        self.FadeT = 1 + self.Timer.GetProgress();
 
-                        if (self.FadeInTimer.CurrentStatus == TimerContext.Status.Stopped)
+                        if (self.Timer.CurrentStatus == TimerContext.Status.Stopped)
                         {
                             return TransitionStateAutomaton.Result.Stop;
                         }
 
                         break;
-                    }
                 }
 
                 return TransitionStateAutomaton.Result.Continue;
@@ -112,19 +98,12 @@ public class Game
                 switch (currentState)
                 {
                     case State.FadingOut:
-                    {
                         FadedOut?.Invoke(self);
                         break;
-                    }
 
                     case State.FadingIn:
-                    {
-                        self.FadeOutTimer.Reset();
-                        self.StickAroundTimer.Reset();
-                        self.FadeInTimer.Reset();
-
+                        self.Timer.Reset();
                         break;
-                    }
                 }
 
                 return TransitionStateAutomaton.Result.Continue;
@@ -134,39 +113,18 @@ public class Game
         public void Update()
         {
             StateAutomaton.Update(this);
-            FadeOutTimer.Update();
-            StickAroundTimer.Update();
-            FadeInTimer.Update();
+            Timer.Update();
         }
     }
 
     public class MenuContext : IResettable
     {
-        public static Menu MainMenu = new()
-        {
-            Items = [
-                new()
-                {
-                    Name = "Snacks",
-                },
-
-                new()
-                {
-                    Name = "Charms",
-                },
-
-                new()
-                {
-                    Name = "Quit",
-                },
-            ],
-        };
+        public Menu SnacksMenu = new();
 
         public Stack<Menu> MenuStack = [];
 
         public void Reset()
         {
-            MainMenu.Reset();
             MenuStack.Clear();
         }
     }
@@ -174,6 +132,7 @@ public class Game
     private readonly GameContext _gameContext;
 
     public event Action? PlayerDamaged;
+    public event Action? Quit;
 
     public World? World;
     public Battle Battle;
@@ -195,26 +154,20 @@ public class Game
         switch (currentState)
         {
             case State.Exploring:
-            {
                 self.Log.Clear();
                 self.CurrentRenderHint = RenderHint.Exploring;
                 self._gameContext.AudioService.ChangeMusic(MusicTrack.WanderingStage1);
 
                 break;
-            }
 
             case State.Transitioning:
-            {
                 self.CurrentTransitionContext.StateAutomaton.ChangeState(TransitionContext.State.FadingOut);
                 break;
-            }
 
             case State.Battling:
-            {
                 self.CurrentRenderHint = RenderHint.Battling;
                 self._gameContext.AudioService.ChangeMusic(MusicTrack.Battle);
                 break;
-            }
         }
 
         return PlaysimStateResult.Continue;
@@ -225,7 +178,6 @@ public class Game
         switch (currentState)
         {
             case State.Exploring:
-            {
                 if (self._gameContext.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
                 {
                     self.StartBattle();
@@ -233,7 +185,7 @@ public class Game
 
                 if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Cancel))
                 {
-                    self.OpenMenu();
+                    self.OpenMainMenu();
                 }
 
                 if (self.World is not null)
@@ -252,12 +204,14 @@ public class Game
                 }
 
                 break;
-            }
 
             case State.Menu:
-            {   if (self.CurrentMenuContext.MenuStack.TryPeek(out Menu? menu))
+                var audio = self._gameContext.AudioService;
+                var input = self._gameContext.InputService;
+
+                if (self.CurrentMenuContext.MenuStack.TryPeek(out Menu? menu))
                 {
-                    if (self._gameContext.InputService.ActionWasJustPressed(InputAction.MoveBack))
+                    if (input.ActionWasJustPressed(InputAction.MoveBack))
                     {
                         menu.CurrentItem += 1;
 
@@ -266,9 +220,9 @@ public class Game
                             menu.CurrentItem = 0;
                         }
 
-                        self._gameContext.AudioService.PlaySoundEffect(SoundEffect.UIFocus);
+                        audio.PlaySoundEffect(SoundEffect.UIFocus);
                     }
-                    else if (self._gameContext.InputService.ActionWasJustPressed(InputAction.MoveForward))
+                    else if (input.ActionWasJustPressed(InputAction.MoveForward))
                     {
                         menu.CurrentItem -= 1;
 
@@ -277,57 +231,95 @@ public class Game
                             menu.CurrentItem = menu.Items.Count - 1;
                         }
 
-                        self._gameContext.AudioService.PlaySoundEffect(SoundEffect.UIFocus);
+                        audio.PlaySoundEffect(SoundEffect.UIFocus);
                     }
-                    else if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
+                    else if (input.ActionWasJustPressed(InputAction.Confirm))
                     {
-                        self._gameContext.AudioService.PlaySoundEffect(SoundEffect.UIConfirm);
+                        switch (menu.ID)
+                        {
+                            case (int)Menus.ID.MainMenu:
+                                {
+                                    var id = (Menus.Item)menu.Items[menu.CurrentItem].ID;
+
+                                    switch (id)
+                                    {
+                                        case Menus.Item.Snacks:
+                                            self.CurrentMenuContext.SnacksMenu.Reset();
+
+                                            if (self.World is World world)
+                                            {
+                                                Menus.InitializeSnacksMenu(self.CurrentMenuContext.SnacksMenu, world.Player.Value.Inventory);
+                                            }
+
+                                            self.CurrentMenuContext.MenuStack.Push(self.CurrentMenuContext.SnacksMenu);
+
+                                            break;
+
+                                        case Menus.Item.Charms:
+                                            Console.WriteLine("Charms");
+                                            break;
+
+                                        case Menus.Item.Quit:
+                                            self.Quit?.Invoke();
+                                            break;
+                                    }
+
+                                    break;
+                                }
+                        }
+
+                        audio.PlaySoundEffect(SoundEffect.UIConfirm);
                     }
                 }
 
-                if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Cancel))
+                if (input.ActionWasJustPressed(InputAction.Cancel))
                 {
-                    self.CloseMenu();
-                    self._gameContext.AudioService.PlaySoundEffect(SoundEffect.UICancel);
+                    self.CurrentMenuContext.MenuStack.TryPop(out var _);
+
+                    if (self.CurrentMenuContext.MenuStack.Count == 0)
+                    {
+                        self.CloseAllMenus();
+                    }
+
+                    audio.PlaySoundEffect(SoundEffect.UICancel);
                 }
 
                 break;
-            }
 
             case State.Transitioning:
-            {
                 if (!self.CurrentTransitionContext.StateAutomaton.IsRunning())
                 {
                     return PlaysimStateResult.Goto(State.Battling);
                 }
 
                 break;
-            }
 
             case State.Battling:
-            {
                 if (self.World is not null)
                 {
                     var bleedFreq = (float)self._gameContext.TimeContext.Delta * 3;
+                    var player = self.World.Player.Value;
 
-                    if (self.World.Player.Value.RunningHealth < self.World.Player.Value.Current.Health)
+                    if (player.RunningHealth < player.Current.Health)
                     {
-                        self.World.Player.Value.RunningHealth += bleedFreq;
+                        player.RunningHealth += bleedFreq;
 
-                        if (self.World.Player.Value.RunningHealth <= self.World.Player.Value.Current.Health)
+                        if (player.RunningHealth <= player.Current.Health)
                         {
-                            self.World.Player.Value.RunningHealth = self.World.Player.Value.Current.Health;
+                            player.RunningHealth = player.Current.Health;
                         }
                     }
-                    else if (self.World.Player.Value.RunningHealth > self.World.Player.Value.Current.Health)
+                    else if (player.RunningHealth > player.Current.Health)
                     {
-                        self.World.Player.Value.RunningHealth -= bleedFreq;
+                        player.RunningHealth -= bleedFreq;
 
-                        if (self.World.Player.Value.RunningHealth <= self.World.Player.Value.Current.Health)
+                        if (player.RunningHealth <= player.Current.Health)
                         {
-                            self.World.Player.Value.RunningHealth = self.World.Player.Value.Current.Health;
+                            player.RunningHealth = player.Current.Health;
                         }
                     }
+
+                    self.World.Player.Value = player;
                 }
 
                 if (self.Battle is not null)
@@ -366,7 +358,6 @@ public class Game
                 }
 
                 break;
-            }
         }
 
         return PlaysimStateResult.Continue;
@@ -392,6 +383,11 @@ public class Game
         };
     }
 
+    public void SetWorld(World world)
+    {
+        World = world;
+    }
+
     public void StartBattle()
     {
         Battle?.Reset();
@@ -399,15 +395,15 @@ public class Game
         _gameContext.AudioService.PlaySoundEffect(SoundEffect.BattleStart);
     }
 
-    public void OpenMenu()
+    public void OpenMainMenu()
     {
         CurrentMenuContext.MenuStack.Clear();
-        CurrentMenuContext.MenuStack.Push(MenuContext.MainMenu);
+        CurrentMenuContext.MenuStack.Push(Menus.Main);
         StateAutomaton.ChangeState(State.Menu);
         _gameContext.AudioService.PlaySoundEffect(SoundEffect.UIConfirm);
     }
 
-    public void CloseMenu()
+    public void CloseAllMenus()
     {
         StateAutomaton.ChangeState(State.Exploring);
         CurrentMenuContext.Reset();

@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public partial class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, Enum
+public partial class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct
 {
     public enum Flow
     {

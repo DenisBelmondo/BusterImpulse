@@ -68,16 +68,16 @@ public static class GameLogic
         {
             var chest = world.Chests[i];
 
-            if (chest.Value.Status == ChestStatus.Opening)
+            if (chest.Value.CurrentStatus == Chest.Status.Opening)
             {
                 chest.Value.Openness += (float)gameContext.TimeContext.Delta * 2;
 
                 if (chest.Value.Openness >= 1)
                 {
                     chest.Value.Openness = 1;
-                    chest.Value.Status = ChestStatus.Opened;
+                    chest.Value.CurrentStatus = Chest.Status.Opened;
                     world.OpenChest(i);
-                    TransferInventory(chest.Value.Items, world.Player.Value.Inventory);
+                    chest.Value.Inventory.TransferTo(world.Player.Value.Inventory);
                     gameContext.AudioService.PlaySoundEffect(SoundEffect.Item);
                 }
             }
@@ -95,31 +95,15 @@ public static class GameLogic
 
         var spawnedChest = world.Chests[chestID];
 
-        if (spawnedChest.Value.Status != ChestStatus.Idle)
+        if (spawnedChest.Value.CurrentStatus != Chest.Status.Idle)
         {
             return false;
         }
 
-        spawnedChest.Value.Status = ChestStatus.Opening;
+        spawnedChest.Value.CurrentStatus = Chest.Status.Opening;
         world.Chests[chestID] = spawnedChest;
         gameContext.AudioService.PlaySoundEffect(SoundEffect.OpenChest);
 
         return true;
-    }
-
-    public static void TransferInventory(IDictionary<int, int> from, IDictionary<int, int> to)
-    {
-        foreach (var kvp in from)
-        {
-            int itemType = kvp.Key;
-            int quantity = kvp.Value;
-
-            if (!to.ContainsKey(itemType))
-            {
-                to[itemType] = 0;
-            }
-
-            to[itemType] += quantity;
-        }
     }
 }

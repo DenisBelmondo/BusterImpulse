@@ -1,15 +1,15 @@
 namespace Belmondo.FightFightDanger;
 
-public enum ChestStatus
+public struct Chest()
 {
-    Idle,
-    Opening,
-    Opened,
-}
+    public enum Status
+    {
+        Idle,
+        Opening,
+        Opened,
+    }
 
-public struct Chest
-{
-    public required IDictionary<int, int> Items;
+    public Inventory Inventory = new();
     public float Openness;
-    public ChestStatus Status;
+    public Status CurrentStatus;
 }
