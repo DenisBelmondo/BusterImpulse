@@ -20,7 +20,7 @@ public class Game
         Battling,
     }
 
-    public class TransitionContext(TimeContext timeContext) : IThinker
+    public class TransitionContext(TimeContext timeContext) : IThinker, IResettable
     {
         public enum State
         {
@@ -42,15 +42,15 @@ public class Game
                 switch (currentState)
                 {
                     case State.FadingOut:
-                        self.Timer.Start(1);
+                        self.Timer.Start(1.0 / 1.5);
                         break;
 
                     case State.StickingAround:
-                        self.Timer.Start(0.5);
+                        self.Timer.Start(1.0 / 10.0);
                         break;
 
                     case State.FadingIn:
-                        self.Timer.Start(1);
+                        self.Timer.Start(1.0 / 1.5);
                         break;
                 }
 
@@ -102,7 +102,7 @@ public class Game
                         break;
 
                     case State.FadingIn:
-                        self.Timer.Reset();
+                        self.Reset();
                         break;
                 }
 
@@ -115,13 +115,24 @@ public class Game
             StateAutomaton.Update(this);
             Timer.Update();
         }
+
+        public void Reset()
+        {
+            FadeT = default;
+            Timer.Reset();
+        }
     }
 
     public class MenuContext : IResettable
     {
-        public Menu SnacksMenu = new();
+        public readonly Menu MainMenu = new();
+        public readonly Menu SnacksMenu = new();
+        public readonly Stack<Menu> MenuStack = [];
 
-        public Stack<Menu> MenuStack = [];
+        public MenuContext()
+        {
+            Menus.InitializeMainMenu(MainMenu);
+        }
 
         public void Reset()
         {
@@ -238,34 +249,32 @@ public class Game
                         switch (menu.ID)
                         {
                             case (int)Menus.ID.MainMenu:
+                                var id = (Menus.Item)menu.Items[menu.CurrentItem].ID;
+
+                                switch (id)
                                 {
-                                    var id = (Menus.Item)menu.Items[menu.CurrentItem].ID;
+                                    case Menus.Item.Snacks:
+                                        self.CurrentMenuContext.SnacksMenu.Reset();
 
-                                    switch (id)
-                                    {
-                                        case Menus.Item.Snacks:
-                                            self.CurrentMenuContext.SnacksMenu.Reset();
+                                        if (self.World is World world)
+                                        {
+                                            Menus.InitializeSnacksMenu(self.CurrentMenuContext.SnacksMenu, world.Player.Value.Inventory);
+                                        }
 
-                                            if (self.World is World world)
-                                            {
-                                                Menus.InitializeSnacksMenu(self.CurrentMenuContext.SnacksMenu, world.Player.Value.Inventory);
-                                            }
+                                        self.CurrentMenuContext.MenuStack.Push(self.CurrentMenuContext.SnacksMenu);
 
-                                            self.CurrentMenuContext.MenuStack.Push(self.CurrentMenuContext.SnacksMenu);
+                                        break;
 
-                                            break;
+                                    case Menus.Item.Charms:
+                                        Console.WriteLine("Charms");
+                                        break;
 
-                                        case Menus.Item.Charms:
-                                            Console.WriteLine("Charms");
-                                            break;
-
-                                        case Menus.Item.Quit:
-                                            self.Quit?.Invoke();
-                                            break;
-                                    }
-
-                                    break;
+                                    case Menus.Item.Quit:
+                                        self.Quit?.Invoke();
+                                        break;
                                 }
+
+                                break;
                         }
 
                         audio.PlaySoundEffect(SoundEffect.UIConfirm);
@@ -397,8 +406,9 @@ public class Game
 
     public void OpenMainMenu()
     {
+        CurrentMenuContext.MainMenu.Reset();
         CurrentMenuContext.MenuStack.Clear();
-        CurrentMenuContext.MenuStack.Push(Menus.Main);
+        CurrentMenuContext.MenuStack.Push(CurrentMenuContext.MainMenu);
         StateAutomaton.ChangeState(State.Menu);
         _gameContext.AudioService.PlaySoundEffect(SoundEffect.UIConfirm);
     }

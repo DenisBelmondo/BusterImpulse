@@ -16,11 +16,11 @@ public static class Menus
         Quit,
     };
 
-    public static readonly Menu Main = new()
+    public static void InitializeMainMenu(Menu menu)
     {
-        ID = (int)ID.MainMenu,
+        menu.ID = (int)ID.MainMenu;
 
-        Items = [
+        menu.Items = [
             new()
             {
                 ID = (int)Item.Snacks,
@@ -38,8 +38,8 @@ public static class Menus
                 ID = (int)Item.Quit,
                 Label = "Quit",
             },
-        ],
-    };
+        ];
+    }
 
     public static void InitializeSnacksMenu(Menu menu, in Inventory inventory)
     {
