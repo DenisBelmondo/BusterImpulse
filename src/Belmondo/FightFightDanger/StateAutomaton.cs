@@ -38,7 +38,21 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct
     public StateFunction? ExitFunction;
 
     private bool _hasEntered;
-    public TStateEnum? CurrentState;
+    public Stack<TStateEnum> Stack = [];
+
+    public TStateEnum? CurrentState
+    {
+        get
+        {
+            if (Stack.TryPeek(out TStateEnum state))
+            {
+                return state;
+            }
+
+            return null;
+        }
+    }
+
     public TStateEnum? PreviousState { get; private set; }
 
     public bool IsProcessingState(TStateEnum state)
@@ -55,13 +69,29 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct
 
     public void ChangeState(TStateEnum newState)
     {
-        CurrentState = newState;
+        if (Stack.Count > 0)
+        {
+            Stack.Pop();
+        }
+
+        Stack.Push(newState);
         _hasEntered = false;
+    }
+
+    public void Push(TStateEnum newState)
+    {
+        Stack.Push(newState);
+        _hasEntered = false;
+    }
+
+    public void Pop()
+    {
+        Stack.Pop();
     }
 
     public void Stop()
     {
-        CurrentState = null;
+        Stack.Clear();
         _hasEntered = false;
     }
 
@@ -95,15 +125,13 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct
                 break;
             case Flow.Stop:
                 ExitFunction?.Invoke(context, currentState);
-                _hasEntered = false;
-                CurrentState = null;
+                Stop();
                 break;
             case Flow.Goto:
                 if (maybeNextState is TStateEnum nextState)
                 {
                     ExitFunction?.Invoke(context, currentState);
-                    CurrentState = nextState;
-                    _hasEntered = false;
+                    ChangeState(nextState);
                 }
                 break;
             }

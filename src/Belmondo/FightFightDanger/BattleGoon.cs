@@ -26,25 +26,25 @@ public class BattleGoon(GameContext gameContext) : IThinker
 
     public struct AnimationContext(TimeContext timeContext) : IThinker, IResettable
     {
-        public TimerContext AnimationTimerContext = new(timeContext);
-        public TimerContext FlyOffscreenTimerContext = new(timeContext);
-        public TimerContext ShakeTimerContext = new(timeContext);
+        public Timer AnimationTimer = new(timeContext);
+        public Timer FlyOffscreenTimer = new(timeContext);
+        public Timer ShakeTimer = new(timeContext);
         public Vector2 ShakeOffset;
         public int Animation;
 
         public void Reset()
         {
-            AnimationTimerContext.Reset();
-            FlyOffscreenTimerContext.Reset();
+            AnimationTimer.Reset();
+            FlyOffscreenTimer.Reset();
             ShakeOffset = Vector2.Zero;
             Animation = 0;
         }
 
         public readonly void Update()
         {
-            AnimationTimerContext.Update();
-            FlyOffscreenTimerContext.Update();
-            ShakeTimerContext.Update();
+            AnimationTimer.Update();
+            FlyOffscreenTimer.Update();
+            ShakeTimer.Update();
         }
     }
 
@@ -71,7 +71,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
                 {
                     self.CurrentAnimationContext.Reset();
                     self.CurrentAnimationContext.Animation = 1;
-                    self.CurrentAnimationContext.AnimationTimerContext.Start(1);
+                    self.CurrentAnimationContext.AnimationTimer.Start(1);
 
                     break;
                 }
@@ -80,7 +80,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
                 {
                     self.CurrentAnimationContext.Reset();
                     self.CurrentAnimationContext.Animation = 2;
-                    self.CurrentAnimationContext.AnimationTimerContext.Start(5);
+                    self.CurrentAnimationContext.AnimationTimer.Start(5);
 
                     break;
                 }
@@ -89,7 +89,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
                 {
                     self.CurrentAnimationContext.Reset();
                     self.CurrentAnimationContext.Animation = 3;
-                    self.CurrentAnimationContext.AnimationTimerContext.Start(1);
+                    self.CurrentAnimationContext.AnimationTimer.Start(1);
                     self.Bullets.Clear();
                     self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Hough);
 
@@ -100,7 +100,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
                 {
                     self.CurrentAnimationContext.Reset();
                     self.CurrentAnimationContext.Animation = 3;
-                    self.CurrentAnimationContext.AnimationTimerContext.Start(1);
+                    self.CurrentAnimationContext.AnimationTimer.Start(1);
 
                     break;
                 }
@@ -109,7 +109,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
                 {
                     self.CurrentAnimationContext.Reset();
                     self.CurrentAnimationContext.Animation = 4;
-                    self.CurrentAnimationContext.FlyOffscreenTimerContext.Start(2f);
+                    self.CurrentAnimationContext.FlyOffscreenTimer.Start(2f);
                     self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Die);
 
                     break;
@@ -125,7 +125,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
             {
                 case State.BeginAttacking:
                 {
-                    if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
                         return BattleGoonStateAutomaton.Result.Goto(State.Attacking);
                     }
@@ -162,7 +162,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
                         self._gameContext.AudioService.PlaySoundEffect(SoundEffect.MachineGun);
                     }
 
-                    if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
                         return BattleGoonStateAutomaton.Result.Goto(State.Idle);
                     }
@@ -172,7 +172,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
 
                 case State.Hurt:
                 {
-                    if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
                         return BattleGoonStateAutomaton.Result.Goto(State.Idle);
                     }
@@ -182,7 +182,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
 
                 case State.Dying:
                 {
-                    if (self.CurrentAnimationContext.AnimationTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
                         return BattleGoonStateAutomaton.Result.Goto(State.FlyingOffscreen);
                     }
@@ -192,7 +192,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
 
                 case State.FlyingOffscreen:
                 {
-                    if (self.CurrentAnimationContext.FlyOffscreenTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    if (self.CurrentAnimationContext.FlyOffscreenTimer.CurrentStatus == Timer.Status.Stopped)
                     {
                         return BattleGoonStateAutomaton.Result.Stop;
                     }
@@ -221,7 +221,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
         {
             if (currentState == BinaryState.On)
             {
-                self.CurrentAnimationContext.ShakeTimerContext.Start(0.125f);
+                self.CurrentAnimationContext.ShakeTimer.Start(0.125f);
             }
 
             return ShakeStateAutomaton.Result.Continue;
@@ -231,7 +231,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
         {
             if (currentState == BinaryState.On)
             {
-                if (self.CurrentAnimationContext.ShakeTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                if (self.CurrentAnimationContext.ShakeTimer.CurrentStatus == Timer.Status.Stopped)
                 {
                     return ShakeStateAutomaton.Result.Stop;
                 }

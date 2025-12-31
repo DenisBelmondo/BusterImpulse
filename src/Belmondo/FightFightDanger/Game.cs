@@ -32,7 +32,7 @@ public class Game
 
         public static event Action<TransitionContext>? FadedOut;
 
-        public TimerContext Timer = new(timeContext);
+        public Timer Timer = new(timeContext);
         public double FadeT;
 
         public TransitionStateAutomaton StateAutomaton = new()
@@ -64,7 +64,7 @@ public class Game
                     case State.FadingOut:
                         self.FadeT = self.Timer.GetProgress();
 
-                        if (self.Timer.CurrentStatus == TimerContext.Status.Stopped)
+                        if (self.Timer.CurrentStatus == Timer.Status.Stopped)
                         {
                             return TransitionStateAutomaton.Result.Goto(State.StickingAround);
                         }
@@ -72,7 +72,7 @@ public class Game
                         break;
 
                     case State.StickingAround:
-                        if (self.Timer.CurrentStatus == TimerContext.Status.Stopped)
+                        if (self.Timer.CurrentStatus == Timer.Status.Stopped)
                         {
                             return TransitionStateAutomaton.Result.Goto(State.FadingIn);
                         }
@@ -82,7 +82,7 @@ public class Game
                     case State.FadingIn:
                         self.FadeT = 1 + self.Timer.GetProgress();
 
-                        if (self.Timer.CurrentStatus == TimerContext.Status.Stopped)
+                        if (self.Timer.CurrentStatus == Timer.Status.Stopped)
                         {
                             return TransitionStateAutomaton.Result.Stop;
                         }
@@ -168,7 +168,6 @@ public class Game
                 self.Log.Clear();
                 self.CurrentRenderHint = RenderHint.Exploring;
                 self._gameContext.AudioService.ChangeMusic(MusicTrack.WanderingStage1);
-
                 break;
 
             case State.Transitioning:
@@ -409,13 +408,13 @@ public class Game
         CurrentMenuContext.MainMenu.Reset();
         CurrentMenuContext.MenuStack.Clear();
         CurrentMenuContext.MenuStack.Push(CurrentMenuContext.MainMenu);
-        StateAutomaton.ChangeState(State.Menu);
+        StateAutomaton.Push(State.Menu);
         _gameContext.AudioService.PlaySoundEffect(SoundEffect.UIConfirm);
     }
 
     public void CloseAllMenus()
     {
-        StateAutomaton.ChangeState(State.Exploring);
+        StateAutomaton.Pop();
         CurrentMenuContext.Reset();
     }
 

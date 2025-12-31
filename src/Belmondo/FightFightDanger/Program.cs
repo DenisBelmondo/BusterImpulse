@@ -150,7 +150,7 @@ internal static class Program
             world.OldPlayerX = world.Player.Transform.Position.X;
             world.OldPlayerY = world.Player.Transform.Position.Y;
 
-            game.StateAutomaton.CurrentState = Game.State.Exploring;
+            game.StateAutomaton.ChangeState(Game.State.Exploring);
 
             _camera.Position.X = world.Player.Transform.Position.X;
             _camera.Position.Z = world.Player.Transform.Position.Y;
@@ -594,11 +594,11 @@ internal static class Program
             if (battle.CurrentBattleGoon is not null)
             {
                 var animation = battle.CurrentBattleGoon.CurrentAnimationContext.Animation;
-                var animationDuration = battle.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimerContext.DurationSeconds;
+                var animationDuration = battle.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimer.DurationSeconds;
 
                 if (animationDuration != 0)
                 {
-                    float t = (float)battle.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimerContext.GetProgress();
+                    float t = (float)battle.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimer.GetProgress();
 
                     enemyDeathOffset = Math2.SampleCatmullRom(
                         _goonDieControlPoints,
@@ -710,11 +710,11 @@ internal static class Program
             if (battle.CurrentPlayingContext.CrosshairIsVisible)
             {
                 var scaledSize = Vector2.Zero;
-                float rot = (float)((battle.CurrentPlayingContext.CrosshairTimerContext.DurationSeconds - battle.CurrentPlayingContext.CrosshairTimerContext.SecondsRemaining) / battle.CurrentPlayingContext.CrosshairTimerContext.DurationSeconds) * 360;
+                float rot = (float)((battle.CurrentPlayingContext.CrosshairTimer.DurationSeconds - battle.CurrentPlayingContext.CrosshairTimer.SecondsRemaining) / battle.CurrentPlayingContext.CrosshairTimer.DurationSeconds) * 360;
 
                 scaledSize.X = 16 * _mat240pTo480p.M11;
                 scaledSize.Y = 16 * _mat240pTo480p.M22;
-                scaledSize *= Vector2.One / (float)((battle.CurrentPlayingContext.CrosshairTimerContext.DurationSeconds - battle.CurrentPlayingContext.CrosshairTimerContext.SecondsRemaining) / battle.CurrentPlayingContext.CrosshairTimerContext.DurationSeconds);
+                scaledSize *= Vector2.One / (float)((battle.CurrentPlayingContext.CrosshairTimer.DurationSeconds - battle.CurrentPlayingContext.CrosshairTimer.SecondsRemaining) / battle.CurrentPlayingContext.CrosshairTimer.DurationSeconds);
 
                 var crosshairColor = Color.White;
 

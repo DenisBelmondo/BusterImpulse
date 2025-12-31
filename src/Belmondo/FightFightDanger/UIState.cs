@@ -30,13 +30,13 @@ public class UIState(GameContext gameContext) : IThinker
     public class MugshotStateContext(TimeContext timeContext) : IThinker
     {
         private readonly TimeContext _timeContext = timeContext;
-        public readonly TimerContext ShakeTimerContext = new(timeContext);
+        public readonly Timer ShakeTimer = new(timeContext);
 
         public readonly MugshotStateAutomaton StateAutomaton = new()
         {
             EnterFunction = static (self, currentState) =>
             {
-                self.ShakeTimerContext.Start(0.25);
+                self.ShakeTimer.Start(0.25);
                 return MugshotStateAutomaton.Result.Continue;
             },
 
@@ -50,7 +50,7 @@ public class UIState(GameContext gameContext) : IThinker
                         * 2;
                 }
 
-                if (self.ShakeTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                if (self.ShakeTimer.CurrentStatus == Timer.Status.Stopped)
                 {
                     return MugshotStateAutomaton.Result.Stop;
                 }
@@ -74,7 +74,7 @@ public class UIState(GameContext gameContext) : IThinker
         public void Update()
         {
             StateAutomaton.Update(this);
-            ShakeTimerContext.Update();
+            ShakeTimer.Update();
         }
     }
 

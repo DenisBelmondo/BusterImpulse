@@ -35,7 +35,7 @@ public class Battle : IResettable
 
     public struct PlayingContext
     {
-        public TimerContext CrosshairTimerContext;
+        public Timer CrosshairTimer;
         public double PlayerInvulnerabilityT;
         public float PlayerDodgeT;
         public float CrosshairT;
@@ -67,7 +67,7 @@ public class Battle : IResettable
 
                 case State.Victory:
                 {
-                    self.VictoryExitTimerContext.Reset();
+                    self.VictoryExitTimer.Reset();
                     break;
                 }
             }
@@ -127,7 +127,7 @@ public class Battle : IResettable
                             }
                         }
 
-                        if (self.CurrentBattleGoon.StateAutomaton.PreviousState == BattleGoon.State.FlyingOffscreen && self.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                        if (self.CurrentBattleGoon.StateAutomaton.PreviousState == BattleGoon.State.FlyingOffscreen && self.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimer.CurrentStatus == Timer.Status.Stopped)
                         {
                             self._gameContext.AudioService.ChangeMusic(MusicTrack.Victory);
                             self.PlayerWon?.Invoke();
@@ -143,7 +143,7 @@ public class Battle : IResettable
 
                 case State.Victory:
                 {
-                    if (self.VictoryExitTimerContext.JustTimedOut)
+                    if (self.VictoryExitTimer.JustTimedOut)
                     {
                         return BattleStateAutomaton.Result.Stop;
                     }
@@ -258,7 +258,7 @@ public class Battle : IResettable
                 case CrosshairState.CountingDown:
                 {
                     self.CurrentPlayingContext.CrosshairIsVisible = false;
-                    self.CurrentPlayingContext.CrosshairTimerContext.Start(3);
+                    self.CurrentPlayingContext.CrosshairTimer.Start(3);
 
                     break;
                 }
@@ -271,7 +271,7 @@ public class Battle : IResettable
 
                 case CrosshairState.Targeting:
                 {
-                    self.CurrentPlayingContext.CrosshairTimerContext.Start(0.5);
+                    self.CurrentPlayingContext.CrosshairTimer.Start(0.5);
                     self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Clap);
 
                     break;
@@ -287,9 +287,9 @@ public class Battle : IResettable
             {
                 case CrosshairState.CountingDown:
                 {
-                    self.CurrentPlayingContext.CrosshairTimerContext.Update();
+                    self.CurrentPlayingContext.CrosshairTimer.Update();
 
-                    if (self.CurrentPlayingContext.CrosshairTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    if (self.CurrentPlayingContext.CrosshairTimer.CurrentStatus == Timer.Status.Stopped)
                     {
                         return CrosshairStateAutomaton.Result.Goto(CrosshairState.Aiming);
                     }
@@ -305,9 +305,9 @@ public class Battle : IResettable
 
                 case CrosshairState.Targeting:
                 {
-                    self.CurrentPlayingContext.CrosshairTimerContext.Update();
+                    self.CurrentPlayingContext.CrosshairTimer.Update();
 
-                    if (self.CurrentPlayingContext.CrosshairTimerContext.CurrentStatus == TimerContext.Status.Stopped)
+                    if (self.CurrentPlayingContext.CrosshairTimer.CurrentStatus == Timer.Status.Stopped)
                     {
                         if (self.CurrentBattleGoon is not null)
                         {
@@ -347,7 +347,7 @@ public class Battle : IResettable
         },
     };
 
-    public readonly TimerContext VictoryExitTimerContext;
+    public readonly Timer VictoryExitTimer;
 
     public ChoosingContext CurrentChoosingContext;
     public PlayingContext CurrentPlayingContext;
@@ -356,8 +356,8 @@ public class Battle : IResettable
     public Battle(GameContext gameContext)
     {
         _gameContext = gameContext;
-        VictoryExitTimerContext = new(gameContext.TimeContext);
-        CurrentPlayingContext.CrosshairTimerContext = new(gameContext.TimeContext);
+        VictoryExitTimer = new(gameContext.TimeContext);
+        CurrentPlayingContext.CrosshairTimer = new(gameContext.TimeContext);
         Reset();
     }
 
@@ -378,6 +378,6 @@ public class Battle : IResettable
         }
 
         StateAutomaton.Update(this);
-        VictoryExitTimerContext.Update();
+        VictoryExitTimer.Update();
     }
 }
