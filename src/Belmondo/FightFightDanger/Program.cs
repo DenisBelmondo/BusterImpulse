@@ -65,7 +65,7 @@ internal static class Program
             UIState uiState = new(gameContext);
 
             game.Battle.PlayerWon += uiState.StartBattleVictoryScreen;
-            game.Battle.Penis += uiState.WipeAwayBattleVictoryScreen;
+            game.Battle.Finished += uiState.WipeAwayBattleVictoryScreen;
             game.PlayerDamaged += uiState.ShakeMugshot;
             game.Quit += () => _shouldQuit = true;
 
@@ -256,7 +256,7 @@ internal static class Program
             }
             EndShaderMode();
 
-            if (game.StateAutomaton.CurrentState == Game.State.Menu)
+            if (game.StateAutomaton.IsProcessingState(Game.State.Menu))
             {
                 DrawRectangle(0, 0, 640, 480, new(0, 0, 0, 128));
             }
@@ -380,7 +380,7 @@ internal static class Program
                     Color.White);
             }
 
-            if (game.StateAutomaton.CurrentState == Game.State.Menu)
+            if (game.StateAutomaton.IsProcessingState(Game.State.Menu))
             {
                 DrawMenu(in game);
             }
@@ -591,24 +591,24 @@ internal static class Program
 
         if (battle.StateAutomaton.CurrentState != Battle.State.Choosing)
         {
-            if (battle.CurrentBattleGoon is not null)
+            if (battle.CurrentGoon is not null)
             {
-                var animation = battle.CurrentBattleGoon.CurrentAnimationContext.Animation;
-                var animationDuration = battle.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimer.DurationSeconds;
+                var animation = battle.CurrentGoon.CurrentAnimationContext.Animation;
+                var animationDuration = battle.CurrentGoon.CurrentAnimationContext.FlyOffscreenTimer.DurationSeconds;
 
                 if (animationDuration != 0)
                 {
-                    float t = (float)battle.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimer.GetProgress();
+                    float t = (float)battle.CurrentGoon.CurrentAnimationContext.FlyOffscreenTimer.GetProgress();
 
                     enemyDeathOffset = Math2.SampleCatmullRom(
                         _goonDieControlPoints,
                         t);
                 }
 
-                enemyShakeOffset.X = battle.CurrentBattleGoon.CurrentAnimationContext.ShakeOffset.X;
-                enemyShakeOffset.Y = battle.CurrentBattleGoon.CurrentAnimationContext.ShakeOffset.Y;
+                enemyShakeOffset.X = battle.CurrentGoon.CurrentAnimationContext.ShakeOffset.X;
+                enemyShakeOffset.Y = battle.CurrentGoon.CurrentAnimationContext.ShakeOffset.Y;
 
-                if (battle.CurrentBattleGoon.ShakeStateAutomaton.CurrentState == BinaryState.On)
+                if (battle.CurrentGoon.ShakeStateAutomaton.IsProcessingState(BinaryState.On))
                 {
                     enemyPosition.X = enemyShakeOffset.X;
                     enemyPosition.Y = enemyShakeOffset.Y;
@@ -675,9 +675,9 @@ internal static class Program
                     Color.White);
             }
 
-            if (battle.CurrentBattleGoon is not null)
+            if (battle.CurrentGoon is not null)
             {
-                foreach (var bullet in battle.CurrentBattleGoon.Bullets)
+                foreach (var bullet in battle.CurrentGoon.Bullets)
                 {
                     var bulletOffset = -Vector3.UnitY / 10f;
                     var bulletDestination = Vector3.Zero + Vector3.UnitX * bullet.HorizontalDirection / 10f;
@@ -696,13 +696,13 @@ internal static class Program
         }
         EndMode3D();
 
-        if (battle.StateAutomaton.CurrentState == Battle.State.Choosing)
+        if (battle.StateAutomaton.IsProcessingState(Battle.State.Choosing))
         {
             DrawTextEx(RaylibResources.Font, "P: Attack Phase", new(0, 0), 15, 1, Color.White);
             DrawTextEx(RaylibResources.Font, "I: Item", new(0, 15), 15, 1, Color.White);
             DrawTextEx(RaylibResources.Font, "R: Run", new(0, 15 * 2), 15, 1, Color.White);
         }
-        else if (battle.StateAutomaton.CurrentState == Battle.State.Playing)
+        else if (battle.StateAutomaton.IsProcessingState(Battle.State.Playing))
         {
             DrawTextEx(RaylibResources.Font, "Dodge left and right!", new(0, 0), 15, 1, Color.White);
             DrawTextEx(RaylibResources.Font, "Align the crosshair with the enemy and press space!", new(0, 15), 15, 1, Color.White);
@@ -723,7 +723,7 @@ internal static class Program
                     crosshairColor = Color.Red;
                 }
 
-                if (battle.CrosshairStateAutomaton.CurrentState == Battle.CrosshairState.Targeting)
+                if (battle.CrosshairStateAutomaton.IsProcessingState(Battle.CrosshairState.Targeting))
                 {
                     crosshairColor = Color.Green;
                 }

@@ -48,8 +48,9 @@ public class BattleGoon(GameContext gameContext) : IThinker
         }
     }
 
+    public event Action? Defeated;
+
     private readonly GameContext _gameContext = gameContext;
-    private double _shootInterval = 0.5;
 
     public readonly List<Bullet> Bullets = [];
 
@@ -194,6 +195,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
                 {
                     if (self.CurrentAnimationContext.FlyOffscreenTimer.CurrentStatus == Timer.Status.Stopped)
                     {
+                        self.Defeated?.Invoke();
                         return BattleGoonStateAutomaton.Result.Stop;
                     }
 
@@ -244,8 +246,9 @@ public class BattleGoon(GameContext gameContext) : IThinker
         },
     };
 
-    public AnimationContext CurrentAnimationContext = new(gameContext.TimeContext);
+    private double _shootInterval = 0.5;
 
+    public AnimationContext CurrentAnimationContext = new(gameContext.TimeContext);
     public float Health = 2;
 
     public void Update()

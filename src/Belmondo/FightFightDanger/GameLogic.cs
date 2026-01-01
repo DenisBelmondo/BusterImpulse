@@ -4,7 +4,7 @@ using Position = (int X, int Y);
 
 public static class GameLogic
 {
-    public static void UpdatePlayer(in GameContext gameContext, ref World world)
+    public static void UpdatePlayer(in GameContext gameContext, World world)
     {
         if (gameContext.InputService.ActionWasJustPressed(InputAction.LookRight))
         {
@@ -62,7 +62,7 @@ public static class GameLogic
             1);
     }
 
-    public static void UpdateChests(in GameContext gameContext, ref World world)
+    public static void UpdateChests(in GameContext gameContext, World world)
     {
         for (int i = 0; i < world.Chests.Count; i++)
         {
@@ -86,7 +86,7 @@ public static class GameLogic
         }
     }
 
-    public static bool TryToInteractWithChest(in GameContext gameContext, ref World world, Position at)
+    public static bool TryToInteractWithChest(in GameContext gameContext, World world, Position at)
     {
         if (!world.ChestMap.TryGetValue((at.X, at.Y), out int chestID))
         {

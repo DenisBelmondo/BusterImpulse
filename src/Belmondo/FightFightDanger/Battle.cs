@@ -46,7 +46,7 @@ public class Battle : IResettable
 
     public event Action? PlayerWon;
     public event Action? PlayerRan;
-    public event Action? Penis;
+    public event Action? Finished;
 
     private readonly GameContext _gameContext;
 
@@ -58,7 +58,7 @@ public class Battle : IResettable
             {
                 case State.Playing:
                 {
-                    self.CurrentBattleGoon?.StateAutomaton.ChangeState(BattleGoon.State.BeginAttacking);
+                    self.CurrentGoon?.StateAutomaton.ChangeState(BattleGoon.State.BeginAttacking);
                     self.PlayerStateAutomaton.ChangeState(PlayerState.Ready);
                     self.CrosshairStateAutomaton.ChangeState(CrosshairState.CountingDown);
 
@@ -96,16 +96,17 @@ public class Battle : IResettable
 
                 case State.Playing:
                 {
-                    if (self.CurrentBattleGoon is not null)
+                    if (self.CurrentGoon is BattleGoon battleGoon)
                     {
-                        self.CurrentBattleGoon.Update();
+                        battleGoon.Update();
 
-                        if (self.CurrentBattleGoon.StateAutomaton.CurrentState == BattleGoon.State.Idle)
+                        if (battleGoon.StateAutomaton.IsProcessingState(BattleGoon.State.Idle))
                         {
                             return BattleStateAutomaton.Result.Goto(State.Choosing);
+
                         }
 
-                        if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm) && self.CrosshairStateAutomaton.CurrentState == CrosshairState.Aiming)
+                        if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm) && self.CrosshairStateAutomaton.IsProcessingState(CrosshairState.Aiming))
                         {
                             if (self.CurrentPlayingContext.CrosshairIsInRange(-0.125f, 0.125f))
                             {
@@ -114,10 +115,10 @@ public class Battle : IResettable
                                     self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Crit);
                                 }
 
-                                self.CurrentBattleGoon.Bullets.Clear();
+                                battleGoon.Bullets.Clear();
                                 self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Clap);
                                 self.CrosshairStateAutomaton.ChangeState(CrosshairState.Targeting);
-                                self.CurrentBattleGoon.StateAutomaton.Stop();
+                                battleGoon.StateAutomaton.Stop();
                             }
                             else
                             {
@@ -125,13 +126,6 @@ public class Battle : IResettable
                                 self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Miss);
                                 self.CurrentPlayingContext.CrosshairIsVisible = false;
                             }
-                        }
-
-                        if (self.CurrentBattleGoon.StateAutomaton.PreviousState == BattleGoon.State.FlyingOffscreen && self.CurrentBattleGoon.CurrentAnimationContext.FlyOffscreenTimer.CurrentStatus == Timer.Status.Stopped)
-                        {
-                            self._gameContext.AudioService.ChangeMusic(MusicTrack.Victory);
-                            self.PlayerWon?.Invoke();
-                            return BattleStateAutomaton.Result.Goto(State.Victory);
                         }
                     }
 
@@ -150,7 +144,7 @@ public class Battle : IResettable
 
                     if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                     {
-                        self.Penis?.Invoke();
+                        self.Finished?.Invoke();
                         return BattleStateAutomaton.Result.Stop;
                     }
 
@@ -309,7 +303,7 @@ public class Battle : IResettable
 
                     if (self.CurrentPlayingContext.CrosshairTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        if (self.CurrentBattleGoon is not null)
+                        if (self.CurrentGoon is not null)
                         {
                             var damage = 1;
 
@@ -318,7 +312,7 @@ public class Battle : IResettable
                                 damage = 2;
                             }
 
-                            self.CurrentBattleGoon.Damage(damage);
+                            self.CurrentGoon.Damage(damage);
                             self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Smack);
                         }
 
@@ -334,13 +328,9 @@ public class Battle : IResettable
 
         ExitFunction = static (self, currentState) =>
         {
-            switch (currentState)
+            if (currentState == CrosshairState.Targeting)
             {
-                case CrosshairState.Targeting:
-                {
-                    self.CurrentPlayingContext.CrosshairIsVisible = false;
-                    break;
-                }
+                self.CurrentPlayingContext.CrosshairIsVisible = false;
             }
 
             return CrosshairStateAutomaton.Result.Continue;
@@ -351,7 +341,8 @@ public class Battle : IResettable
 
     public ChoosingContext CurrentChoosingContext;
     public PlayingContext CurrentPlayingContext;
-    public BattleGoon? CurrentBattleGoon;
+
+    public BattleGoon? CurrentGoon;
 
     public Battle(GameContext gameContext)
     {
@@ -361,11 +352,22 @@ public class Battle : IResettable
         Reset();
     }
 
+    public void SetGoon(BattleGoon battleGoon)
+    {
+        if (CurrentGoon is not null)
+        {
+            CurrentGoon.Defeated -= OnBattleGoonDefeated;
+        }
+
+        CurrentGoon = battleGoon;
+        CurrentGoon.Defeated += OnBattleGoonDefeated;
+    }
+
     public void Reset()
     {
         StateAutomaton.ChangeState(State.Choosing);
         PlayerStateAutomaton.ChangeState(PlayerState.Ready);
-        CurrentBattleGoon = new BattleGoon(_gameContext);
+        SetGoon(new BattleGoon(_gameContext));
     }
 
     public void Update()
@@ -379,5 +381,12 @@ public class Battle : IResettable
 
         StateAutomaton.Update(this);
         VictoryExitTimer.Update();
+    }
+
+    public void OnBattleGoonDefeated()
+    {
+        _gameContext.AudioService.ChangeMusic(MusicTrack.Victory);
+        PlayerWon?.Invoke();
+        StateAutomaton.ChangeState(State.Victory);
     }
 }

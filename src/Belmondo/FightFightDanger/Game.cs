@@ -200,17 +200,19 @@ public class Game
 
                 if (self.World is not null)
                 {
+                    var world = self.World;
+
                     if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                     {
-                        var (X, Y) = Direction.ToInt32Tuple(self.World.Player.Transform.Direction);
-                        var desiredX = self.World.Player.Transform.Position.X + X;
-                        var desiredY = self.World.Player.Transform.Position.Y + Y;
+                        var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
+                        var desiredX = world.Player.Transform.Position.X + X;
+                        var desiredY = world.Player.Transform.Position.Y + Y;
 
-                        GameLogic.TryToInteractWithChest(self._gameContext, ref self.World, (desiredX, desiredY));
+                        GameLogic.TryToInteractWithChest(self._gameContext, world, (desiredX, desiredY));
                     }
 
-                    GameLogic.UpdatePlayer(self._gameContext, ref self.World);
-                    GameLogic.UpdateChests(self._gameContext, ref self.World);
+                    GameLogic.UpdatePlayer(self._gameContext, world);
+                    GameLogic.UpdateChests(self._gameContext, world);
                 }
 
                 break;
@@ -255,9 +257,9 @@ public class Game
                                     case Menus.Item.Snacks:
                                         self.CurrentMenuContext.SnacksMenu.Reset();
 
-                                        if (self.World is World world)
+                                        if (self.World is not null)
                                         {
-                                            Menus.InitializeSnacksMenu(self.CurrentMenuContext.SnacksMenu, world.Player.Value.Inventory);
+                                            Menus.InitializeSnacksMenu(self.CurrentMenuContext.SnacksMenu, self.World.Player.Value.Inventory);
                                         }
 
                                         self.CurrentMenuContext.MenuStack.Push(self.CurrentMenuContext.SnacksMenu);
@@ -305,8 +307,9 @@ public class Game
             case State.Battling:
                 if (self.World is not null)
                 {
+                    var world = self.World;
                     var bleedFreq = (float)self._gameContext.TimeContext.Delta * 3;
-                    var player = self.World.Player.Value;
+                    var player = world.Player.Value;
 
                     if (player.RunningHealth < player.Current.Health)
                     {
@@ -327,27 +330,27 @@ public class Game
                         }
                     }
 
-                    self.World.Player.Value = player;
+                    world.Player.Value = player;
                 }
 
-                if (self.Battle is not null)
+                if (self.Battle is Battle battle)
                 {
-                    self.Battle.Update();
+                    battle.Update();
 
-                    if (self.Battle.StateAutomaton.CurrentState is null)
+                    if (!battle.StateAutomaton.IsRunning())
                     {
                         return PlaysimStateResult.Goto(State.Exploring);
                     }
 
-                    if (self.Battle.CurrentBattleGoon is not null)
+                    if (battle.CurrentGoon is BattleGoon goon)
                     {
-                        foreach (var bullet in self.Battle.CurrentBattleGoon.Bullets)
+                        foreach (var bullet in goon.Bullets)
                         {
                             if (bullet.Closeness >= 0.9 && bullet.Closeness < 0.95)
                             {
-                                var shouldHurtPlayer = bullet.HorizontalDirection == -MathF.Sign(self.Battle.CurrentPlayingContext.PlayerDodgeT);
+                                var shouldHurtPlayer = bullet.HorizontalDirection == -MathF.Sign(battle.CurrentPlayingContext.PlayerDodgeT);
 
-                                shouldHurtPlayer &= self.Battle.CurrentPlayingContext.PlayerInvulnerabilityT == 0;
+                                shouldHurtPlayer &= battle.CurrentPlayingContext.PlayerInvulnerabilityT == 0;
 
                                 if (shouldHurtPlayer)
                                 {
@@ -357,7 +360,7 @@ public class Game
                                         self.PlayerDamaged?.Invoke();
                                     }
 
-                                    self.Battle.CurrentPlayingContext.PlayerInvulnerabilityT = 1;
+                                    battle.CurrentPlayingContext.PlayerInvulnerabilityT = 1;
                                     self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Smack);
                                 }
                             }
@@ -380,7 +383,7 @@ public class Game
 
         TransitionContext.FadedOut += transitionContext =>
         {
-            if (StateAutomaton.CurrentState == State.Transitioning)
+            if (StateAutomaton.IsProcessingState(State.Transitioning))
             {
                 CurrentRenderHint = RenderHint.Battling;
             }
