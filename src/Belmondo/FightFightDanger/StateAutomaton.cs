@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct
+public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, IComparable
 {
     public enum Flow
     {
@@ -62,7 +62,7 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct
             return false;
         }
 
-        return CurrentState.Value.Equals(state);
+        return CurrentState.Equals(state);
     }
 
     public bool IsRunning() => CurrentState is not null;
