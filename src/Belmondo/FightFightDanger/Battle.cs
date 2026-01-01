@@ -28,11 +28,6 @@ public class Battle : IResettable
         Dodging,
     }
 
-    public struct ChoosingContext
-    {
-        public int CurrentChoice;
-    }
-
     public struct PlayingContext
     {
         public Timer CrosshairTimer;
@@ -101,7 +96,6 @@ public class Battle : IResettable
                         if (battleGoon.StateAutomaton.IsProcessingState(BattleGoon.State.Idle))
                         {
                             return BattleStateAutomaton.Result.Goto(State.Choosing);
-
                         }
 
                         if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm) && self.CrosshairStateAutomaton.IsProcessingState(CrosshairState.Aiming))
@@ -337,9 +331,7 @@ public class Battle : IResettable
 
     public readonly Timer VictoryExitTimer;
 
-    public ChoosingContext CurrentChoosingContext;
     public PlayingContext CurrentPlayingContext;
-
     public BattleGoon? CurrentGoon;
 
     public Battle(GameContext gameContext)
