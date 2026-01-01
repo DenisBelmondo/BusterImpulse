@@ -98,8 +98,6 @@ public class Battle : IResettable
                 {
                     if (self.CurrentGoon is BattleGoon battleGoon)
                     {
-                        battleGoon.Update();
-
                         if (battleGoon.StateAutomaton.IsProcessingState(BattleGoon.State.Idle))
                         {
                             return BattleStateAutomaton.Result.Goto(State.Choosing);
@@ -379,6 +377,7 @@ public class Battle : IResettable
             CurrentPlayingContext.PlayerInvulnerabilityT = 0;
         }
 
+        CurrentGoon?.Update();
         StateAutomaton.Update(this);
         VictoryExitTimer.Update();
     }

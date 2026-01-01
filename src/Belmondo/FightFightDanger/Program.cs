@@ -17,7 +17,6 @@ internal static class Program
     //
     private static readonly Matrix3x2 _mat240pTo480p = Math2.FitContain(new(320, 240), new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT));
     private static readonly StringBuilder _sb = new();
-    private static readonly Vector3[] _goonDieControlPoints;
 
     private static Camera3D _camera;
     private static Camera3D _battleCamera;
@@ -26,15 +25,6 @@ internal static class Program
     private static Vector3 _cameraDirection;
     private static Vector2 _currentScreenSize;
     private static bool _shouldQuit;
-
-    static Program()
-    {
-        _goonDieControlPoints = [
-            Vector3.Zero,
-            -Vector3.UnitX / 2 + Vector3.UnitY + Vector3.UnitZ,
-            -Vector3.UnitX - Vector3.UnitY * 4 + Vector3.UnitZ * 2
-        ];
-    }
 
     private static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
     private static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
@@ -583,36 +573,13 @@ internal static class Program
 
     private static void RenderBattle(in Battle battle, in TimeContext timeContext)
     {
-        var enemyPosition = Vector3.UnitZ * 2;
-        var enemyShakeOffset = Vector2.Zero;
-        var enemyDeathOffset = Vector3.Zero;
         var enemyFrameNumber = 0;
-        var shouldDraw = true;
 
         if (battle.StateAutomaton.CurrentState != Battle.State.Choosing)
         {
             if (battle.CurrentGoon is not null)
             {
                 var animation = battle.CurrentGoon.CurrentAnimationContext.Animation;
-                var animationDuration = battle.CurrentGoon.CurrentAnimationContext.FlyOffscreenTimer.DurationSeconds;
-
-                if (animationDuration != 0)
-                {
-                    float t = (float)battle.CurrentGoon.CurrentAnimationContext.FlyOffscreenTimer.GetProgress();
-
-                    enemyDeathOffset = Math2.SampleCatmullRom(
-                        _goonDieControlPoints,
-                        t);
-                }
-
-                enemyShakeOffset.X = battle.CurrentGoon.CurrentAnimationContext.ShakeOffset.X;
-                enemyShakeOffset.Y = battle.CurrentGoon.CurrentAnimationContext.ShakeOffset.Y;
-
-                if (battle.CurrentGoon.ShakeStateAutomaton.IsProcessingState(BinaryState.On))
-                {
-                    enemyPosition.X = enemyShakeOffset.X;
-                    enemyPosition.Y = enemyShakeOffset.Y;
-                }
 
                 if (animation == 0 || animation == 1)
                 {
@@ -658,8 +625,13 @@ internal static class Program
             Rlgl.EnableDepthTest();
             Rlgl.EnableBackfaceCulling();
 
-            if (shouldDraw)
+            if (battle.CurrentGoon is not null)
             {
+                Matrix4x4 enemyTransform = battle.CurrentGoon.RenderThing.Transform;
+
+                enemyTransform.Translation += Vector3.UnitX * battle.CurrentGoon.CurrentAnimationContext.ShakeOffset.X;
+                enemyTransform.Translation += Vector3.UnitY * battle.CurrentGoon.CurrentAnimationContext.ShakeOffset.Y;
+
                 DrawBillboardRec(
                     _battleCamera,
                     RaylibResources.EnemyAtlas,
@@ -670,7 +642,7 @@ internal static class Program
                         Width = 64,
                         Height = 64,
                     },
-                    enemyPosition + enemyDeathOffset,
+                    enemyTransform.Translation,
                     Vector2.One,
                     Color.White);
             }
@@ -679,16 +651,8 @@ internal static class Program
             {
                 foreach (var bullet in battle.CurrentGoon.Bullets)
                 {
-                    var bulletOffset = -Vector3.UnitY / 10f;
-                    var bulletDestination = Vector3.Zero + Vector3.UnitX * bullet.HorizontalDirection / 10f;
-
-                    var bulletPosition = Vector3Lerp(
-                        enemyPosition + bulletOffset,
-                        bulletDestination + bulletOffset,
-                        bullet.Closeness);
-
                     DrawCubeV(
-                        bulletPosition,
+                        bullet.RenderThing.Transform.Translation,
                         (Vector3.One + Vector3.UnitZ * 2) / 60f,
                         Color.Yellow);
                 }

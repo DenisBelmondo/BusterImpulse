@@ -2,7 +2,7 @@ namespace Belmondo.FightFightDanger;
 
 public interface IAudioService
 {
-    public void PlaySoundEffect(SoundEffect soundEffect);
-    public void ChangeMusic(MusicTrack musicTrack);
-    public void StopMusic();
+    void PlaySoundEffect(SoundEffect soundEffect);
+    void ChangeMusic(MusicTrack musicTrack);
+    void StopMusic();
 }

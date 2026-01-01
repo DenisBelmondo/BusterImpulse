@@ -5,7 +5,7 @@ namespace Belmondo.FightFightDanger;
 public struct RenderThing
 {
     public Matrix4x4 Transform;
-    public int AnimationID;
+    public int ShapeType;
     public float CurrentAnimationTime;
     public bool IsVisible;
 }

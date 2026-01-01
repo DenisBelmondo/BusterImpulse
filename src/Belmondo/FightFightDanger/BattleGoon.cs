@@ -6,7 +6,7 @@ namespace Belmondo.FightFightDanger;
 using BattleGoonStateAutomaton = StateAutomaton<BattleGoon, BattleGoon.State>;
 using ShakeStateAutomaton = StateAutomaton<BattleGoon, BinaryState>;
 
-public class BattleGoon(GameContext gameContext) : IThinker
+public partial class BattleGoon
 {
     public enum State
     {
@@ -18,10 +18,13 @@ public class BattleGoon(GameContext gameContext) : IThinker
         FlyingOffscreen,
     }
 
-    public struct Bullet
+    public struct Bullet : IRenderable
     {
         public int HorizontalDirection;
         public float Closeness;
+        public RenderThing RenderThing;
+
+        public readonly RenderThing GetRenderThing() => RenderThing;
     }
 
     public struct AnimationContext(TimeContext timeContext) : IThinker, IResettable
@@ -50,8 +53,7 @@ public class BattleGoon(GameContext gameContext) : IThinker
 
     public event Action? Defeated;
 
-    private readonly GameContext _gameContext = gameContext;
-
+    private readonly GameContext _gameContext;
     public readonly List<Bullet> Bullets = [];
 
     public readonly BattleGoonStateAutomaton StateAutomaton = new()
@@ -138,6 +140,17 @@ public class BattleGoon(GameContext gameContext) : IThinker
                 {
                     foreach (ref var bullet in CollectionsMarshal.AsSpan(self.Bullets))
                     {
+                        var bulletOriginalOffset = Vector3.UnitZ * 2;
+                        var bulletOffset = -Vector3.UnitY / 10f;
+                        var bulletDestination = Vector3.Zero + Vector3.UnitX * bullet.HorizontalDirection / 10f;
+
+                        var bulletPosition = Vector3.Lerp(
+                            bulletOriginalOffset + bulletOffset,
+                            bulletDestination + bulletOffset,
+                            bullet.Closeness);
+
+                        bullet.RenderThing.Transform.Translation = bulletPosition;
+
                         if (bullet.Closeness >= 1)
                         {
                             bullet.Closeness = 1;
@@ -248,14 +261,19 @@ public class BattleGoon(GameContext gameContext) : IThinker
 
     private double _shootInterval = 0.5;
 
-    public AnimationContext CurrentAnimationContext = new(gameContext.TimeContext);
+    public AnimationContext CurrentAnimationContext;
     public float Health = 2;
 
-    public void Update()
+    public BattleGoon(GameContext gameContext)
     {
-        StateAutomaton.Update(this);
-        ShakeStateAutomaton.Update(this);
-        CurrentAnimationContext.Update();
+        _gameContext = gameContext;
+        CurrentAnimationContext = new(gameContext.TimeContext);
+        InitializeRenderThing();
+    }
+
+    static BattleGoon()
+    {
+        InitializeFlyOffscreenControlPoints();
     }
 
     public void Damage(float amount)
@@ -270,5 +288,57 @@ public class BattleGoon(GameContext gameContext) : IThinker
         }
 
         ShakeStateAutomaton.ChangeState(BinaryState.On);
+    }
+}
+
+public partial class BattleGoon : IThinker
+{
+    public void Update()
+    {
+        StateAutomaton.Update(this);
+        ShakeStateAutomaton.Update(this);
+        CurrentAnimationContext.Update();
+        UpdateRenderThing();
+    }
+}
+
+public partial class BattleGoon : IRenderable
+{
+    private static Vector3[] _flyOffscreenControlPoints = [];
+    public Vector3 BaseOffset;
+    public Vector3 FlyOffscreenOffset;
+    public RenderThing RenderThing;
+
+    private static void InitializeFlyOffscreenControlPoints()
+    {
+        _flyOffscreenControlPoints = [
+            Vector3.Zero,
+            -Vector3.UnitX / 2 + Vector3.UnitY + Vector3.UnitZ,
+            -Vector3.UnitX - Vector3.UnitY * 4 + Vector3.UnitZ * 2
+        ];
+    }
+
+    public void InitializeRenderThing()
+    {
+        BaseOffset = Vector3.UnitZ * 2;
+        UpdateRenderThing();
+    }
+
+    public void UpdateRenderThing()
+    {
+        float t = (float)CurrentAnimationContext.FlyOffscreenTimer.GetProgress();
+
+        FlyOffscreenOffset = Math2.SampleCatmullRom(
+            _flyOffscreenControlPoints,
+            t);
+
+        RenderThing.Transform.Translation = (
+            BaseOffset
+                + FlyOffscreenOffset);
+    }
+
+    public RenderThing GetRenderThing()
+    {
+        return RenderThing;
     }
 }
