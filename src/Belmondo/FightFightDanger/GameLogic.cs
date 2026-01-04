@@ -106,4 +106,18 @@ public static class GameLogic
 
         return true;
     }
+
+    public static void EatSnack(Player player, SnackType snackType)
+    {
+        switch (snackType)
+        {
+            case SnackType.ChickenLeg:
+                player.Current.Health += 10;
+                break;
+
+            case SnackType.WholeChicken:
+                player.Current.Health += 20;
+                break;
+        }
+    }
 }

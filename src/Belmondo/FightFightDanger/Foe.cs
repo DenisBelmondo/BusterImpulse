@@ -3,21 +3,11 @@ using System.Runtime.InteropServices;
 
 namespace Belmondo.FightFightDanger;
 
-using BattleGoonStateAutomaton = StateAutomaton<BattleGoon, BattleGoon.State>;
-using ShakeStateAutomaton = StateAutomaton<BattleGoon, BinaryState>;
+using FoeStateAutomaton = StateAutomaton<Foe, FoeState>;
+using ShakeStateAutomaton = StateAutomaton<Foe, BinaryState>;
 
-public partial class BattleGoon
+public partial class Foe
 {
-    public enum State
-    {
-        Idle,
-        BeginAttacking,
-        Attacking,
-        Hurt,
-        Dying,
-        FlyingOffscreen,
-    }
-
     public struct Bullet : IRenderable
     {
         public int HorizontalDirection;
@@ -33,14 +23,12 @@ public partial class BattleGoon
         public Timer FlyOffscreenTimer = new(timeContext);
         public Timer ShakeTimer = new(timeContext);
         public Vector2 ShakeOffset;
-        public int Animation;
 
         public void Reset()
         {
             AnimationTimer.Reset();
             FlyOffscreenTimer.Reset();
             ShakeOffset = Vector2.Zero;
-            Animation = 0;
         }
 
         public readonly void Update()
@@ -56,88 +44,66 @@ public partial class BattleGoon
     private readonly GameContext _gameContext;
     public readonly List<Bullet> Bullets = [];
 
-    public readonly BattleGoonStateAutomaton StateAutomaton = new()
+    public readonly FoeStateAutomaton StateAutomaton = new()
     {
         EnterFunction = static (self, currentState) =>
         {
-            switch (currentState)
+            switch (self.Type)
             {
-                case State.Idle:
-                {
-                    self.CurrentAnimationContext.Reset();
-                    self.CurrentAnimationContext.Animation = 0;
+                case FoeType.Goon:
+                    switch (currentState)
+                    {
+                        case FoeState.Idle:
+                            self.RenderThing.SubFrame = 0;
+                            break;
 
+                        case FoeState.BeginAttacking:
+                            self.RenderThing.SubFrame = 0;
+                            self.CurrentAnimationContext.AnimationTimer.Start(1);
+                            break;
+
+                        case FoeState.Attacking:
+                            self.RenderThing.SubFrame = 1;
+                            self.CurrentAnimationContext.AnimationTimer.Start(5);
+                            break;
+
+                        case FoeState.Hurt:
+                            self.RenderThing.SubFrame = 2;
+                            self.CurrentAnimationContext.AnimationTimer.Start(1);
+                            self.Bullets.Clear();
+                            self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Hough);
+                            break;
+
+                        case FoeState.Dying:
+                            self.RenderThing.SubFrame = 2;
+                            self.CurrentAnimationContext.AnimationTimer.Start(1);
+                            break;
+
+                        case FoeState.FlyingOffscreen:
+                            self.RenderThing.SubFrame = 3;
+                            self.CurrentAnimationContext.FlyOffscreenTimer.Start(2f);
+                            self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Die);
+                            break;
+                    }
                     break;
-                }
-
-                case State.BeginAttacking:
-                {
-                    self.CurrentAnimationContext.Reset();
-                    self.CurrentAnimationContext.Animation = 1;
-                    self.CurrentAnimationContext.AnimationTimer.Start(1);
-
-                    break;
-                }
-
-                case State.Attacking:
-                {
-                    self.CurrentAnimationContext.Reset();
-                    self.CurrentAnimationContext.Animation = 2;
-                    self.CurrentAnimationContext.AnimationTimer.Start(5);
-
-                    break;
-                }
-
-                case State.Hurt:
-                {
-                    self.CurrentAnimationContext.Reset();
-                    self.CurrentAnimationContext.Animation = 3;
-                    self.CurrentAnimationContext.AnimationTimer.Start(1);
-                    self.Bullets.Clear();
-                    self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Hough);
-
-                    break;
-                }
-
-                case State.Dying:
-                {
-                    self.CurrentAnimationContext.Reset();
-                    self.CurrentAnimationContext.Animation = 3;
-                    self.CurrentAnimationContext.AnimationTimer.Start(1);
-
-                    break;
-                }
-
-                case State.FlyingOffscreen:
-                {
-                    self.CurrentAnimationContext.Reset();
-                    self.CurrentAnimationContext.Animation = 4;
-                    self.CurrentAnimationContext.FlyOffscreenTimer.Start(2f);
-                    self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Die);
-
-                    break;
-                }
             }
 
-            return BattleGoonStateAutomaton.Result.Continue;
+            return FoeStateAutomaton.Result.Continue;
         },
 
         UpdateFunction = static (self, currentState) =>
         {
             switch (currentState)
             {
-                case State.BeginAttacking:
-                {
+                case FoeState.BeginAttacking:
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return BattleGoonStateAutomaton.Result.Goto(State.Attacking);
+                        return FoeStateAutomaton.Result.Goto(FoeState.Attacking);
                     }
 
                     break;
-                }
 
-                case State.Attacking:
-                {
+                case FoeState.Attacking:
                     foreach (ref var bullet in CollectionsMarshal.AsSpan(self.Bullets))
                     {
                         var bulletOriginalOffset = Vector3.UnitZ * 2;
@@ -178,55 +144,48 @@ public partial class BattleGoon
 
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return BattleGoonStateAutomaton.Result.Goto(State.Idle);
+                        return FoeStateAutomaton.Result.Goto(FoeState.Idle);
                     }
 
                     break;
-                }
 
-                case State.Hurt:
-                {
+                case FoeState.Hurt:
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return BattleGoonStateAutomaton.Result.Goto(State.Idle);
+                        return FoeStateAutomaton.Result.Goto(FoeState.Idle);
                     }
 
                     break;
-                }
 
-                case State.Dying:
-                {
+                case FoeState.Dying:
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return BattleGoonStateAutomaton.Result.Goto(State.FlyingOffscreen);
+                        return FoeStateAutomaton.Result.Goto(FoeState.FlyingOffscreen);
                     }
 
                     break;
-                }
 
-                case State.FlyingOffscreen:
-                {
+                case FoeState.FlyingOffscreen:
                     if (self.CurrentAnimationContext.FlyOffscreenTimer.CurrentStatus == Timer.Status.Stopped)
                     {
                         self.Defeated?.Invoke();
-                        return BattleGoonStateAutomaton.Result.Stop;
+                        return FoeStateAutomaton.Result.Stop;
                     }
 
                     break;
-                }
             }
 
-            return BattleGoonStateAutomaton.Result.Continue;
+            return FoeStateAutomaton.Result.Continue;
         },
 
         ExitFunction = static (self, currentState) =>
         {
-            if (currentState == State.Attacking)
+            if (currentState == FoeState.Attacking)
             {
                 self.Bullets.Clear();
             }
 
-            return BattleGoonStateAutomaton.Result.Continue;
+            return FoeStateAutomaton.Result.Continue;
         },
     };
 
@@ -257,21 +216,34 @@ public partial class BattleGoon
 
             return ShakeStateAutomaton.Result.Continue;
         },
+
+        ExitFunction = static (self, currentState) =>
+        {
+            if (currentState == BinaryState.Off)
+            {
+                self.CurrentAnimationContext.ShakeOffset = default;
+            }
+
+            return ShakeStateAutomaton.Result.Continue;
+        },
     };
+
+    public FoeType Type;
 
     private double _shootInterval = 0.5;
 
     public AnimationContext CurrentAnimationContext;
     public float Health = 2;
 
-    public BattleGoon(GameContext gameContext)
+    public Foe(FoeType type, GameContext gameContext)
     {
+        Type = type;
         _gameContext = gameContext;
         CurrentAnimationContext = new(gameContext.TimeContext);
         InitializeRenderThing();
     }
 
-    static BattleGoon()
+    static Foe()
     {
         InitializeFlyOffscreenControlPoints();
     }
@@ -280,18 +252,18 @@ public partial class BattleGoon
     {
         Health -= amount;
 
-        StateAutomaton.ChangeState(State.Hurt);
+        StateAutomaton.ChangeState(FoeState.Hurt);
 
         if (Health <= 0)
         {
-            StateAutomaton.ChangeState(State.Dying);
+            StateAutomaton.ChangeState(FoeState.Dying);
         }
 
         ShakeStateAutomaton.ChangeState(BinaryState.On);
     }
 }
 
-public partial class BattleGoon : IThinker
+public partial class Foe : IThinker
 {
     public void Update()
     {
@@ -302,7 +274,7 @@ public partial class BattleGoon : IThinker
     }
 }
 
-public partial class BattleGoon : IRenderable
+public partial class Foe : IRenderable
 {
     private static Vector3[] _flyOffscreenControlPoints = [];
     public Vector3 BaseOffset;

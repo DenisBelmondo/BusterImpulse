@@ -342,9 +342,9 @@ public class Game
                         return PlaysimStateResult.Goto(State.Exploring);
                     }
 
-                    if (battle.CurrentGoon is BattleGoon goon)
+                    if (battle.CurrentFoe is Foe foe)
                     {
-                        foreach (var bullet in goon.Bullets)
+                        foreach (var bullet in foe.Bullets)
                         {
                             if (bullet.Closeness >= 0.9 && bullet.Closeness < 0.95)
                             {

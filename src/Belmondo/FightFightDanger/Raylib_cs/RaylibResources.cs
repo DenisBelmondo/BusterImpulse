@@ -591,7 +591,9 @@ public static class RaylibResources
     public static Texture2D CeilingTexture { get; private set; }
     public static Texture2D ChestAtlas { get; private set; }
     public static Texture2D CrosshairAtlasTexture { get; private set; }
-    public static Texture2D EnemyAtlas { get; private set; }
+    public static Texture2D TurretAtlas { get; private set; }
+    public static Texture2D GoonAtlas { get; private set; }
+    public static Texture2D TerraCottaAtlas { get; private set; }
     public static Texture2D EnemyTexture { get; private set; }
     public static Texture2D FloorTexture { get; private set; }
     public static Texture2D LUTTexture { get; private set; }
@@ -662,7 +664,9 @@ public static class RaylibResources
         LUTTexture = LoadTexture("static/textures/lut.png");
         MugshotTexture = LoadTexture("static/textures/mugshot.png");
         UIAtlasTexture = LoadTexture("static/textures/ui.png");
-        EnemyAtlas = LoadTexture("static/textures/enemy-atlas.png");
+        TurretAtlas = LoadTexture("static/terra-cotta.png");
+        GoonAtlas = LoadTexture("static/textures/enemy-atlas.png");
+        TerraCottaAtlas = LoadTexture("static/textures/terra-cotta.png");
         TileMaterial = LoadMaterialDefault();
         FloorMaterial = LoadMaterialDefault();
         TileMesh = GenMeshCube(1, 1, 1);
@@ -747,7 +751,9 @@ public static class RaylibResources
         UnloadMusicStream(VictoryMusic);
         UnloadTexture(ChestAtlas);
         UnloadTexture(CrosshairAtlasTexture);
-        UnloadTexture(EnemyAtlas);
+        UnloadTexture(TurretAtlas);
+        UnloadTexture(GoonAtlas);
+        UnloadTexture(TerraCottaAtlas);
         UnloadTexture(EnemyTexture);
         UnloadTexture(LUTTexture);
         UnloadTexture(MugshotTexture);

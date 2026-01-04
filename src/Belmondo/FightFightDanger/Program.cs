@@ -9,6 +9,18 @@ using System.Text;
 
 internal static class Program
 {
+    public struct SizedText
+    {
+        public string Text;
+        public Vector2 Size;
+
+        public SizedText(Font font, string text, float fontSize, float spacing)
+        {
+            Text = text;
+            Size = MeasureTextEx(font, Text, fontSize, spacing);
+        }
+    }
+
     private const int VIRTUAL_SCREEN_WIDTH = 640;
     private const int VIRTUAL_SCREEN_HEIGHT = 480;
 
@@ -18,6 +30,7 @@ internal static class Program
     private static readonly Matrix3x2 _mat240pTo480p = Math2.FitContain(new(320, 240), new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT));
     private static readonly StringBuilder _sb = new();
 
+    private static SizedText _survivedSizedText;
     private static Camera3D _camera;
     private static Camera3D _battleCamera;
     private static RenderTexture2D _gameWorldRenderTexture;
@@ -37,6 +50,7 @@ internal static class Program
         InitAudioDevice();
         SetExitKey(KeyboardKey.Null);
         RaylibResources.CacheAndInitializeAll();
+        _survivedSizedText = new(RaylibResources.Font, "Survived!", 30, 2);
 
         {
             RaylibAudioService raylibAudioService = new();
@@ -363,8 +377,8 @@ internal static class Program
 
                 DrawTextEx(
                     RaylibResources.Font,
-                    "Survived!",
-                    new Vector2(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT) / 2f - MeasureTextEx(RaylibResources.Font, "Survived!", 30, 2) / 2f,
+                    _survivedSizedText.Text,
+                    new Vector2(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT) / 2f - _survivedSizedText.Size / 2f,
                     30,
                     2,
                     Color.White);
@@ -391,7 +405,10 @@ internal static class Program
         {
             ClearBackground(Color.Black);
 
-            SetShaderValue(RaylibResources.DownmixedShader, RaylibResources.DownmixedShaderLUTLoc, RaylibResources.LUTTexture);
+            SetShaderValue(
+                RaylibResources.DownmixedShader,
+                RaylibResources.DownmixedShaderLUTLoc,
+                RaylibResources.LUTTexture);
 
             SetShaderValue(
                 RaylibResources.DownmixedShader,
@@ -573,33 +590,6 @@ internal static class Program
 
     private static void RenderBattle(in Battle battle, in TimeContext timeContext)
     {
-        var enemyFrameNumber = 0;
-
-        if (battle.StateAutomaton.CurrentState != Battle.State.Choosing)
-        {
-            if (battle.CurrentGoon is not null)
-            {
-                var animation = battle.CurrentGoon.CurrentAnimationContext.Animation;
-
-                if (animation == 0 || animation == 1)
-                {
-                    enemyFrameNumber = 0;
-                }
-                else if (animation == 2)
-                {
-                    enemyFrameNumber = 1;
-                }
-                else if (animation == 3)
-                {
-                    enemyFrameNumber = 2;
-                }
-                else if (animation == 4)
-                {
-                    enemyFrameNumber = 3;
-                }
-            }
-        }
-
         float x = Math2.SampleParabola(battle.CurrentPlayingContext.PlayerDodgeT, MathF.Sign(battle.CurrentPlayingContext.PlayerDodgeT), -1, 0);
 
         _battleCamera.Position.X = x;
@@ -625,31 +615,46 @@ internal static class Program
             Rlgl.EnableDepthTest();
             Rlgl.EnableBackfaceCulling();
 
-            if (battle.CurrentGoon is not null)
+            if (battle.CurrentFoe is not null)
             {
-                Matrix4x4 enemyTransform = battle.CurrentGoon.RenderThing.Transform;
+                Foe foe = battle.CurrentFoe;
+                Matrix4x4 foeTransform = battle.CurrentFoe.RenderThing.Transform;
+                Texture2D? foeAtlas = null;
 
-                enemyTransform.Translation += Vector3.UnitX * battle.CurrentGoon.CurrentAnimationContext.ShakeOffset.X;
-                enemyTransform.Translation += Vector3.UnitY * battle.CurrentGoon.CurrentAnimationContext.ShakeOffset.Y;
+                switch (foe.RenderThing.ShapeType)
+                {
+                    case ShapeType.Turret:
+                        foeAtlas = RaylibResources.TurretAtlas;
+                        break;
+                    case ShapeType.Goon:
+                        foeAtlas = RaylibResources.GoonAtlas;
+                        break;
+                }
 
-                DrawBillboardRec(
-                    _battleCamera,
-                    RaylibResources.EnemyAtlas,
-                    new()
-                    {
-                        X = enemyFrameNumber * 64,
-                        Y = 0,
-                        Width = 64,
-                        Height = 64,
-                    },
-                    enemyTransform.Translation,
-                    Vector2.One,
-                    Color.White);
+                foeTransform.Translation += Vector3.UnitX * battle.CurrentFoe.CurrentAnimationContext.ShakeOffset.X;
+                foeTransform.Translation += Vector3.UnitY * battle.CurrentFoe.CurrentAnimationContext.ShakeOffset.Y;
+
+                if (foeAtlas.HasValue)
+                {
+                    DrawBillboardRec(
+                        _battleCamera,
+                        foeAtlas.Value,
+                        new()
+                        {
+                            X = foe.RenderThing.SubFrame * 64,
+                            Y = 0,
+                            Width = 64,
+                            Height = 64,
+                        },
+                        foeTransform.Translation,
+                        Vector2.One,
+                        Color.White);
+                }
             }
 
-            if (battle.CurrentGoon is not null)
+            if (battle.CurrentFoe is not null)
             {
-                foreach (var bullet in battle.CurrentGoon.Bullets)
+                foreach (var bullet in battle.CurrentFoe.Bullets)
                 {
                     DrawCubeV(
                         bullet.RenderThing.Transform.Translation,

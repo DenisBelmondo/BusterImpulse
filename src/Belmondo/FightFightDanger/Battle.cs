@@ -53,7 +53,7 @@ public class Battle : IResettable
             {
                 case State.Playing:
                 {
-                    self.CurrentGoon?.StateAutomaton.ChangeState(BattleGoon.State.BeginAttacking);
+                    self.CurrentFoe?.StateAutomaton.ChangeState(FoeState.BeginAttacking);
                     self.PlayerStateAutomaton.ChangeState(PlayerState.Ready);
                     self.CrosshairStateAutomaton.ChangeState(CrosshairState.CountingDown);
 
@@ -91,9 +91,9 @@ public class Battle : IResettable
 
                 case State.Playing:
                 {
-                    if (self.CurrentGoon is BattleGoon battleGoon)
+                    if (self.CurrentFoe is Foe foe)
                     {
-                        if (battleGoon.StateAutomaton.IsProcessingState(BattleGoon.State.Idle))
+                        if (foe.StateAutomaton.IsProcessingState(FoeState.Idle))
                         {
                             return BattleStateAutomaton.Result.Goto(State.Choosing);
                         }
@@ -107,10 +107,10 @@ public class Battle : IResettable
                                     self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Crit);
                                 }
 
-                                battleGoon.Bullets.Clear();
+                                foe.Bullets.Clear();
                                 self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Clap);
                                 self.CrosshairStateAutomaton.ChangeState(CrosshairState.Targeting);
-                                battleGoon.StateAutomaton.Stop();
+                                foe.StateAutomaton.Stop();
                             }
                             else
                             {
@@ -295,7 +295,7 @@ public class Battle : IResettable
 
                     if (self.CurrentPlayingContext.CrosshairTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        if (self.CurrentGoon is not null)
+                        if (self.CurrentFoe is not null)
                         {
                             var damage = 1;
 
@@ -304,7 +304,7 @@ public class Battle : IResettable
                                 damage = 2;
                             }
 
-                            self.CurrentGoon.Damage(damage);
+                            self.CurrentFoe.Damage(damage);
                             self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Smack);
                         }
 
@@ -332,7 +332,7 @@ public class Battle : IResettable
     public readonly Timer VictoryExitTimer;
 
     public PlayingContext CurrentPlayingContext;
-    public BattleGoon? CurrentGoon;
+    public Foe? CurrentFoe;
 
     public Battle(GameContext gameContext)
     {
@@ -342,22 +342,27 @@ public class Battle : IResettable
         Reset();
     }
 
-    public void SetGoon(BattleGoon battleGoon)
+    public void SetFoe(Foe foe)
     {
-        if (CurrentGoon is not null)
+        if (CurrentFoe is not null)
         {
-            CurrentGoon.Defeated -= OnBattleGoonDefeated;
+            CurrentFoe.Defeated -= OnFoeDefeated;
         }
 
-        CurrentGoon = battleGoon;
-        CurrentGoon.Defeated += OnBattleGoonDefeated;
+        CurrentFoe = foe;
+        CurrentFoe.Defeated += OnFoeDefeated;
     }
 
     public void Reset()
     {
         StateAutomaton.ChangeState(State.Choosing);
         PlayerStateAutomaton.ChangeState(PlayerState.Ready);
-        SetGoon(new BattleGoon(_gameContext));
+        SetFoe(new Foe(FoeType.Goon, _gameContext));
+
+        if (CurrentFoe is not null)
+        {
+            CurrentFoe.RenderThing.ShapeType = ShapeType.Goon;
+        }
     }
 
     public void Update()
@@ -369,12 +374,12 @@ public class Battle : IResettable
             CurrentPlayingContext.PlayerInvulnerabilityT = 0;
         }
 
-        CurrentGoon?.Update();
+        CurrentFoe?.Update();
         StateAutomaton.Update(this);
         VictoryExitTimer.Update();
     }
 
-    public void OnBattleGoonDefeated()
+    public void OnFoeDefeated()
     {
         _gameContext.AudioService.ChangeMusic(MusicTrack.Victory);
         PlayerWon?.Invoke();
