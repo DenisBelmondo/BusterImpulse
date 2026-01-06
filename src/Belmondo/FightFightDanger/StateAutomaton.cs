@@ -55,6 +55,38 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, ICo
 
     public TStateEnum? PreviousState { get; private set; }
 
+    private bool HandleTransition(TContext context, TStateEnum currentState, in Result result)
+    {
+        TStateEnum? maybeNextState = result.NextState;
+        bool shouldCallExitFunction = false;
+        bool isStillRunning = true;
+
+        switch (result.Flow)
+        {
+        case Flow.Stop:
+            shouldCallExitFunction = true;
+            isStillRunning = false;
+            Stop();
+
+            break;
+        case Flow.Goto:
+            if (maybeNextState is TStateEnum nextState)
+            {
+                shouldCallExitFunction = true;
+                ChangeState(nextState);
+            }
+
+            break;
+        }
+
+        if (shouldCallExitFunction)
+        {
+            ExitFunction?.Invoke(context, currentState);
+        }
+
+        return isStillRunning;
+    }
+
     public bool IsProcessingState(TStateEnum state)
     {
         if (CurrentState is null)
@@ -105,36 +137,25 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, ICo
         }
 
         TStateEnum currentState = CurrentState.Value;
-
+        Result? maybeResult = null;
 
         if (!_hasEntered)
         {
-            EnterFunction?.Invoke(context, currentState);
+            maybeResult = EnterFunction?.Invoke(context, currentState);
+
+            if (maybeResult is not null && !HandleTransition(context, currentState, maybeResult.Value))
+            {
+                return;
+            }
+
             _hasEntered = true;
         }
 
-        Result? maybeResult = UpdateFunction?.Invoke(context, currentState);
+        maybeResult = UpdateFunction?.Invoke(context, currentState);
 
-        if (maybeResult is Result result)
+        if (maybeResult is not null)
         {
-            TStateEnum? maybeNextState = result.NextState;
-
-            switch (result.Flow)
-            {
-            case Flow.Continue:
-                break;
-            case Flow.Stop:
-                ExitFunction?.Invoke(context, currentState);
-                Stop();
-                break;
-            case Flow.Goto:
-                if (maybeNextState is TStateEnum nextState)
-                {
-                    ExitFunction?.Invoke(context, currentState);
-                    ChangeState(nextState);
-                }
-                break;
-            }
+            HandleTransition(context, currentState, maybeResult.Value);
         }
     }
 }

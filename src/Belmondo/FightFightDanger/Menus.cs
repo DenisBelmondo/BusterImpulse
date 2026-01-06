@@ -13,6 +13,7 @@ public static class Menus
     {
         Snacks,
         Charms,
+        Options,
         Quit,
     };
 
@@ -31,6 +32,12 @@ public static class Menus
             {
                 ID = (int)Item.Charms,
                 Label = "Charms",
+            },
+
+            new()
+            {
+                ID = (int)Item.Options,
+                Label = "Options",
             },
 
             new()

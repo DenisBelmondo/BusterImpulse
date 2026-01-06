@@ -311,10 +311,10 @@ internal static class Program
                     Math.Floor(game.World.Player.Value.RunningHealth).ToString(),
                     new(
                         (32 + 1) * _mat240pTo480p.M11 + _mat240pTo480p.M31,
-                        (1 + _mat240pTo480p.M32) + (240 - 15) * _mat240pTo480p.M22),
+                        (2 + _mat240pTo480p.M32) + (240 - 15) * _mat240pTo480p.M22),
                     15 * _mat240pTo480p.M22,
                     1 * _mat240pTo480p.M11,
-                    new(24, 24, 24));
+                    Color.Red);
 
                 DrawTextEx(
                     RaylibResources.Font,
@@ -477,11 +477,21 @@ internal static class Program
                     }
 
                     var color = Color.DarkGray;
+                    var shadowColor = Color.DarkBlue;
 
                     if (i == menu.CurrentItem)
                     {
                         color = Color.RayWhite;
+                        shadowColor = Color.Red;
                     }
+
+                    DrawTextEx(
+                        RaylibResources.Font,
+                        _sb.ToString(),
+                        new Vector2(640 - 256 + 8, i * 30 + 8) + Vector2.One * 2,
+                        30,
+                        2,
+                        shadowColor);
 
                     DrawTextEx(
                         RaylibResources.Font,

@@ -50,6 +50,16 @@ public partial class Foe
         {
             switch (self.Type)
             {
+                case FoeType.Turret:
+                    self.RenderThing.SubFrame = 0;
+
+                    switch (currentState)
+                    {
+                        case FoeState.Attacking:
+                            self.RenderThing.SubFrame = 1;
+                            break;
+                    }
+                    break;
                 case FoeType.Goon:
                     switch (currentState)
                     {
@@ -219,7 +229,7 @@ public partial class Foe
 
         ExitFunction = static (self, currentState) =>
         {
-            if (currentState == BinaryState.Off)
+            if (currentState == BinaryState.On)
             {
                 self.CurrentAnimationContext.ShakeOffset = default;
             }

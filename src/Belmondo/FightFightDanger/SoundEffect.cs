@@ -7,6 +7,7 @@ public enum SoundEffect
     Crit,
     Die,
     Hough,
+    HPUp,
     Item,
     MachineGun,
     Miss,

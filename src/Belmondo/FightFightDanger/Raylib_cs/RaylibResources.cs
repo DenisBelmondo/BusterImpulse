@@ -612,6 +612,7 @@ public static class RaylibResources
     public static Sound CritSound { get; private set; }
     public static Sound DieSound { get; private set; }
     public static Sound HoughSound { get; private set; }
+    public static Sound HPUpSound { get; private set; }
     public static Sound ItemSound { get; private set; }
     public static Sound MachineGunSound { get; private set; }
     public static Sound MissSound { get; private set; }
@@ -693,6 +694,7 @@ public static class RaylibResources
         CritSound = LoadSound("static/sounds/crit.wav");
         DieSound = LoadSound("static/sounds/die.wav");
         HoughSound = LoadSound("static/sounds/hough.wav");
+        HPUpSound = LoadSound("static/sounds/hp_up.wav");
         ItemSound = LoadSound("static/sounds/item.ogg");
         MachineGunSound = LoadSound("static/sounds/machine_gun.wav");
         MissSound = LoadSound("static/sounds/miss.ogg");
@@ -735,6 +737,7 @@ public static class RaylibResources
         UnloadSound(CritSound);
         UnloadSound(DieSound);
         UnloadSound(HoughSound);
+        UnloadSound(HPUpSound);
         UnloadSound(ItemSound);
         UnloadSound(MachineGunSound);
         UnloadSound(MissSound);

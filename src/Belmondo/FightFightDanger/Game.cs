@@ -4,7 +4,7 @@ using GameStateAutomaton = StateAutomaton<Game, Game.State>;
 using PlaysimStateResult = StateAutomaton<Game, Game.State>.Result;
 using TransitionStateAutomaton = StateAutomaton<Game.TransitionContext, Game.TransitionContext.State>;
 
-public class Game
+public class Game : IThinker
 {
     public enum State
     {
@@ -142,6 +142,7 @@ public class Game
 
     private readonly GameContext _gameContext;
 
+    public event Action? PlayerAteSnack;
     public event Action? PlayerDamaged;
     public event Action? Quit;
 
@@ -247,35 +248,57 @@ public class Game
                     }
                     else if (input.ActionWasJustPressed(InputAction.Confirm))
                     {
-                        switch (menu.ID)
+                        if (menu.Items.Count > 0)
                         {
-                            case (int)Menus.ID.MainMenu:
-                                var id = (Menus.Item)menu.Items[menu.CurrentItem].ID;
+                            switch (menu.ID)
+                            {
+                                case (int)Menus.ID.MainMenu:
+                                    var id = (Menus.Item)menu.Items[menu.CurrentItem].ID;
 
-                                switch (id)
-                                {
-                                    case Menus.Item.Snacks:
-                                        self.CurrentMenuContext.SnacksMenu.Reset();
+                                    switch (id)
+                                    {
+                                        case Menus.Item.Snacks:
+                                            self.CurrentMenuContext.SnacksMenu.Reset();
 
-                                        if (self.World is not null)
+                                            if (self.World is not null)
+                                            {
+                                                Menus.InitializeSnacksMenu(self.CurrentMenuContext.SnacksMenu, self.World.Player.Value.Inventory);
+                                            }
+
+                                            self.CurrentMenuContext.MenuStack.Push(self.CurrentMenuContext.SnacksMenu);
+
+                                            break;
+
+                                        case Menus.Item.Charms:
+                                            Console.WriteLine("Charms");
+                                            break;
+
+                                        case Menus.Item.Quit:
+                                            self.Quit?.Invoke();
+                                            break;
+                                    }
+
+                                    break;
+
+                                case (int)Menus.ID.SnacksMenu:
+                                    if (self.World is not null)
+                                    {
+                                        var ateSnack = GameLogic.EatSnack(
+                                            ref self.World.Player.Value,
+                                            (SnackType)menu.Items[menu.CurrentItem].ID,
+                                            self.PlayerAteSnack);
+
+                                        if (ateSnack)
                                         {
-                                            Menus.InitializeSnacksMenu(self.CurrentMenuContext.SnacksMenu, self.World.Player.Value.Inventory);
+                                            var menuItem = menu.Items[menu.CurrentItem];
+
+                                            menuItem.Quantity -= 1;
+                                            menu.Items[menu.CurrentItem] = menuItem;
                                         }
+                                    }
 
-                                        self.CurrentMenuContext.MenuStack.Push(self.CurrentMenuContext.SnacksMenu);
-
-                                        break;
-
-                                    case Menus.Item.Charms:
-                                        Console.WriteLine("Charms");
-                                        break;
-
-                                    case Menus.Item.Quit:
-                                        self.Quit?.Invoke();
-                                        break;
-                                }
-
-                                break;
+                                    break;
+                            }
                         }
 
                         audio.PlaySoundEffect(SoundEffect.UIConfirm);
@@ -305,34 +328,6 @@ public class Game
                 break;
 
             case State.Battling:
-                if (self.World is not null)
-                {
-                    var world = self.World;
-                    var bleedFreq = (float)self._gameContext.TimeContext.Delta * 3;
-                    var player = world.Player.Value;
-
-                    if (player.RunningHealth < player.Current.Health)
-                    {
-                        player.RunningHealth += bleedFreq;
-
-                        if (player.RunningHealth <= player.Current.Health)
-                        {
-                            player.RunningHealth = player.Current.Health;
-                        }
-                    }
-                    else if (player.RunningHealth > player.Current.Health)
-                    {
-                        player.RunningHealth -= bleedFreq;
-
-                        if (player.RunningHealth <= player.Current.Health)
-                        {
-                            player.RunningHealth = player.Current.Health;
-                        }
-                    }
-
-                    world.Player.Value = player;
-                }
-
                 if (self.Battle is Battle battle)
                 {
                     battle.Update();
@@ -381,6 +376,11 @@ public class Game
         CurrentTransitionContext = new(gameContext.TimeContext);
         CurrentMenuContext = new();
 
+        PlayerAteSnack += () =>
+        {
+            _gameContext.AudioService.PlaySoundEffect(SoundEffect.HPUp);
+        };
+
         TransitionContext.FadedOut += transitionContext =>
         {
             if (StateAutomaton.IsProcessingState(State.Transitioning))
@@ -423,6 +423,34 @@ public class Game
 
     public void Update()
     {
+        if (World is not null)
+        {
+            var world = World;
+            var bleedFreq = (float)_gameContext.TimeContext.Delta * 3;
+            var player = world.Player.Value;
+
+            if (player.RunningHealth < player.Current.Health)
+            {
+                player.RunningHealth += bleedFreq;
+
+                if (player.RunningHealth >= player.Current.Health)
+                {
+                    player.RunningHealth = player.Current.Health;
+                }
+            }
+            else if (player.RunningHealth > player.Current.Health)
+            {
+                player.RunningHealth -= bleedFreq;
+
+                if (player.RunningHealth <= player.Current.Health)
+                {
+                    player.RunningHealth = player.Current.Health;
+                }
+            }
+
+            world.Player.Value = player;
+        }
+
         StateAutomaton.Update(this);
         CurrentTransitionContext.Update();
     }

@@ -107,8 +107,18 @@ public static class GameLogic
         return true;
     }
 
-    public static void EatSnack(Player player, SnackType snackType)
+    public static bool EatSnack(ref Player player, SnackType snackType, Action? onEatAction = null)
     {
+        if (!player.Inventory.Snacks.ContainsKey(snackType))
+        {
+            return false;
+        }
+
+        if (player.Inventory.Snacks[snackType] <= 0)
+        {
+            return false;
+        }
+
         switch (snackType)
         {
             case SnackType.ChickenLeg:
@@ -119,5 +129,10 @@ public static class GameLogic
                 player.Current.Health += 20;
                 break;
         }
+
+        player.Inventory.Snacks[snackType] -= 1;
+        onEatAction?.Invoke();
+
+        return true;
     }
 }
