@@ -186,17 +186,14 @@ public class Game : IThinker
 
     private static PlaysimStateResult UpdateFunction(Game self, State currentState)
     {
+        var triedToOpenMenu = self._gameContext.InputService.ActionWasJustPressed(InputAction.Cancel);
+
         switch (currentState)
         {
             case State.Exploring:
                 if (self._gameContext.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
                 {
                     self.StartBattle();
-                }
-
-                if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Cancel))
-                {
-                    self.OpenMainMenu();
                 }
 
                 if (self.World is not null)
@@ -214,6 +211,11 @@ public class Game : IThinker
 
                     GameLogic.UpdatePlayer(self._gameContext, world);
                     GameLogic.UpdateChests(self._gameContext, world);
+                }
+
+                if (triedToOpenMenu)
+                {
+                    self.OpenMainMenu();
                 }
 
                 break;
@@ -361,6 +363,11 @@ public class Game : IThinker
                             }
                         }
                     }
+                }
+
+                if (triedToOpenMenu)
+                {
+                    self.OpenMainMenu();
                 }
 
                 break;
