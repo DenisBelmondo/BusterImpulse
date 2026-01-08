@@ -109,12 +109,12 @@ public static class GameLogic
 
     public static bool EatSnack(ref Player player, SnackType snackType, Action? onEatAction = null)
     {
-        if (!player.Inventory.Snacks.ContainsKey(snackType))
+        if (!player.Inventory.Snacks.TryGetValue(snackType, out int value))
         {
             return false;
         }
 
-        if (player.Inventory.Snacks[snackType] <= 0)
+        if (value <= 0)
         {
             return false;
         }
