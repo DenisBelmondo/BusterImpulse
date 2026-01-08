@@ -14,12 +14,12 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, ICo
         public Flow Flow;
         public TStateEnum? NextState;
 
-        public static Result Continue => new()
+        public static readonly Result Continue = new()
         {
             Flow = Flow.Continue,
         };
 
-        public static Result Stop = new()
+        public static readonly Result Stop = new()
         {
             Flow = Flow.Stop,
         };
