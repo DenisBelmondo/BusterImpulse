@@ -555,8 +555,8 @@ internal static class Program
         {
             Rlgl.DisableBackfaceCulling();
             {
-                DrawModel(RaylibResources.FloorModel, Vector3.UnitY * -0.5F, 1, Color.White);
-                DrawModel(RaylibResources.CeilingModel, Vector3.UnitY * 0.5F, 1, Color.White);
+                DrawModel(RaylibResources.FloorModel, -Vector3.UnitY / 2f, 1, Color.White);
+                DrawModel(RaylibResources.CeilingModel, Vector3.UnitY / 2f, 1, Color.White);
             }
             Rlgl.EnableBackfaceCulling();
 
