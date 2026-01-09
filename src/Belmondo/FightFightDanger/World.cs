@@ -56,6 +56,19 @@ public class World
 
     public int[,]? TileMap;
 
+    public void Initialize(in Map map)
+    {
+        TileMap = new int[map.Walls.GetLength(0), map.Walls.GetLength(1)];
+
+        for (int y = 0; y < map.Walls.GetLength(0); y++)
+        {
+            for (int x = 0; x < map.Walls.GetLength(1); x++)
+            {
+                TileMap[y, x] = map.Walls[y, x].Type;
+            }
+        }
+    }
+
     public bool TryMove(in Position from, int direction, out Position result)
     {
         var (X, Y) = Direction.ToInt32Tuple(direction);
