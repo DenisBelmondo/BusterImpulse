@@ -15,7 +15,7 @@ public static class Menus
         Charms,
         Options,
         Quit,
-    };
+    }
 
     public static void InitializeMainMenu(Menu menu)
     {
