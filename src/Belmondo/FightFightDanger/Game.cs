@@ -156,10 +156,10 @@ public class Game : IThinker
     };
 
     public readonly Log Log = new(8);
+    public readonly TransitionContext CurrentTransitionContext;
+    public readonly MenuContext CurrentMenuContext;
 
     public RenderHint CurrentRenderHint;
-    public TransitionContext CurrentTransitionContext;
-    public MenuContext CurrentMenuContext;
 
     private static PlaysimStateResult EnterFunction(Game self, State currentState)
     {
