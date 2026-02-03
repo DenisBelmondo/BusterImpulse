@@ -4,7 +4,7 @@ public struct Item
 {
     public ItemType Type;
     public SnackType? Snack;
-    public Charms.Type? CharmType;
+    public CharmType? CharmType;
 
     public static Item NewSnack(SnackType snackType) => new()
     {
@@ -12,7 +12,7 @@ public struct Item
         Snack = snackType,
     };
 
-    public static Item NewCharm(Charms.Type charmType) => new()
+    public static Item NewCharm(CharmType charmType) => new()
     {
         Type = ItemType.Charm,
         CharmType = charmType,

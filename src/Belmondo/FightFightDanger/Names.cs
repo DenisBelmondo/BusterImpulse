@@ -9,14 +9,14 @@ public static class Names
         _ => snackType.ToString(),
     };
 
-    public static string Get(Charms.Type charmType) => charmType switch
+    public static string Get(CharmType charmType) => charmType switch
     {
-        Charms.Type.ElephantStatue => "Elephant Statue",
-        Charms.Type.FourLeafClover => "Four Leaf Clover",
-        Charms.Type.GoldenGrapes => "Golden Grapes",
-        Charms.Type.Milagro => "Milagro",
-        Charms.Type.RabbitsFoot => "Rabbit's Foot",
-        Charms.Type.Scarab => "Scarab",
+        CharmType.ElephantStatue => "Elephant Statue",
+        CharmType.FourLeafClover => "Four Leaf Clover",
+        CharmType.GoldenGrapes => "Golden Grapes",
+        CharmType.Milagro => "Milagro",
+        CharmType.RabbitsFoot => "Rabbit's Foot",
+        CharmType.Scarab => "Scarab",
         _ => charmType.ToString(),
     };
 }

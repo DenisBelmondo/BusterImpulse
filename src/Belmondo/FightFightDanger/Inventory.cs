@@ -2,7 +2,7 @@ namespace Belmondo.FightFightDanger;
 
 public class Inventory
 {
-    public Dictionary<Charms.Type, int> Charms = [];
+    public Dictionary<CharmType, int> Charms = [];
     public Dictionary<SnackType, int> Snacks = [];
 
     public void TransferTo(Inventory other)
