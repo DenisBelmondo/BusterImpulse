@@ -72,16 +72,18 @@ public class Battle : IResettable
 
         UpdateFunction = static (self, currentState) =>
         {
+            var inputService = self._gameContext.InputService;
+
             switch (currentState)
             {
                 case State.Choosing:
                 {
-                    if (self._gameContext.InputService.ActionWasJustPressed(InputAction.BattleAttack))
+                    if (inputService.ActionWasJustPressed(InputAction.BattleAttack))
                     {
                         return BattleStateAutomaton.Result.Goto(State.Playing);
                     }
 
-                    if (self._gameContext.InputService.ActionWasJustPressed(InputAction.BattleRun))
+                    if (inputService.ActionWasJustPressed(InputAction.BattleRun))
                     {
                         return BattleStateAutomaton.Result.Stop;
                     }
@@ -98,7 +100,11 @@ public class Battle : IResettable
                             return BattleStateAutomaton.Result.Goto(State.Choosing);
                         }
 
-                        if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm) && self.CrosshairStateAutomaton.IsProcessingState(CrosshairState.Aiming))
+                        bool shouldStartAttack = (
+                            self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm)
+                            && self.CrosshairStateAutomaton.IsProcessingState(CrosshairState.Aiming));
+
+                        if (shouldStartAttack)
                         {
                             if (self.CurrentPlayingContext.CrosshairIsInRange(-0.125f, 0.125f))
                             {
@@ -167,17 +173,19 @@ public class Battle : IResettable
     {
         UpdateFunction = static (self, currentState) =>
         {
+            var inputService = self._gameContext.InputService;
+
             switch (currentState)
             {
                 case PlayerState.Ready:
                 {
-                    if (self._gameContext.InputService.ActionWasJustPressed(InputAction.MoveLeft))
+                    if (inputService.ActionWasJustPressed(InputAction.MoveLeft))
                     {
                         self.CurrentPlayingContext.PlayerDodgeT -= 1f;
                         return PlayerStateAutomaton.Result.Goto(PlayerState.Dodging);
                     }
 
-                    if (self._gameContext.InputService.ActionWasJustPressed(InputAction.MoveRight))
+                    if (inputService.ActionWasJustPressed(InputAction.MoveRight))
                     {
                         self.CurrentPlayingContext.PlayerDodgeT += 1f;
                         return PlayerStateAutomaton.Result.Goto(PlayerState.Dodging);
@@ -351,18 +359,20 @@ public class Battle : IResettable
 
         CurrentFoe = foe;
         CurrentFoe.Defeated += OnFoeDefeated;
+
+        foe.RenderThing.ShapeType = foe.Type switch
+        {
+            FoeType.Turret => ShapeType.Turret,
+            FoeType.Goon => ShapeType.Goon,
+            _ => ShapeType.Placeholder,
+        };
     }
 
     public void Reset()
     {
         StateAutomaton.ChangeState(State.Choosing);
         PlayerStateAutomaton.ChangeState(PlayerState.Ready);
-        SetFoe(new Foe(FoeType.Goon, _gameContext));
-
-        if (CurrentFoe is not null)
-        {
-            CurrentFoe.RenderThing.ShapeType = ShapeType.Goon;
-        }
+        SetFoe(new Foe(FoeType.Turret, _gameContext));
     }
 
     public void Update()

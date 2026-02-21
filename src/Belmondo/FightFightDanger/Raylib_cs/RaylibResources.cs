@@ -665,7 +665,7 @@ public static class RaylibResources
         LUTTexture = LoadTexture("static/textures/lut.png");
         MugshotTexture = LoadTexture("static/textures/mugshot.png");
         UIAtlasTexture = LoadTexture("static/textures/ui.png");
-        TurretAtlas = LoadTexture("static/terra-cotta.png");
+        TurretAtlas = LoadTexture("static/textures/terra-cotta.png");
         GoonAtlas = LoadTexture("static/textures/enemy-atlas.png");
         TerraCottaAtlas = LoadTexture("static/textures/terra-cotta.png");
         TileMaterial = LoadMaterialDefault();

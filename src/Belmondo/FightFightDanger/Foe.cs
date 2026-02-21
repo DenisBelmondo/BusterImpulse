@@ -51,15 +51,18 @@ public partial class Foe
             switch (self.Type)
             {
                 case FoeType.Turret:
-                    self.RenderThing.SubFrame = 0;
-
                     switch (currentState)
                     {
+                        case FoeState.Idle:
+                            self.RenderThing.SubFrame = 0;
+                            break;
+
                         case FoeState.Attacking:
                             self.RenderThing.SubFrame = 1;
                             break;
                     }
                     break;
+
                 case FoeType.Goon:
                     switch (currentState)
                     {
@@ -221,7 +224,7 @@ public partial class Foe
                 }
 
                 self.CurrentAnimationContext.ShakeOffset = Vector2.UnitX
-                    * ((float)Math2.SampleTriangleWave(self._gameContext.TimeContext.Time * 50) / 15f);
+                    * ((float)Math2.SampleSquareWave(self._gameContext.TimeContext.Time * 50) / 15f);
             }
 
             return ShakeStateAutomaton.Result.Continue;

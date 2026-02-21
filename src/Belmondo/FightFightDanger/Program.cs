@@ -636,6 +636,7 @@ internal static class Program
                     case ShapeType.Turret:
                         foeAtlas = RaylibResources.TurretAtlas;
                         break;
+
                     case ShapeType.Goon:
                         foeAtlas = RaylibResources.GoonAtlas;
                         break;
