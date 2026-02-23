@@ -56,9 +56,9 @@ public static class GameLogic
             0);
 
         world.CameraPositionLerpT = MathF.Min(
-            world.CameraPositionLerpT
-                + ((1.0F / (float)world.Player.Value.Default.WalkCooldown)
-                * (float)gameContext.TimeContext.Delta),
+            world.CameraPositionLerpT + (
+                    (1.0F / (float)world.Player.Value.Default.WalkCooldown)
+                    * (float)gameContext.TimeContext.Delta),
             1);
     }
 
