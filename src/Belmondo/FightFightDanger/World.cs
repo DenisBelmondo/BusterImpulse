@@ -93,5 +93,23 @@ public class World
         return true;
     }
 
+    public int TryMove(in Position from, int direction, int numberOfUnits, out Position result)
+    {
+        var moveResult = from;
+        var currentNumberOfMoves = 0;
+
+        for (; currentNumberOfMoves < numberOfUnits; currentNumberOfMoves++)
+        {
+            if (!TryMove(moveResult, direction, out moveResult))
+            {
+                break;
+            }
+        }
+
+        result = moveResult;
+
+        return currentNumberOfMoves;
+    }
+
     public void OpenChest(int chestID) => ChestOpened?.Invoke(chestID);
 }
