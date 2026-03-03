@@ -6,6 +6,7 @@ public enum SoundEffect
     Clap,
     Crit,
     Die,
+    Flame,
     Hough,
     HPUp,
     Item,

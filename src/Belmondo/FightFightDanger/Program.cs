@@ -1,14 +1,24 @@
-﻿using System.Numerics;
-using Belmondo.FightFightDanger;
+﻿using Belmondo.FightFightDanger;
 using Belmondo.FightFightDanger.Raylib_cs;
 using Raylib_cs.BleedingEdge;
+using System.Numerics;
+using System.Text;
 using static Raylib_cs.BleedingEdge.Raylib;
 using static Raylib_cs.BleedingEdge.Raymath;
 using static Belmondo.Mathematics.Extensions;
-using System.Text;
 
 internal static class Program
 {
+    public struct RenderState
+    {
+        public Camera3D Camera;
+        public Camera3D BattleCamera;
+        public RenderTexture2D GameWorldRenderTexture;
+        public RenderTexture2D OuterRenderTexture;
+        public Vector3 CameraDirection;
+        public Vector2 CurrentScreenSize;
+    }
+
     public struct SizedText
     {
         public string Text;
@@ -31,12 +41,7 @@ internal static class Program
     private static readonly StringBuilder _sb = new();
 
     private static SizedText _survivedSizedText;
-    private static Camera3D _camera;
-    private static Camera3D _battleCamera;
-    private static RenderTexture2D _gameWorldRenderTexture;
-    private static RenderTexture2D _outerRenderTexture;
-    private static Vector3 _cameraDirection;
-    private static Vector2 _currentScreenSize;
+    private static RenderState _renderState;
     private static bool _shouldQuit;
 
     private static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
@@ -137,14 +142,14 @@ internal static class Program
             world.Player.Transform.Position = (5, 5);
             game.SetWorld(world);
 
-            _camera = new()
+            _renderState.Camera = new()
             {
                 FovY = 90,
                 Projection = CameraProjection.Perspective,
                 Up = Vector3.UnitY,
             };
 
-            _battleCamera = new()
+            _renderState.BattleCamera = new()
             {
                 FovY = 60,
                 Projection = CameraProjection.Perspective,
@@ -156,12 +161,12 @@ internal static class Program
 
             game.StateAutomaton.ChangeState(Game.State.Exploring);
 
-            _camera.Position.X = world.Player.Transform.Position.X;
-            _camera.Position.Z = world.Player.Transform.Position.Y;
+            _renderState.Camera.Position.X = world.Player.Transform.Position.X;
+            _renderState.Camera.Position.Z = world.Player.Transform.Position.Y;
 
             {
                 var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
-                _cameraDirection = new(X, 0, Y);
+                _renderState.CameraDirection = new(X, 0, Y);
             }
 
             // [INFO]: for all shape drawing routines, raylib actually samples the "blank character texture" in its default
@@ -181,16 +186,16 @@ internal static class Program
                 SetShapesTexture(texture, new(0, 0, 1, 1));
             }
 
-            _gameWorldRenderTexture = LoadRenderTexture(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
-            _outerRenderTexture = LoadRenderTexture(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
-            SetTextureFilter(_outerRenderTexture.Texture, TextureFilter.Trilinear);
+            _renderState.GameWorldRenderTexture = LoadRenderTexture(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
+            _renderState.OuterRenderTexture = LoadRenderTexture(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
+            SetTextureFilter(_renderState.OuterRenderTexture.Texture, TextureFilter.Trilinear);
 
             double oldTime = GetTime();
 
             while (!_shouldQuit)
             {
                 _shouldQuit |= WindowShouldClose();
-                _currentScreenSize = new(GetScreenWidth(), GetScreenHeight());
+                _renderState.CurrentScreenSize = new(GetScreenWidth(), GetScreenHeight());
 
                 double newTime = GetTime();
                 double delta = newTime - oldTime;
@@ -216,8 +221,8 @@ internal static class Program
                 Render(game, timeContext, uiState);
             }
 
-            UnloadRenderTexture(_gameWorldRenderTexture);
-            UnloadRenderTexture(_outerRenderTexture);
+            UnloadRenderTexture(_renderState.GameWorldRenderTexture);
+            UnloadRenderTexture(_renderState.OuterRenderTexture);
         }
 
         RaylibResources.UnloadAll();
@@ -227,7 +232,7 @@ internal static class Program
 
     private static void Render(in Game game, in TimeContext timeContext, UIState uiState)
     {
-        BeginTextureMode(_gameWorldRenderTexture);
+        BeginTextureMode(_renderState.GameWorldRenderTexture);
         {
             ClearBackground(Color.Black);
 
@@ -391,11 +396,11 @@ internal static class Program
         }
         EndTextureMode();
 
-        BeginTextureMode(_outerRenderTexture);
+        BeginTextureMode(_renderState.OuterRenderTexture);
         {
             BeginShaderMode(RaylibResources.DownmixedShader);
             {
-                DrawTexture(_gameWorldRenderTexture.Texture, 0, 0, Color.White);
+                DrawTexture(_renderState.GameWorldRenderTexture.Texture, 0, 0, Color.White);
             }
             EndShaderMode();
         }
@@ -416,10 +421,14 @@ internal static class Program
                 RaylibResources.LUTSize,
                 ShaderUniformDataType.Vec2);
 
-            var mat = Math2.FitContain(new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT), _currentScreenSize);
+            var mat = Math2.FitContain(
+                new(
+                    VIRTUAL_SCREEN_WIDTH,
+                    VIRTUAL_SCREEN_HEIGHT),
+                _renderState.CurrentScreenSize);
 
             DrawTexturePro(
-                _outerRenderTexture.Texture,
+                _renderState.OuterRenderTexture.Texture,
                 new Rectangle()
                 {
                     Width = VIRTUAL_SCREEN_WIDTH,
@@ -514,19 +523,19 @@ internal static class Program
             playerDirection3d = new(X, 0, Y);
         }
 
-        _camera.Position = Vector3.Lerp(
+        _renderState.Camera.Position = Vector3.Lerp(
             Make3D(new(world.OldPlayerX, world.OldPlayerY)),
             Make3D(new(world.Player.Transform.Position.X, world.Player.Transform.Position.Y)),
             world.CameraPositionLerpT);
 
         Quaternion cameraRotation = QuaternionFromAxisAngle(
             Vector3.UnitY,
-            _cameraDirection.SignedAngleTo(playerDirection3d, Vector3.UnitY)
+            _renderState.CameraDirection.SignedAngleTo(playerDirection3d, Vector3.UnitY)
                 * 10
                 * (float)timeContext.Delta);
 
-        _cameraDirection = Vector3RotateByQuaternion(_cameraDirection, cameraRotation);
-        _camera.Target = _camera.Position + _cameraDirection;
+        _renderState.CameraDirection = Vector3RotateByQuaternion(_renderState.CameraDirection, cameraRotation);
+        _renderState.Camera.Target = _renderState.Camera.Position + _renderState.CameraDirection;
 
         Vector2 virtualScreenSize = new(VIRTUAL_SCREEN_WIDTH, VIRTUAL_SCREEN_HEIGHT);
 
@@ -551,7 +560,7 @@ internal static class Program
                 ShaderUniformDataType.Vec2);
         }
 
-        BeginMode3D(_camera);
+        BeginMode3D(_renderState.Camera);
         {
             Rlgl.DisableBackfaceCulling();
             {
@@ -581,7 +590,7 @@ internal static class Program
                     int subFrame = (int)(spawnedChest.Value.Openness * 3);
 
                     DrawBillboardPro(
-                        _camera,
+                        _renderState.Camera,
                         RaylibResources.ChestAtlas,
                         new Rectangle(subFrame * 32, 0, 32, 32),
                         Make3D(new(spawnedChest.Transform.Position.X, spawnedChest.Transform.Position.Y)),
@@ -602,10 +611,10 @@ internal static class Program
     {
         float x = Math2.SampleParabola(battle.CurrentPlayingContext.PlayerDodgeT, MathF.Sign(battle.CurrentPlayingContext.PlayerDodgeT), -1, 0);
 
-        _battleCamera.Position.X = x;
-        _battleCamera.Target = _battleCamera.Position + Vector3.UnitZ;
+        _renderState.BattleCamera.Position.X = x;
+        _renderState.BattleCamera.Target = _renderState.BattleCamera.Position + Vector3.UnitZ;
 
-        BeginMode3D(_battleCamera);
+        BeginMode3D(_renderState.BattleCamera);
         {
             Rlgl.DisableBackfaceCulling();
             Rlgl.DisableDepthTest();
@@ -648,7 +657,7 @@ internal static class Program
                 if (foeAtlas.HasValue)
                 {
                     DrawBillboardRec(
-                        _battleCamera,
+                        _renderState.BattleCamera,
                         foeAtlas.Value,
                         new()
                         {

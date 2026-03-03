@@ -57,8 +57,14 @@ public partial class Foe
                             self.RenderThing.SubFrame = 0;
                             break;
 
+                        case FoeState.BeginAttacking:
+                            self.RenderThing.SubFrame = 1;
+                            self.CurrentAnimationContext.AnimationTimer.Start(1);
+                            break;
+
                         case FoeState.Attacking:
                             self.RenderThing.SubFrame = 1;
+                            self.CurrentAnimationContext.AnimationTimer.Start(5);
                             break;
                     }
                     break;
@@ -117,47 +123,97 @@ public partial class Foe
                     break;
 
                 case FoeState.Attacking:
-                    foreach (ref var bullet in CollectionsMarshal.AsSpan(self.Bullets))
+                    switch (self.Type)
                     {
-                        var bulletOriginalOffset = Vector3.UnitZ * 2;
-                        var bulletOffset = -Vector3.UnitY / 10f;
-                        var bulletDestination = Vector3.Zero + Vector3.UnitX * bullet.HorizontalDirection / 10f;
+                        case FoeType.Turret:
+                            foreach (ref var bullet in CollectionsMarshal.AsSpan(self.Bullets))
+                            {
+                                var bulletOriginalOffset = Vector3.UnitZ * 2;
+                                var bulletOffset = -Vector3.UnitY / 10f;
+                                var bulletDestination = Vector3.Zero;
 
-                        var bulletPosition = Vector3.Lerp(
-                            bulletOriginalOffset + bulletOffset,
-                            bulletDestination + bulletOffset,
-                            bullet.Closeness);
+                                var bulletPosition = Vector3.Lerp(
+                                    bulletOriginalOffset + bulletOffset,
+                                    bulletDestination + bulletOffset,
+                                    bullet.Closeness);
 
-                        bullet.RenderThing.Transform.Translation = bulletPosition;
+                                bullet.RenderThing.Transform.Translation = bulletPosition;
 
-                        if (bullet.Closeness >= 1)
-                        {
-                            bullet.Closeness = 1;
-                            continue;
-                        }
+                                if (bullet.Closeness >= 1)
+                                {
+                                    bullet.Closeness = 1;
+                                    continue;
+                                }
 
-                        bullet.Closeness += (float)self._gameContext.TimeContext.Delta;
-                    }
+                                bullet.Closeness += (float)self._gameContext.TimeContext.Delta;
+                            }
 
-                    self._shootInterval += self._gameContext.TimeContext.Delta;
+                            self._shootInterval += self._gameContext.TimeContext.Delta;
 
-                    if (self._shootInterval >= 0.4)
-                    {
-                        self._shootInterval = 0;
+                            if (self._shootInterval >= 1)
+                            {
+                                self._shootInterval = 0;
 
-                        var horizontalDirection = Random.Shared.Next(-1, 2);
+                                var horizontalDirection = Random.Shared.Next(-1, 2);
 
-                        self.Bullets.Add(new()
-                        {
-                            HorizontalDirection = horizontalDirection,
-                        });
+                                self.Bullets.Add(new()
+                                {
+                                    HorizontalDirection = horizontalDirection,
+                                });
 
-                        self._gameContext.AudioService.PlaySoundEffect(SoundEffect.MachineGun);
-                    }
+                                self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Flame);
+                            }
 
-                    if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
-                    {
-                        return FoeStateAutomaton.Result.Goto(FoeState.Idle);
+                            if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
+                            {
+                                return FoeStateAutomaton.Result.Goto(FoeState.Idle);
+                            }
+                            break;
+
+                        case FoeType.Goon:
+                            foreach (ref var bullet in CollectionsMarshal.AsSpan(self.Bullets))
+                            {
+                                var bulletOriginalOffset = Vector3.UnitZ * 2;
+                                var bulletOffset = -Vector3.UnitY / 10f;
+                                var bulletDestination = Vector3.Zero + Vector3.UnitX * bullet.HorizontalDirection / 10f;
+
+                                var bulletPosition = Vector3.Lerp(
+                                    bulletOriginalOffset + bulletOffset,
+                                    bulletDestination + bulletOffset,
+                                    bullet.Closeness);
+
+                                bullet.RenderThing.Transform.Translation = bulletPosition;
+
+                                if (bullet.Closeness >= 1)
+                                {
+                                    bullet.Closeness = 1;
+                                    continue;
+                                }
+
+                                bullet.Closeness += (float)self._gameContext.TimeContext.Delta;
+                            }
+
+                            self._shootInterval += self._gameContext.TimeContext.Delta;
+
+                            if (self._shootInterval >= 0.4)
+                            {
+                                self._shootInterval = 0;
+
+                                var horizontalDirection = Random.Shared.Next(-1, 2);
+
+                                self.Bullets.Add(new()
+                                {
+                                    HorizontalDirection = horizontalDirection,
+                                });
+
+                                self._gameContext.AudioService.PlaySoundEffect(SoundEffect.MachineGun);
+                            }
+
+                            if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
+                            {
+                                return FoeStateAutomaton.Result.Goto(FoeState.Idle);
+                            }
+                            break;
                     }
 
                     break;

@@ -17,6 +17,7 @@ public sealed class RaylibAudioService : IAudioService
             SoundEffect.Clap => RaylibResources.ClapSound,
             SoundEffect.Crit => RaylibResources.CritSound,
             SoundEffect.Die => RaylibResources.DieSound,
+            SoundEffect.Flame => RaylibResources.FlameSound,
             SoundEffect.Hough => RaylibResources.HoughSound,
             SoundEffect.HPUp => RaylibResources.HPUpSound,
             SoundEffect.Item => RaylibResources.ItemSound,
