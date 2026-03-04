@@ -56,8 +56,8 @@ public class RaylibRenderer
         Camera.Position.Z = world.Player.Transform.Position.Y;
 
         {
-            var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
-            CameraDirection = new(X, 0, Y);
+            var position = Direction.ToPosition(world.Player.Transform.Direction);
+            CameraDirection = new(position.X, 0, position.Y);
         }
 
         SetConfigFlags(ConfigFlags.WindowResizable);
@@ -386,8 +386,8 @@ public class RaylibRenderer
         Vector3 playerDirection3d;
 
         {
-            var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
-            playerDirection3d = new(X, 0, Y);
+            var position = Direction.ToPosition(world.Player.Transform.Direction);
+            playerDirection3d = new(position.X, 0, position.Y);
         }
 
         Camera.Position = Vector3.Lerp(

@@ -202,11 +202,11 @@ public class Game : IThinker
 
                     if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                     {
-                        var (X, Y) = Direction.ToInt32Tuple(world.Player.Transform.Direction);
-                        var desiredX = world.Player.Transform.Position.X + X;
-                        var desiredY = world.Player.Transform.Position.Y + Y;
+                        var newPosition = Direction.ToPosition(world.Player.Transform.Direction);
+                        var desiredX = world.Player.Transform.Position.X + newPosition.X;
+                        var desiredY = world.Player.Transform.Position.Y + newPosition.Y;
 
-                        Util.TryToInteractWithChest(self._gameContext, world, (desiredX, desiredY));
+                        self.TryToInteractWithChest(new(desiredX, desiredY));
                     }
 
                     self.UpdatePlayer();
@@ -285,7 +285,7 @@ public class Game : IThinker
                                 case (int)Menus.ID.SnacksMenu:
                                     if (self.World is not null)
                                     {
-                                        var ateSnack = Util.EatSnack(
+                                        var ateSnack = EatSnack(
                                             ref self.World.Player.Value,
                                             (SnackType)menu.Items[menu.CurrentItem].ID,
                                             self.PlayerAteSnack);
@@ -554,5 +554,60 @@ public class Game : IThinker
 
             World.Chests[i] = chest;
         }
+    }
+
+    public bool TryToInteractWithChest(Position at)
+    {
+        if (World is null)
+        {
+            return false;
+        }
+
+        if (!World.ChestMap.TryGetValue(at, out int chestID))
+        {
+            return false;
+        }
+
+        var spawnedChest = World.Chests[chestID];
+
+        if (spawnedChest.Value.CurrentStatus != Chest.Status.Idle)
+        {
+            return false;
+        }
+
+        spawnedChest.Value.CurrentStatus = Chest.Status.Opening;
+        World.Chests[chestID] = spawnedChest;
+        _gameContext.AudioService.PlaySoundEffect(SoundEffect.OpenChest);
+
+        return true;
+    }
+
+    public static bool EatSnack(ref Player player, SnackType snackType, Action? onEatAction = null)
+    {
+        if (!player.Inventory.Snacks.TryGetValue(snackType, out int value))
+        {
+            return false;
+        }
+
+        if (value <= 0)
+        {
+            return false;
+        }
+
+        switch (snackType)
+        {
+            case SnackType.ChickenLeg:
+                player.Current.Health += 10;
+                break;
+
+            case SnackType.WholeChicken:
+                player.Current.Health += 20;
+                break;
+        }
+
+        player.Inventory.Snacks[snackType] -= 1;
+        onEatAction?.Invoke();
+
+        return true;
     }
 }

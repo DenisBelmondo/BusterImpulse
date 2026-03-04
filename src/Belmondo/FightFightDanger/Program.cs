@@ -51,7 +51,7 @@ world.TileMap = new int[,]
 world.SpawnChest(
     new()
     {
-        Position = (6, 5),
+        Position = new(6, 5),
     });
 
 world.Chests[^1].Value.Inventory.Snacks[SnackType.ChickenLeg] = 1;
@@ -59,7 +59,7 @@ world.Chests[^1].Value.Inventory.Snacks[SnackType.ChickenLeg] = 1;
 world.SpawnChest(
     new()
     {
-        Position = (7, 5),
+        Position = new(7, 5),
     });
 
 world.Chests[^1].Value.Inventory.Snacks[SnackType.WholeChicken] = 1;
@@ -67,7 +67,7 @@ world.Chests[^1].Value.Inventory.Snacks[SnackType.WholeChicken] = 1;
 world.SpawnChest(
     new()
     {
-        Position = (5, 7),
+        Position = new(5, 7),
     });
 
 world.Chests[^1].Value.Inventory.Snacks[SnackType.ChickenLeg] = 1;
@@ -85,7 +85,7 @@ world.ChestOpened += chestID =>
     }
 };
 
-world.Player.Transform.Position = (5, 5);
+world.Player.Transform.Position = new(5, 5);
 game.SetWorld(world);
 
 world.OldPlayerX = world.Player.Transform.Position.X;

@@ -1,7 +1,5 @@
 namespace Belmondo.FightFightDanger;
 
-using Position = (int X, int Y);
-
 public class World
 {
     public struct Spawned<T> where T : struct
@@ -71,15 +69,15 @@ public class World
 
     public bool TraceMove(in Position from, int direction, out Position result)
     {
-        var (X, Y) = Direction.ToInt32Tuple(direction);
-        int desiredX = from.X + X;
-        int desiredY = from.Y + Y;
+        var position = Direction.ToPosition(direction);
+        int desiredX = from.X + position.X;
+        int desiredY = from.Y + position.Y;
 
         result = from;
 
         bool canMoveToDestination = (true
             && (TileMap is not null && (TileMap[desiredY, desiredX] == 0))
-            && (!ChestMap.ContainsKey((desiredX, desiredY)))
+            && (!ChestMap.ContainsKey(new(desiredX, desiredY)))
         );
 
         if (!canMoveToDestination)

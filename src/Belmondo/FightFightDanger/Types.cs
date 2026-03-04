@@ -4,8 +4,6 @@ using System.Text;
 
 namespace Belmondo.FightFightDanger;
 
-using Position = (int X, int Y);
-
 public enum BinaryState
 {
     Off,
@@ -268,4 +266,18 @@ public class GameContext
     public required IAudioService AudioService;
     public required IInputService InputService;
     public required TimeContext TimeContext;
+}
+
+public struct Position
+{
+    public int X;
+    public int Y;
+
+    public Position() {}
+
+    public Position(int x, int y)
+    {
+        X = x;
+        Y = y;
+    }
 }
