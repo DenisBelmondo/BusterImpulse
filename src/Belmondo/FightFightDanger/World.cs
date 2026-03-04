@@ -69,7 +69,7 @@ public class World
         }
     }
 
-    public bool TryMove(in Position from, int direction, out Position result)
+    public bool TraceMove(in Position from, int direction, out Position result)
     {
         var (X, Y) = Direction.ToInt32Tuple(direction);
         int desiredX = from.X + X;
@@ -93,14 +93,14 @@ public class World
         return true;
     }
 
-    public int TryMove(in Position from, int direction, int numberOfUnits, out Position result)
+    public int TraceMove(in Position from, int direction, int numberOfUnits, out Position result)
     {
         var moveResult = from;
         var currentNumberOfMoves = 0;
 
         for (; currentNumberOfMoves < numberOfUnits; currentNumberOfMoves++)
         {
-            if (!TryMove(moveResult, direction, out moveResult))
+            if (!TraceMove(moveResult, direction, out moveResult))
             {
                 break;
             }

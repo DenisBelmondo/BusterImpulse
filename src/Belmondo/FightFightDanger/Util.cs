@@ -53,7 +53,7 @@ public static class Util
             world.OldPlayerY = world.Player.Transform.Position.Y;
             gameContext.AudioService.PlaySoundEffect(SoundEffect.Step);
             world.Player.Value.Current.WalkCooldown = world.Player.Value.Default.WalkCooldown;
-            world.TryMove(world.Player.Transform.Position, (int)moveDirection, out world.Player.Transform.Position);
+            world.TraceMove(world.Player.Transform.Position, (int)moveDirection, out world.Player.Transform.Position);
         }
 
         world.Player.Value.Current.WalkCooldown = Math.Max(
