@@ -67,7 +67,7 @@ public class World
         }
     }
 
-    public bool TraceMove(in Position from, int direction, out Position result)
+    public bool TraceMove(Position from, int direction, out Position result)
     {
         var position = Direction.ToPosition(direction);
         int desiredX = from.X + position.X;
@@ -91,7 +91,7 @@ public class World
         return true;
     }
 
-    public int TraceMove(in Position from, int direction, int numberOfUnits, out Position result)
+    public int TraceMove(Position from, int direction, int numberOfUnits, out Position result)
     {
         var moveResult = from;
         var currentNumberOfMoves = 0;
