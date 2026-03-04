@@ -4,6 +4,9 @@ namespace Belmondo.FightFightDanger;
 
 public static class Math2
 {
+    public static Vector2 Flatten(Vector3 v) => new(v.X, v.Z);
+    public static Vector3 Make3D(Vector2 v) => new(v.X, 0, v.Y);
+
     public static float Lerp(float v0, float v1, float t) => (1 - t) * v0 + t * v1;
 
     public static float SampleParabola(float x, float a, float b, float c)

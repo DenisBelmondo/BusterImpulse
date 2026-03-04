@@ -6,6 +6,11 @@ namespace Belmondo.FightFightDanger;
 using FoeStateAutomaton = StateAutomaton<Foe, FoeState>;
 using ShakeStateAutomaton = StateAutomaton<Foe, BinaryState>;
 
+public interface IFoe
+{
+    void DoAttackSequence();
+}
+
 public partial class Foe
 {
     public struct Bullet : IRenderable
