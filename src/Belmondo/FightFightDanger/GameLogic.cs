@@ -6,13 +6,15 @@ public static class GameLogic
 {
     public static void UpdatePlayer(in GameContext gameContext, World world)
     {
-        if (gameContext.InputService.ActionWasJustPressed(InputAction.LookRight))
+        var input = gameContext.InputService;
+
+        if (input.ActionWasJustPressed(InputAction.LookRight))
         {
             world.OldPlayerDirection = world.Player.Transform.Direction;
             world.CameraDirectionLerpT = 0;
             world.Player.Transform.Direction++;
         }
-        else if (gameContext.InputService.ActionWasJustPressed(InputAction.LookLeft))
+        else if (input.ActionWasJustPressed(InputAction.LookLeft))
         {
             world.OldPlayerDirection = world.Player.Transform.Direction;
             world.CameraDirectionLerpT = 0;
@@ -24,19 +26,19 @@ public static class GameLogic
 
         int? moveDirection = null;
 
-        if (gameContext.InputService.ActionIsPressed(InputAction.MoveForward))
+        if (input.ActionIsPressed(InputAction.MoveForward))
         {
             moveDirection = Direction.Clamped(world.Player.Transform.Direction);
         }
-        else if (gameContext.InputService.ActionIsPressed(InputAction.MoveBack))
+        else if (input.ActionIsPressed(InputAction.MoveBack))
         {
             moveDirection = Direction.Clamped(world.Player.Transform.Direction + 2);
         }
-        else if (gameContext.InputService.ActionIsPressed(InputAction.MoveLeft))
+        else if (input.ActionIsPressed(InputAction.MoveLeft))
         {
             moveDirection = Direction.Clamped(world.Player.Transform.Direction + 3);
         }
-        else if (gameContext.InputService.ActionIsPressed(InputAction.MoveRight))
+        else if (input.ActionIsPressed(InputAction.MoveRight))
         {
             moveDirection = Direction.Clamped(world.Player.Transform.Direction + 1);
         }
