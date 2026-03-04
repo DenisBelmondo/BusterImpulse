@@ -1,18 +1,9 @@
 ﻿using Belmondo.FightFightDanger;
 using Belmondo.FightFightDanger.Raylib_cs;
-using Raylib_cs.BleedingEdge;
-using System.Numerics;
-using System.Text;
 using static Raylib_cs.BleedingEdge.Raylib;
-using static Raylib_cs.BleedingEdge.Raymath;
-using static Belmondo.Mathematics.Extensions;
 
 internal static class Program
 {
-    //
-    // render stuff
-    //
-
     private static bool _shouldQuit;
 
     private static void Main(string[] args)
