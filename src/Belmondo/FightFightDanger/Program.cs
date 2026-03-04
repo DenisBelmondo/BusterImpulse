@@ -128,3 +128,5 @@ while (!shouldQuit)
     uiState.Update();
     raylibRenderer.Render(game, timeContext, uiState);
 }
+
+raylibRenderer.Shutdown();
