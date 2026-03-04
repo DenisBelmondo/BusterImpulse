@@ -262,3 +262,10 @@ public enum FoeType
     Turret,
     Goon,
 }
+
+public class GameContext
+{
+    public required IAudioService AudioService;
+    public required IInputService InputService;
+    public required TimeContext TimeContext;
+}
