@@ -206,11 +206,11 @@ public class Game : IThinker
                         var desiredX = world.Player.Transform.Position.X + X;
                         var desiredY = world.Player.Transform.Position.Y + Y;
 
-                        GameLogic.TryToInteractWithChest(self._gameContext, world, (desiredX, desiredY));
+                        Util.TryToInteractWithChest(self._gameContext, world, (desiredX, desiredY));
                     }
 
-                    GameLogic.UpdatePlayer(self._gameContext, world);
-                    GameLogic.UpdateChests(self._gameContext, world);
+                    Util.UpdatePlayer(self._gameContext, world);
+                    Util.UpdateChests(self._gameContext, world);
                 }
 
                 if (triedToOpenMenu)
@@ -285,7 +285,7 @@ public class Game : IThinker
                                 case (int)Menus.ID.SnacksMenu:
                                     if (self.World is not null)
                                     {
-                                        var ateSnack = GameLogic.EatSnack(
+                                        var ateSnack = Util.EatSnack(
                                             ref self.World.Player.Value,
                                             (SnackType)menu.Items[menu.CurrentItem].ID,
                                             self.PlayerAteSnack);

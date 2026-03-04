@@ -2,8 +2,11 @@ namespace Belmondo.FightFightDanger;
 
 using Position = (int X, int Y);
 
-public static class GameLogic
+public static class Util
 {
+    public static readonly int SnackTypeCount = Enum.GetNames<SnackType>().Length;
+    public static readonly int CharmTypeCount = Enum.GetNames<CharmType>().Length;
+
     public static void UpdatePlayer(in GameContext gameContext, World world)
     {
         var input = gameContext.InputService;

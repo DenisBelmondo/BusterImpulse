@@ -1,3 +1,5 @@
+namespace Belmondo.FightFightDanger;
+
 public class Goon
 {
     public enum State

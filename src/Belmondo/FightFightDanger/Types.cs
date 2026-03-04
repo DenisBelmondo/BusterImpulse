@@ -151,6 +151,11 @@ public struct RenderThing
     public bool IsVisible;
 }
 
+public interface IRenderable
+{
+    RenderThing GetRenderThing();
+}
+
 public enum ShapeType
 {
     Placeholder,
@@ -197,4 +202,49 @@ public struct Transform
 {
     public Position Position;
     public int Direction;
+}
+
+public interface IAudioService
+{
+    void PlaySoundEffect(SoundEffect soundEffect);
+    void ChangeMusic(MusicTrack musicTrack);
+    void StopMusic();
+}
+
+public interface IInputService
+{
+    bool ActionWasJustPressed(InputAction action);
+    bool ActionWasJustReleased(InputAction action);
+    bool ActionIsPressed(InputAction action);
+}
+
+public enum InputAction
+{
+    MoveForward,
+    MoveRight,
+    MoveBack,
+    MoveLeft,
+    LookRight,
+    LookLeft,
+    Confirm,
+    Cancel,
+
+    //
+    // [TODO]: temporary
+    //
+    BattleAttack,
+    BattleDefend,
+    BattleRun,
+    BattleItem,
+    DebugBattleScreen,
+}
+
+public interface IResettable
+{
+    public void Reset();
+}
+
+public interface IResettable<TArg>
+{
+    public void Reset(TArg arg);
 }
