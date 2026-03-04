@@ -30,7 +30,7 @@ public class UIState(GameContext gameContext) : IThinker
     public class MugshotStateContext(TimeContext timeContext) : IThinker
     {
         private readonly TimeContext _timeContext = timeContext;
-        public readonly Timer ShakeTimer = new(timeContext);
+        public readonly Timer ShakeTimer = new();
 
         public readonly MugshotStateAutomaton StateAutomaton = new()
         {
@@ -74,7 +74,7 @@ public class UIState(GameContext gameContext) : IThinker
         public void Update()
         {
             StateAutomaton.Update(this);
-            ShakeTimer.Update();
+            ShakeTimer.Update(_timeContext);
         }
     }
 

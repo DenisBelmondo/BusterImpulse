@@ -20,7 +20,7 @@ public class Game : IThinker
         Battling,
     }
 
-    public class TransitionContext(TimeContext timeContext) : IThinker, IResettable
+    public class TransitionContext : IThinker<TimeContext>, IResettable
     {
         public enum State
         {
@@ -32,7 +32,7 @@ public class Game : IThinker
 
         public static event Action<TransitionContext>? FadedOut;
 
-        public Timer Timer = new(timeContext);
+        public Timer Timer = new();
         public double FadeT;
 
         public TransitionStateAutomaton StateAutomaton = new()
@@ -110,10 +110,10 @@ public class Game : IThinker
             },
         };
 
-        public void Update()
+        public void Update(TimeContext timeContext)
         {
             StateAutomaton.Update(this);
-            Timer.Update();
+            Timer.Update(timeContext);
         }
 
         public void Reset()
@@ -380,7 +380,7 @@ public class Game : IThinker
     {
         _gameContext = gameContext;
         Battle = new(gameContext);
-        CurrentTransitionContext = new(gameContext.TimeContext);
+        CurrentTransitionContext = new();
         CurrentMenuContext = new();
 
         PlayerAteSnack += () =>
@@ -459,6 +459,6 @@ public class Game : IThinker
         }
 
         StateAutomaton.Update(this);
-        CurrentTransitionContext.Update();
+        CurrentTransitionContext.Update(_gameContext.TimeContext);
     }
 }

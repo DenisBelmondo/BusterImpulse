@@ -129,8 +129,6 @@ public struct Player
         public float Health = 100;
     }
 
-    public event Action? InventoryUpdated;
-
     public Defaults Default = new();
     public Defaults Current = new();
     public Inventory Inventory = new();
@@ -247,4 +245,20 @@ public interface IResettable
 public interface IResettable<TArg>
 {
     public void Reset(TArg arg);
+}
+
+public enum FoeState
+{
+    Idle,
+    BeginAttacking,
+    Attacking,
+    Hurt,
+    Dying,
+    FlyingOffscreen,
+}
+
+public enum FoeType
+{
+    Turret,
+    Goon,
 }

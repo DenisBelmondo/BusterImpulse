@@ -40,7 +40,7 @@ public class Battle : IResettable
     }
 
     public event Action? PlayerWon;
-    public event Action? PlayerRan;
+    // public event Action? PlayerRan;
     public event Action? Finished;
 
     private readonly GameContext _gameContext;
@@ -281,7 +281,7 @@ public class Battle : IResettable
             {
                 case CrosshairState.CountingDown:
                 {
-                    self.CurrentPlayingContext.CrosshairTimer.Update();
+                    self.CurrentPlayingContext.CrosshairTimer.Update(self._gameContext.TimeContext);
 
                     if (self.CurrentPlayingContext.CrosshairTimer.CurrentStatus == Timer.Status.Stopped)
                     {
@@ -299,7 +299,7 @@ public class Battle : IResettable
 
                 case CrosshairState.Targeting:
                 {
-                    self.CurrentPlayingContext.CrosshairTimer.Update();
+                    self.CurrentPlayingContext.CrosshairTimer.Update(self._gameContext.TimeContext);
 
                     if (self.CurrentPlayingContext.CrosshairTimer.CurrentStatus == Timer.Status.Stopped)
                     {
@@ -345,8 +345,8 @@ public class Battle : IResettable
     public Battle(GameContext gameContext)
     {
         _gameContext = gameContext;
-        VictoryExitTimer = new(gameContext.TimeContext);
-        CurrentPlayingContext.CrosshairTimer = new(gameContext.TimeContext);
+        VictoryExitTimer = new();
+        CurrentPlayingContext.CrosshairTimer = new();
         Reset();
     }
 
@@ -384,9 +384,9 @@ public class Battle : IResettable
             CurrentPlayingContext.PlayerInvulnerabilityT = 0;
         }
 
-        CurrentFoe?.Update();
+        CurrentFoe?.Update(_gameContext.TimeContext);
         StateAutomaton.Update(this);
-        VictoryExitTimer.Update();
+        VictoryExitTimer.Update(_gameContext.TimeContext);
     }
 
     public void OnFoeDefeated()

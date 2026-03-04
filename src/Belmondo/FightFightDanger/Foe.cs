@@ -22,11 +22,11 @@ public partial class Foe
         public readonly RenderThing GetRenderThing() => RenderThing;
     }
 
-    public struct AnimationContext(TimeContext timeContext) : IThinker, IResettable
+    public struct AnimationContext() : IThinker<TimeContext>, IResettable
     {
-        public Timer AnimationTimer = new(timeContext);
-        public Timer FlyOffscreenTimer = new(timeContext);
-        public Timer ShakeTimer = new(timeContext);
+        public Timer AnimationTimer = new();
+        public Timer FlyOffscreenTimer = new();
+        public Timer ShakeTimer = new();
         public Vector2 ShakeOffset;
 
         public void Reset()
@@ -36,11 +36,11 @@ public partial class Foe
             ShakeOffset = Vector2.Zero;
         }
 
-        public readonly void Update()
+        public readonly void Update(TimeContext timeContext)
         {
-            AnimationTimer.Update();
-            FlyOffscreenTimer.Update();
-            ShakeTimer.Update();
+            AnimationTimer.Update(timeContext);
+            FlyOffscreenTimer.Update(timeContext);
+            ShakeTimer.Update(timeContext);
         }
     }
 
@@ -313,7 +313,7 @@ public partial class Foe
     {
         Type = type;
         _gameContext = gameContext;
-        CurrentAnimationContext = new(gameContext.TimeContext);
+        CurrentAnimationContext = new();
         InitializeRenderThing();
     }
 
@@ -337,13 +337,13 @@ public partial class Foe
     }
 }
 
-public partial class Foe : IThinker
+public partial class Foe : IThinker<TimeContext>
 {
-    public void Update()
+    public void Update(TimeContext timeContext)
     {
         StateAutomaton.Update(this);
         ShakeStateAutomaton.Update(this);
-        CurrentAnimationContext.Update();
+        CurrentAnimationContext.Update(timeContext);
         UpdateRenderThing();
     }
 }
