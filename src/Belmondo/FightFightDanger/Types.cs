@@ -281,3 +281,8 @@ public struct Position
         Y = y;
     }
 }
+
+public interface IProgressTracker
+{
+    double GetProgress();
+}
