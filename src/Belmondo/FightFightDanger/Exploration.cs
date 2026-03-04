@@ -32,7 +32,7 @@ public class Exploration
         }
     }
 
-    public void UpdatePlayer(in GameContext gameContext, World world)
+    private static void UpdatePlayer(in GameContext gameContext, World world)
     {
         var input = gameContext.InputService;
 
@@ -92,7 +92,7 @@ public class Exploration
             1);
     }
 
-    public void UpdateChests(in GameContext gameContext, World world)
+    private static void UpdateChests(in GameContext gameContext, World world)
     {
         for (int i = 0; i < world.Chests.Count; i++)
         {
@@ -116,7 +116,7 @@ public class Exploration
         }
     }
 
-    public bool TryToInteractWithChest(in GameContext gameContext, World world, Position at)
+    private static bool TryToInteractWithChest(in GameContext gameContext, World world, Position at)
     {
         if (!world.ChestMap.TryGetValue(at, out int chestID))
         {
