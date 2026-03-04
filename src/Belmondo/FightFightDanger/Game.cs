@@ -209,8 +209,8 @@ public class Game : IThinker
                         Util.TryToInteractWithChest(self._gameContext, world, (desiredX, desiredY));
                     }
 
-                    Util.UpdatePlayer(self._gameContext, world);
-                    Util.UpdateChests(self._gameContext, world);
+                    self.UpdatePlayer();
+                    self.UpdateChests();
                 }
 
                 if (triedToOpenMenu)
@@ -460,5 +460,99 @@ public class Game : IThinker
 
         StateAutomaton.Update(this);
         CurrentTransitionContext.Update(_gameContext.TimeContext);
+    }
+
+    public void UpdatePlayer()
+    {
+        if (World is null)
+        {
+            return;
+        }
+
+        var input = _gameContext.InputService;
+
+        if (input.ActionWasJustPressed(InputAction.LookRight))
+        {
+            World.OldPlayerDirection = World.Player.Transform.Direction;
+            World.CameraDirectionLerpT = 0;
+            World.Player.Transform.Direction++;
+        }
+        else if (input.ActionWasJustPressed(InputAction.LookLeft))
+        {
+            World.OldPlayerDirection = World.Player.Transform.Direction;
+            World.CameraDirectionLerpT = 0;
+            World.Player.Transform.Direction--;
+        }
+
+        World.Player.Transform.Direction = Direction.Clamped(World.Player.Transform.Direction);
+        World.CameraDirectionLerpT = MathF.Min(World.CameraDirectionLerpT + (float)_gameContext.TimeContext.Delta, 1);
+
+        int? moveDirection = null;
+
+        if (input.ActionIsPressed(InputAction.MoveForward))
+        {
+            moveDirection = Direction.Clamped(World.Player.Transform.Direction);
+        }
+        else if (input.ActionIsPressed(InputAction.MoveBack))
+        {
+            moveDirection = Direction.Clamped(World.Player.Transform.Direction + 2);
+        }
+        else if (input.ActionIsPressed(InputAction.MoveLeft))
+        {
+            moveDirection = Direction.Clamped(World.Player.Transform.Direction + 3);
+        }
+        else if (input.ActionIsPressed(InputAction.MoveRight))
+        {
+            moveDirection = Direction.Clamped(World.Player.Transform.Direction + 1);
+        }
+
+        if (moveDirection is not null && World.Player.Value.Current.WalkCooldown == 0)
+        {
+            World.CameraPositionLerpT = 0;
+            World.OldPlayerX = World.Player.Transform.Position.X;
+            World.OldPlayerY = World.Player.Transform.Position.Y;
+            _gameContext.AudioService.PlaySoundEffect(SoundEffect.Step);
+            World.Player.Value.Current.WalkCooldown = World.Player.Value.Default.WalkCooldown;
+            World.TraceMove(World.Player.Transform.Position, (int)moveDirection, out World.Player.Transform.Position);
+        }
+
+        World.Player.Value.Current.WalkCooldown = Math.Max(
+            World.Player.Value.Current.WalkCooldown - _gameContext.TimeContext.Delta,
+            0);
+
+        World.CameraPositionLerpT = MathF.Min(
+            World.CameraPositionLerpT + (
+                    (1.0F / (float)World.Player.Value.Default.WalkCooldown)
+                    * (float)_gameContext.TimeContext.Delta),
+            1);
+    }
+
+    public void UpdateChests()
+    {
+        if (World is null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < World.Chests.Count; i++)
+        {
+            var chest = World.Chests[i];
+
+            if (chest.Value.CurrentStatus == Chest.Status.Opening)
+            {
+                chest.Value.Openness += (float)_gameContext.TimeContext.Delta * 2;
+
+                if (chest.Value.Openness >= 1)
+                {
+                    chest.Value.Openness = 1;
+                    chest.Value.CurrentStatus = Chest.Status.Opened;
+                    World.OpenChest(i);
+                    chest.Value.Inventory.TransferTo(World.Player.Value.Inventory);
+                    _gameContext.AudioService.PlaySoundEffect(SoundEffect.Item);
+                }
+            }
+
+            World.Chests[i] = chest;
+        }
     }
 }
