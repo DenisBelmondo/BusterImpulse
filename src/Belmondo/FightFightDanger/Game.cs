@@ -338,7 +338,14 @@ public class Game : IThinker
                         }
                     }
 
-                    self.BleedOutPlayer();
+                    var shouldBleedOutPlayer = (
+                        battle.StateAutomaton.IsProcessingState(Battle.State.Choosing)
+                        || battle.StateAutomaton.IsProcessingState(Battle.State.Playing));
+
+                    if (shouldBleedOutPlayer)
+                    {
+                        self.BleedOutPlayer();
+                    }
                 }
 
                 break;
