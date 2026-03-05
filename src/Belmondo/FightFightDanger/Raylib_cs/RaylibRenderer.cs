@@ -105,9 +105,9 @@ public class RaylibRenderer
 
             if (game.CurrentRenderHint == Game.RenderHint.Exploring)
             {
-                if (game.World is not null)
+                if (game.CurrentWorld is not null)
                 {
-                    RenderWandering(game.World, timeContext);
+                    RenderWandering(game.CurrentWorld, timeContext);
                 }
             }
             else if (game.CurrentRenderHint == Game.RenderHint.Battling)
@@ -141,7 +141,7 @@ public class RaylibRenderer
             // draw hud
             //
 
-            if (game.World is not null)
+            if (game.CurrentWorld is not null)
             {
                 DrawRectanglePro(
                     new()
@@ -180,7 +180,7 @@ public class RaylibRenderer
 
                 DrawTextEx(
                     RaylibResources.Font,
-                    Math.Floor(game.World.Player.Value.RunningHealth).ToString(),
+                    Math.Floor(game.CurrentWorld.Player.Value.RunningHealth).ToString(),
                     new(
                         (32 + 1) * _mat240pTo480p.M11 + _mat240pTo480p.M31,
                         (2 + _mat240pTo480p.M32) + (240 - 15) * _mat240pTo480p.M22),
@@ -190,7 +190,7 @@ public class RaylibRenderer
 
                 DrawTextEx(
                     RaylibResources.Font,
-                    Math.Floor(game.World.Player.Value.RunningHealth).ToString(),
+                    Math.Floor(game.CurrentWorld.Player.Value.RunningHealth).ToString(),
                     new(
                         32 * _mat240pTo480p.M11 + _mat240pTo480p.M31,
                         _mat240pTo480p.M32 + (240 - 15) * _mat240pTo480p.M22),

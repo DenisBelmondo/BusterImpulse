@@ -146,7 +146,7 @@ public class Game : IThinker
     public event Action? PlayerDamaged;
     public event Action? Quit;
 
-    public World? World;
+    public World? CurrentWorld;
     public Battle Battle;
     public Exploration Exploration;
 
@@ -190,7 +190,7 @@ public class Game : IThinker
         switch (currentState)
         {
             case State.Exploring:
-                self.Exploration.Update(self._gameContext, self.World);
+                self.Exploration.Update(self._gameContext, self.CurrentWorld);
                 self.BleedOutPlayer();
                 break;
 
@@ -236,9 +236,9 @@ public class Game : IThinker
                                         case Menus.Item.Snacks:
                                             self.CurrentMenuContext.SnacksMenu.Reset();
 
-                                            if (self.World is not null)
+                                            if (self.CurrentWorld is not null)
                                             {
-                                                Menus.InitializeSnacksMenu(self.CurrentMenuContext.SnacksMenu, self.World.Player.Value.Inventory);
+                                                Menus.InitializeSnacksMenu(self.CurrentMenuContext.SnacksMenu, self.CurrentWorld.Player.Value.Inventory);
                                             }
 
                                             self.CurrentMenuContext.MenuStack.Push(self.CurrentMenuContext.SnacksMenu);
@@ -257,10 +257,10 @@ public class Game : IThinker
                                     break;
 
                                 case (int)Menus.ID.SnacksMenu:
-                                    if (self.World is not null)
+                                    if (self.CurrentWorld is not null)
                                     {
                                         var ateSnack = EatSnack(
-                                            ref self.World.Player.Value,
+                                            ref self.CurrentWorld.Player.Value,
                                             (SnackType)menu.Items[menu.CurrentItem].ID,
                                             self.PlayerAteSnack);
 
@@ -325,9 +325,9 @@ public class Game : IThinker
 
                                 if (shouldHurtPlayer)
                                 {
-                                    if (self.World is not null)
+                                    if (self.CurrentWorld is not null)
                                     {
-                                        self.World.Player.Value.Current.Health -= 10;
+                                        self.CurrentWorld.Player.Value.Current.Health -= 10;
                                         self.PlayerDamaged?.Invoke();
                                     }
 
@@ -385,7 +385,7 @@ public class Game : IThinker
 
     public void SetWorld(World world)
     {
-        World = world;
+        CurrentWorld = world;
     }
 
     public void StartBattle()
@@ -418,7 +418,7 @@ public class Game : IThinker
 
     public void UpdatePlayer()
     {
-        if (World is null)
+        if (CurrentWorld is null)
         {
             return;
         }
@@ -427,70 +427,70 @@ public class Game : IThinker
 
         if (input.ActionWasJustPressed(InputAction.LookRight))
         {
-            World.OldPlayerDirection = World.Player.Transform.Direction;
-            World.CameraDirectionLerpT = 0;
-            World.Player.Transform.Direction++;
+            CurrentWorld.OldPlayerDirection = CurrentWorld.Player.Transform.Direction;
+            CurrentWorld.CameraDirectionLerpT = 0;
+            CurrentWorld.Player.Transform.Direction++;
         }
         else if (input.ActionWasJustPressed(InputAction.LookLeft))
         {
-            World.OldPlayerDirection = World.Player.Transform.Direction;
-            World.CameraDirectionLerpT = 0;
-            World.Player.Transform.Direction--;
+            CurrentWorld.OldPlayerDirection = CurrentWorld.Player.Transform.Direction;
+            CurrentWorld.CameraDirectionLerpT = 0;
+            CurrentWorld.Player.Transform.Direction--;
         }
 
-        World.Player.Transform.Direction = Direction.Clamped(World.Player.Transform.Direction);
-        World.CameraDirectionLerpT = MathF.Min(World.CameraDirectionLerpT + (float)_gameContext.TimeContext.Delta, 1);
+        CurrentWorld.Player.Transform.Direction = Direction.Clamped(CurrentWorld.Player.Transform.Direction);
+        CurrentWorld.CameraDirectionLerpT = MathF.Min(CurrentWorld.CameraDirectionLerpT + (float)_gameContext.TimeContext.Delta, 1);
 
         int? moveDirection = null;
 
         if (input.ActionIsPressed(InputAction.MoveForward))
         {
-            moveDirection = Direction.Clamped(World.Player.Transform.Direction);
+            moveDirection = Direction.Clamped(CurrentWorld.Player.Transform.Direction);
         }
         else if (input.ActionIsPressed(InputAction.MoveBack))
         {
-            moveDirection = Direction.Clamped(World.Player.Transform.Direction + 2);
+            moveDirection = Direction.Clamped(CurrentWorld.Player.Transform.Direction + 2);
         }
         else if (input.ActionIsPressed(InputAction.MoveLeft))
         {
-            moveDirection = Direction.Clamped(World.Player.Transform.Direction + 3);
+            moveDirection = Direction.Clamped(CurrentWorld.Player.Transform.Direction + 3);
         }
         else if (input.ActionIsPressed(InputAction.MoveRight))
         {
-            moveDirection = Direction.Clamped(World.Player.Transform.Direction + 1);
+            moveDirection = Direction.Clamped(CurrentWorld.Player.Transform.Direction + 1);
         }
 
-        if (moveDirection is not null && World.Player.Value.Current.WalkCooldown == 0)
+        if (moveDirection is not null && CurrentWorld.Player.Value.Current.WalkCooldown == 0)
         {
-            World.CameraPositionLerpT = 0;
-            World.OldPlayerX = World.Player.Transform.Position.X;
-            World.OldPlayerY = World.Player.Transform.Position.Y;
+            CurrentWorld.CameraPositionLerpT = 0;
+            CurrentWorld.OldPlayerX = CurrentWorld.Player.Transform.Position.X;
+            CurrentWorld.OldPlayerY = CurrentWorld.Player.Transform.Position.Y;
             _gameContext.AudioService.PlaySoundEffect(SoundEffect.Step);
-            World.Player.Value.Current.WalkCooldown = World.Player.Value.Default.WalkCooldown;
-            World.TraceMove(World.Player.Transform.Position, (int)moveDirection, out World.Player.Transform.Position);
+            CurrentWorld.Player.Value.Current.WalkCooldown = CurrentWorld.Player.Value.Default.WalkCooldown;
+            CurrentWorld.TraceMove(CurrentWorld.Player.Transform.Position, (int)moveDirection, out CurrentWorld.Player.Transform.Position);
         }
 
-        World.Player.Value.Current.WalkCooldown = Math.Max(
-            World.Player.Value.Current.WalkCooldown - _gameContext.TimeContext.Delta,
+        CurrentWorld.Player.Value.Current.WalkCooldown = Math.Max(
+            CurrentWorld.Player.Value.Current.WalkCooldown - _gameContext.TimeContext.Delta,
             0);
 
-        World.CameraPositionLerpT = MathF.Min(
-            World.CameraPositionLerpT + (
-                    (1.0F / (float)World.Player.Value.Default.WalkCooldown)
+        CurrentWorld.CameraPositionLerpT = MathF.Min(
+            CurrentWorld.CameraPositionLerpT + (
+                    (1.0F / (float)CurrentWorld.Player.Value.Default.WalkCooldown)
                     * (float)_gameContext.TimeContext.Delta),
             1);
     }
 
     public void UpdateChests()
     {
-        if (World is null)
+        if (CurrentWorld is null)
         {
             return;
         }
 
-        for (int i = 0; i < World.Chests.Count; i++)
+        for (int i = 0; i < CurrentWorld.Chests.Count; i++)
         {
-            var chest = World.Chests[i];
+            var chest = CurrentWorld.Chests[i];
 
             if (chest.Value.CurrentStatus == Chest.Status.Opening)
             {
@@ -500,29 +500,29 @@ public class Game : IThinker
                 {
                     chest.Value.Openness = 1;
                     chest.Value.CurrentStatus = Chest.Status.Opened;
-                    World.OpenChest(i);
-                    chest.Value.Inventory.TransferTo(World.Player.Value.Inventory);
+                    CurrentWorld.OpenChest(i);
+                    chest.Value.Inventory.TransferTo(CurrentWorld.Player.Value.Inventory);
                     _gameContext.AudioService.PlaySoundEffect(SoundEffect.Item);
                 }
             }
 
-            World.Chests[i] = chest;
+            CurrentWorld.Chests[i] = chest;
         }
     }
 
     public bool TryToInteractWithChest(Position at)
     {
-        if (World is null)
+        if (CurrentWorld is null)
         {
             return false;
         }
 
-        if (!World.ChestMap.TryGetValue(at, out int chestID))
+        if (!CurrentWorld.ChestMap.TryGetValue(at, out int chestID))
         {
             return false;
         }
 
-        var spawnedChest = World.Chests[chestID];
+        var spawnedChest = CurrentWorld.Chests[chestID];
 
         if (spawnedChest.Value.CurrentStatus != Chest.Status.Idle)
         {
@@ -530,7 +530,7 @@ public class Game : IThinker
         }
 
         spawnedChest.Value.CurrentStatus = Chest.Status.Opening;
-        World.Chests[chestID] = spawnedChest;
+        CurrentWorld.Chests[chestID] = spawnedChest;
         _gameContext.AudioService.PlaySoundEffect(SoundEffect.OpenChest);
 
         return true;
@@ -567,10 +567,10 @@ public class Game : IThinker
 
     public void BleedOutPlayer()
     {
-        if (World is World world)
+        if (CurrentWorld is World world)
         {
             var bleedfreq = (float)_gameContext.TimeContext.Delta * 3;
-            var player = World.Player.Value;
+            var player = CurrentWorld.Player.Value;
 
             if (player.RunningHealth < player.Current.Health)
             {
@@ -591,7 +591,7 @@ public class Game : IThinker
                 }
             }
 
-            World.Player.Value = player;
+            CurrentWorld.Player.Value = player;
         }
     }
 }
