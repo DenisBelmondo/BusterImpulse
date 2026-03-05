@@ -190,7 +190,11 @@ public class Game : IThinker
         switch (currentState)
         {
             case State.Exploring:
-                self.Exploration.Update(self._gameContext, self.CurrentWorld);
+                if (self.CurrentWorld is not null)
+                {
+                    self.Exploration.Update(self._gameContext, self.CurrentWorld);
+                }
+
                 self.BleedOutPlayer();
                 break;
 
