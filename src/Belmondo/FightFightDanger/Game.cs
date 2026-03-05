@@ -148,6 +148,7 @@ public class Game : IThinker
 
     public World? World;
     public Battle Battle;
+    public Exploration Exploration;
 
     public readonly GameStateAutomaton StateAutomaton = new()
     {
@@ -186,38 +187,11 @@ public class Game : IThinker
 
     private static PlaysimStateResult UpdateFunction(Game self, State currentState)
     {
-        var triedToOpenMenu = self._gameContext.InputService.ActionWasJustPressed(InputAction.Cancel);
-
         switch (currentState)
         {
             case State.Exploring:
-                if (self._gameContext.InputService.ActionWasJustPressed(InputAction.DebugBattleScreen))
-                {
-                    self.StartBattle();
-                }
-
-                if (self.World is not null)
-                {
-                    var world = self.World;
-
-                    if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
-                    {
-                        var newPosition = Direction.ToPosition(world.Player.Transform.Direction);
-                        var desiredX = world.Player.Transform.Position.X + newPosition.X;
-                        var desiredY = world.Player.Transform.Position.Y + newPosition.Y;
-
-                        self.TryToInteractWithChest(new(desiredX, desiredY));
-                    }
-
-                    self.UpdatePlayer();
-                    self.UpdateChests();
-                }
-
-                if (triedToOpenMenu)
-                {
-                    self.OpenMainMenu();
-                }
-
+                self.Exploration.Update(self._gameContext, self.World);
+                self.BleedOutPlayer();
                 break;
 
             case State.Menu:
@@ -363,11 +337,8 @@ public class Game : IThinker
                             }
                         }
                     }
-                }
 
-                if (triedToOpenMenu)
-                {
-                    self.OpenMainMenu();
+                    self.BleedOutPlayer();
                 }
 
                 break;
@@ -380,8 +351,12 @@ public class Game : IThinker
     {
         _gameContext = gameContext;
         Battle = new(gameContext);
+        Exploration = new();
         CurrentTransitionContext = new();
         CurrentMenuContext = new();
+
+        Exploration.BattleRequested += StartBattle;
+        Exploration.MainMenuRequested += OpenMainMenu;
 
         PlayerAteSnack += () =>
         {
@@ -430,34 +405,6 @@ public class Game : IThinker
 
     public void Update()
     {
-        if (World is not null)
-        {
-            var world = World;
-            var bleedFreq = (float)_gameContext.TimeContext.Delta * 3;
-            var player = world.Player.Value;
-
-            if (player.RunningHealth < player.Current.Health)
-            {
-                player.RunningHealth += bleedFreq;
-
-                if (player.RunningHealth >= player.Current.Health)
-                {
-                    player.RunningHealth = player.Current.Health;
-                }
-            }
-            else if (player.RunningHealth > player.Current.Health)
-            {
-                player.RunningHealth -= bleedFreq;
-
-                if (player.RunningHealth <= player.Current.Health)
-                {
-                    player.RunningHealth = player.Current.Health;
-                }
-            }
-
-            world.Player.Value = player;
-        }
-
         StateAutomaton.Update(this);
         CurrentTransitionContext.Update(_gameContext.TimeContext);
     }
@@ -609,5 +556,35 @@ public class Game : IThinker
         onEatAction?.Invoke();
 
         return true;
+    }
+
+    public void BleedOutPlayer()
+    {
+        if (World is World world)
+        {
+            var bleedfreq = (float)_gameContext.TimeContext.Delta * 3;
+            var player = World.Player.Value;
+
+            if (player.RunningHealth < player.Current.Health)
+            {
+                player.RunningHealth += bleedfreq;
+
+                if (player.RunningHealth >= player.Current.Health)
+                {
+                    player.RunningHealth = player.Current.Health;
+                }
+            }
+            else if (player.RunningHealth > player.Current.Health)
+            {
+                player.RunningHealth -= bleedfreq;
+
+                if (player.RunningHealth <= player.Current.Health)
+                {
+                    player.RunningHealth = player.Current.Health;
+                }
+            }
+
+            World.Player.Value = player;
+        }
     }
 }
