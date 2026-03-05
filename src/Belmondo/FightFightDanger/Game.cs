@@ -1,3 +1,5 @@
+using static Belmondo.FightFightDanger.Items;
+
 namespace Belmondo.FightFightDanger;
 
 using GameStateAutomaton = StateAutomaton<Game, Game.State>;
@@ -536,35 +538,6 @@ public class Game : IThinker
         spawnedChest.Value.CurrentStatus = Chest.Status.Opening;
         CurrentWorld.Chests[chestID] = spawnedChest;
         _gameContext.AudioService.PlaySoundEffect(SoundEffect.OpenChest);
-
-        return true;
-    }
-
-    public static bool EatSnack(ref Player player, SnackType snackType, Action? onEatAction = null)
-    {
-        if (!player.Inventory.Snacks.TryGetValue(snackType, out int value))
-        {
-            return false;
-        }
-
-        if (value <= 0)
-        {
-            return false;
-        }
-
-        switch (snackType)
-        {
-            case SnackType.ChickenLeg:
-                player.Current.Health += 10;
-                break;
-
-            case SnackType.WholeChicken:
-                player.Current.Health += 20;
-                break;
-        }
-
-        player.Inventory.Snacks[snackType] -= 1;
-        onEatAction?.Invoke();
 
         return true;
     }
