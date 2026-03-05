@@ -567,7 +567,7 @@ public class Game : IThinker
 
     public void BleedOutPlayer()
     {
-        if (CurrentWorld is World world)
+        if (CurrentWorld is not null)
         {
             var bleedfreq = (float)_gameContext.TimeContext.Delta * 3;
             var player = CurrentWorld.Player.Value;
