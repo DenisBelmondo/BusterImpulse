@@ -1,37 +1,37 @@
 namespace Belmondo.FightFightDanger;
 
+public enum StateFlowFlag
+{
+    Continue,
+    Stop,
+    Goto,
+}
+
+public struct StateFlowResult<TStateEnum> where TStateEnum : struct, IComparable
+{
+    public StateFlowFlag Flag;
+    public TStateEnum? NextState;
+
+    public static readonly StateFlowResult<TStateEnum> Continue = new()
+    {
+        Flag = StateFlowFlag.Continue,
+    };
+
+    public static readonly StateFlowResult<TStateEnum> Stop = new()
+    {
+        Flag = StateFlowFlag.Stop,
+    };
+
+    public static StateFlowResult<TStateEnum> Goto(TStateEnum nextState) => new()
+    {
+        Flag = StateFlowFlag.Goto,
+        NextState = nextState,
+    };
+}
+
 public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, IComparable
 {
-    public enum Flow
-    {
-        Continue,
-        Stop,
-        Goto,
-    }
-
-    public struct Result
-    {
-        public Flow Flow;
-        public TStateEnum? NextState;
-
-        public static readonly Result Continue = new()
-        {
-            Flow = Flow.Continue,
-        };
-
-        public static readonly Result Stop = new()
-        {
-            Flow = Flow.Stop,
-        };
-
-        public static Result Goto(TStateEnum nextState) => new()
-        {
-            Flow = Flow.Goto,
-            NextState = nextState,
-        };
-    }
-
-    public delegate Result StateFunction(TContext context, TStateEnum currentState);
+    public delegate StateFlowResult<TStateEnum> StateFunction(TContext context, TStateEnum currentState);
 
     public StateFunction? EnterFunction;
     public StateFunction? UpdateFunction;
@@ -55,28 +55,28 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, ICo
 
     public TStateEnum? PreviousState { get; private set; }
 
-    private bool HandleTransition(TContext context, TStateEnum currentState, in Result result)
+    private bool HandleTransition(TContext context, TStateEnum currentState, in StateFlowResult<TStateEnum> result)
     {
         TStateEnum? maybeNextState = result.NextState;
         bool shouldCallExitFunction = false;
         bool isStillRunning = true;
 
-        switch (result.Flow)
+        switch (result.Flag)
         {
-        case Flow.Stop:
-            shouldCallExitFunction = true;
-            isStillRunning = false;
-            Stop();
-
-            break;
-        case Flow.Goto:
-            if (maybeNextState is TStateEnum nextState)
-            {
+            case StateFlowFlag.Stop:
                 shouldCallExitFunction = true;
-                ChangeState(nextState);
-            }
+                isStillRunning = false;
+                Stop();
 
-            break;
+                break;
+            case StateFlowFlag.Goto:
+                if (maybeNextState is TStateEnum nextState)
+                {
+                    shouldCallExitFunction = true;
+                    ChangeState(nextState);
+                }
+
+                break;
         }
 
         if (shouldCallExitFunction)
@@ -137,7 +137,7 @@ public class StateAutomaton<TContext, TStateEnum> where TStateEnum : struct, ICo
         }
 
         TStateEnum currentState = CurrentState.Value;
-        Result? maybeResult = null;
+        StateFlowResult<TStateEnum>? maybeResult = null;
 
         if (!_hasEntered)
         {

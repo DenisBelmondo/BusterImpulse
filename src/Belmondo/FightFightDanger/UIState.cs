@@ -3,8 +3,11 @@ using System.Numerics;
 namespace Belmondo.FightFightDanger;
 
 using PopUpStateAutomaton = StateAutomaton<UIState, UIState.PopUpState>;
+using PopUpStateResult = StateFlowResult<UIState.PopUpState>;
 using BattleVictoryScreenAutomaton = StateAutomaton<UIState, UIState.BattleVictoryScreenState>;
+using BattleVictoryScreenStateResult = StateFlowResult<UIState.BattleVictoryScreenState>;
 using MugshotStateAutomaton = StateAutomaton<UIState.MugshotStateContext, UIState.MugshotState>;
+using MugshotStateResult = StateFlowResult<UIState.MugshotState>;
 
 public class UIState(GameContext gameContext) : IThinker
 {
@@ -37,7 +40,7 @@ public class UIState(GameContext gameContext) : IThinker
             EnterFunction = static (self, currentState) =>
             {
                 self.ShakeTimer.Start(0.25);
-                return MugshotStateAutomaton.Result.Continue;
+                return MugshotStateResult.Continue;
             },
 
             UpdateFunction = static (self, currentState) =>
@@ -52,10 +55,10 @@ public class UIState(GameContext gameContext) : IThinker
 
                 if (self.ShakeTimer.CurrentStatus == Timer.Status.Stopped)
                 {
-                    return MugshotStateAutomaton.Result.Stop;
+                    return MugshotStateResult.Stop;
                 }
 
-                return MugshotStateAutomaton.Result.Continue;
+                return MugshotStateResult.Continue;
             },
 
             ExitFunction = static (self, currentState) =>
@@ -65,7 +68,7 @@ public class UIState(GameContext gameContext) : IThinker
                     self.ShakeOffset = Vector2.Zero;
                 }
 
-                return MugshotStateAutomaton.Result.Continue;
+                return MugshotStateResult.Continue;
             },
         };
 
@@ -104,7 +107,7 @@ public class UIState(GameContext gameContext) : IThinker
                 }
             }
 
-            return PopUpStateAutomaton.Result.Continue;
+            return PopUpStateResult.Continue;
         },
 
         UpdateFunction = static (self, currentState) =>
@@ -117,7 +120,7 @@ public class UIState(GameContext gameContext) : IThinker
 
                     if (self.PopUpT >= 1)
                     {
-                        return PopUpStateAutomaton.Result.Goto(PopUpState.StickingAround);
+                        return PopUpStateResult.Goto(PopUpState.StickingAround);
                     }
 
                     break;
@@ -129,7 +132,7 @@ public class UIState(GameContext gameContext) : IThinker
 
                     if (self.PopUpWaitT >= 3)
                     {
-                        return PopUpStateAutomaton.Result.Goto(PopUpState.Disappearing);
+                        return PopUpStateResult.Goto(PopUpState.Disappearing);
                     }
 
                     break;
@@ -141,14 +144,14 @@ public class UIState(GameContext gameContext) : IThinker
 
                     if (self.PopUpT <= 0)
                     {
-                        return PopUpStateAutomaton.Result.Stop;
+                        return PopUpStateResult.Stop;
                     }
 
                     break;
                 }
             }
 
-            return PopUpStateAutomaton.Result.Continue;
+            return PopUpStateResult.Continue;
         },
     };
 
@@ -175,7 +178,7 @@ public class UIState(GameContext gameContext) : IThinker
                 }
             }
 
-            return BattleVictoryScreenAutomaton.Result.Continue;
+            return BattleVictoryScreenStateResult.Continue;
         },
 
         UpdateFunction = static (self, currentState) =>
@@ -189,7 +192,7 @@ public class UIState(GameContext gameContext) : IThinker
                     if (self.BattleVictoryWipeT >= 0.5)
                     {
                         self.BattleVictoryWipeT = 0.5;
-                        return BattleVictoryScreenAutomaton.Result.Stop;
+                        return BattleVictoryScreenStateResult.Stop;
                     }
 
                     break;
@@ -202,14 +205,14 @@ public class UIState(GameContext gameContext) : IThinker
                     if (self.BattleVictoryWipeT >= 1.0)
                     {
                         self.BattleVictoryWipeT = 0;
-                        return BattleVictoryScreenAutomaton.Result.Stop;
+                        return BattleVictoryScreenStateResult.Stop;
                     }
 
                     break;
                 }
             }
 
-            return BattleVictoryScreenAutomaton.Result.Continue;
+            return BattleVictoryScreenStateResult.Continue;
         },
     };
 

@@ -4,7 +4,9 @@ using System.Runtime.InteropServices;
 namespace Belmondo.FightFightDanger;
 
 using FoeStateAutomaton = StateAutomaton<Foe, FoeState>;
+using FoeStateResult = StateFlowResult<FoeState>;
 using ShakeStateAutomaton = StateAutomaton<Foe, BinaryState>;
+using ShakeStateResult = StateFlowResult<BinaryState>;
 
 public interface IFoe
 {
@@ -112,7 +114,7 @@ public partial class Foe
                     break;
             }
 
-            return FoeStateAutomaton.Result.Continue;
+            return FoeStateResult.Continue;
         },
 
         UpdateFunction = static (self, currentState) =>
@@ -122,7 +124,7 @@ public partial class Foe
                 case FoeState.BeginAttacking:
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return FoeStateAutomaton.Result.Goto(FoeState.Attacking);
+                        return FoeStateResult.Goto(FoeState.Attacking);
                     }
 
                     break;
@@ -173,7 +175,7 @@ public partial class Foe
 
                             if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                             {
-                                return FoeStateAutomaton.Result.Goto(FoeState.Idle);
+                                return FoeStateResult.Goto(FoeState.Idle);
                             }
                             break;
 
@@ -220,7 +222,7 @@ public partial class Foe
 
                             if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                             {
-                                return FoeStateAutomaton.Result.Goto(FoeState.Idle);
+                                return FoeStateResult.Goto(FoeState.Idle);
                             }
                             break;
                     }
@@ -230,7 +232,7 @@ public partial class Foe
                 case FoeState.Hurt:
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return FoeStateAutomaton.Result.Goto(FoeState.Idle);
+                        return FoeStateResult.Goto(FoeState.Idle);
                     }
 
                     break;
@@ -238,7 +240,7 @@ public partial class Foe
                 case FoeState.Dying:
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return FoeStateAutomaton.Result.Goto(FoeState.FlyingOffscreen);
+                        return FoeStateResult.Goto(FoeState.FlyingOffscreen);
                     }
 
                     break;
@@ -247,13 +249,13 @@ public partial class Foe
                     if (self.CurrentAnimationContext.FlyOffscreenTimer.CurrentStatus == Timer.Status.Stopped)
                     {
                         self.Defeated?.Invoke();
-                        return FoeStateAutomaton.Result.Stop;
+                        return FoeStateResult.Stop;
                     }
 
                     break;
             }
 
-            return FoeStateAutomaton.Result.Continue;
+            return FoeStateResult.Continue;
         },
 
         ExitFunction = static (self, currentState) =>
@@ -263,7 +265,7 @@ public partial class Foe
                 self.Bullets.Clear();
             }
 
-            return FoeStateAutomaton.Result.Continue;
+            return FoeStateResult.Continue;
         },
     };
 
@@ -276,7 +278,7 @@ public partial class Foe
                 self.CurrentAnimationContext.ShakeTimer.Start(0.125f);
             }
 
-            return ShakeStateAutomaton.Result.Continue;
+            return ShakeStateResult.Continue;
         },
 
         UpdateFunction = static (self, currentState) =>
@@ -285,14 +287,14 @@ public partial class Foe
             {
                 if (self.CurrentAnimationContext.ShakeTimer.CurrentStatus == Timer.Status.Stopped)
                 {
-                    return ShakeStateAutomaton.Result.Stop;
+                    return ShakeStateResult.Stop;
                 }
 
                 self.CurrentAnimationContext.ShakeOffset = Vector2.UnitX
                     * ((float)Math2.SampleSquareWave(self._gameContext.TimeContext.Time * 50) / 15f);
             }
 
-            return ShakeStateAutomaton.Result.Continue;
+            return ShakeStateResult.Continue;
         },
 
         ExitFunction = static (self, currentState) =>
@@ -302,7 +304,7 @@ public partial class Foe
                 self.CurrentAnimationContext.ShakeOffset = default;
             }
 
-            return ShakeStateAutomaton.Result.Continue;
+            return ShakeStateResult.Continue;
         },
     };
 

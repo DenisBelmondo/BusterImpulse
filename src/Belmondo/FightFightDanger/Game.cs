@@ -3,8 +3,9 @@ using static Belmondo.FightFightDanger.Items;
 namespace Belmondo.FightFightDanger;
 
 using GameStateAutomaton = StateAutomaton<Game, Game.State>;
-using PlaysimStateResult = StateAutomaton<Game, Game.State>.Result;
+using GameStateResult = StateFlowResult<Game.State>;
 using TransitionStateAutomaton = StateAutomaton<Game.TransitionContext, Game.TransitionContext.State>;
+using TransitionStateResult = StateFlowResult<Game.TransitionContext.State>;
 
 public class Game : IThinker
 {
@@ -56,7 +57,7 @@ public class Game : IThinker
                         break;
                 }
 
-                return TransitionStateAutomaton.Result.Continue;
+                return TransitionStateResult.Continue;
             },
 
             UpdateFunction = static (self, currentState) =>
@@ -68,7 +69,7 @@ public class Game : IThinker
 
                         if (self.Timer.CurrentStatus == Timer.Status.Stopped)
                         {
-                            return TransitionStateAutomaton.Result.Goto(State.StickingAround);
+                            return TransitionStateResult.Goto(State.StickingAround);
                         }
 
                         break;
@@ -76,7 +77,7 @@ public class Game : IThinker
                     case State.StickingAround:
                         if (self.Timer.CurrentStatus == Timer.Status.Stopped)
                         {
-                            return TransitionStateAutomaton.Result.Goto(State.FadingIn);
+                            return TransitionStateResult.Goto(State.FadingIn);
                         }
 
                         break;
@@ -86,13 +87,13 @@ public class Game : IThinker
 
                         if (self.Timer.CurrentStatus == Timer.Status.Stopped)
                         {
-                            return TransitionStateAutomaton.Result.Stop;
+                            return TransitionStateResult.Stop;
                         }
 
                         break;
                 }
 
-                return TransitionStateAutomaton.Result.Continue;
+                return TransitionStateResult.Continue;
             },
 
             ExitFunction = static (self, currentState) =>
@@ -108,7 +109,7 @@ public class Game : IThinker
                         break;
                 }
 
-                return TransitionStateAutomaton.Result.Continue;
+                return TransitionStateResult.Continue;
             },
         };
 
@@ -164,7 +165,7 @@ public class Game : IThinker
 
     public RenderHint CurrentRenderHint;
 
-    private static PlaysimStateResult EnterFunction(Game self, State currentState)
+    private static GameStateResult EnterFunction(Game self, State currentState)
     {
         switch (currentState)
         {
@@ -184,10 +185,10 @@ public class Game : IThinker
                 break;
         }
 
-        return PlaysimStateResult.Continue;
+        return GameStateResult.Continue;
     }
 
-    private static PlaysimStateResult UpdateFunction(Game self, State currentState)
+    private static GameStateResult UpdateFunction(Game self, State currentState)
     {
         switch (currentState)
         {
@@ -304,7 +305,7 @@ public class Game : IThinker
             case State.Transitioning:
                 if (!self.CurrentTransitionContext.StateAutomaton.IsRunning())
                 {
-                    return PlaysimStateResult.Goto(State.Battling);
+                    return GameStateResult.Goto(State.Battling);
                 }
 
                 break;
@@ -316,7 +317,7 @@ public class Game : IThinker
 
                     if (!battle.StateAutomaton.IsRunning())
                     {
-                        return PlaysimStateResult.Goto(State.Exploring);
+                        return GameStateResult.Goto(State.Exploring);
                     }
 
                     if (battle.CurrentFoe is Foe foe)
@@ -359,7 +360,7 @@ public class Game : IThinker
                 break;
         }
 
-        return PlaysimStateResult.Continue;
+        return GameStateResult.Continue;
     }
 
     public Game(GameContext gameContext)

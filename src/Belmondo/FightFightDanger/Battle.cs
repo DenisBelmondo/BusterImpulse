@@ -1,8 +1,11 @@
 namespace Belmondo.FightFightDanger;
 
 using BattleStateAutomaton = StateAutomaton<Battle, Battle.State>;
+using BattleStateResult = StateFlowResult<Battle.State>;
 using CrosshairStateAutomaton = StateAutomaton<Battle, Battle.CrosshairState>;
+using CrosshairStateResult = StateFlowResult<Battle.CrosshairState>;
 using PlayerStateAutomaton = StateAutomaton<Battle, Battle.PlayerState>;
+using PlayerStateResult = StateFlowResult<Battle.PlayerState>;
 
 public class Battle : IResettable
 {
@@ -67,7 +70,7 @@ public class Battle : IResettable
                 }
             }
 
-            return BattleStateAutomaton.Result.Continue;
+            return BattleStateResult.Continue;
         },
 
         UpdateFunction = static (self, currentState) =>
@@ -80,12 +83,12 @@ public class Battle : IResettable
                 {
                     if (inputService.ActionWasJustPressed(InputAction.BattleAttack))
                     {
-                        return BattleStateAutomaton.Result.Goto(State.Playing);
+                        return BattleStateResult.Goto(State.Playing);
                     }
 
                     if (inputService.ActionWasJustPressed(InputAction.BattleRun))
                     {
-                        return BattleStateAutomaton.Result.Stop;
+                        return BattleStateResult.Stop;
                     }
 
                     break;
@@ -97,7 +100,7 @@ public class Battle : IResettable
                     {
                         if (foe.StateAutomaton.IsProcessingState(FoeState.Idle))
                         {
-                            return BattleStateAutomaton.Result.Goto(State.Choosing);
+                            return BattleStateResult.Goto(State.Choosing);
                         }
 
                         bool shouldStartAttack = (
@@ -137,20 +140,20 @@ public class Battle : IResettable
                 {
                     if (self.VictoryExitTimer.JustTimedOut)
                     {
-                        return BattleStateAutomaton.Result.Stop;
+                        return BattleStateResult.Stop;
                     }
 
                     if (self._gameContext.InputService.ActionWasJustPressed(InputAction.Confirm))
                     {
                         self.Finished?.Invoke();
-                        return BattleStateAutomaton.Result.Stop;
+                        return BattleStateResult.Stop;
                     }
 
-                    return BattleStateAutomaton.Result.Continue;
+                    return BattleStateResult.Continue;
                 }
             }
 
-            return BattleStateAutomaton.Result.Continue;
+            return BattleStateResult.Continue;
         },
 
         ExitFunction = static (self, currentState) =>
@@ -165,7 +168,7 @@ public class Battle : IResettable
                 }
             }
 
-            return BattleStateAutomaton.Result.Continue;
+            return BattleStateResult.Continue;
         }
     };
 
@@ -182,13 +185,13 @@ public class Battle : IResettable
                     if (inputService.ActionWasJustPressed(InputAction.MoveLeft))
                     {
                         self.CurrentPlayingContext.PlayerDodgeT -= 1f;
-                        return PlayerStateAutomaton.Result.Goto(PlayerState.Dodging);
+                        return PlayerStateResult.Goto(PlayerState.Dodging);
                     }
 
                     if (inputService.ActionWasJustPressed(InputAction.MoveRight))
                     {
                         self.CurrentPlayingContext.PlayerDodgeT += 1f;
-                        return PlayerStateAutomaton.Result.Goto(PlayerState.Dodging);
+                        return PlayerStateResult.Goto(PlayerState.Dodging);
                     }
 
                     break;
@@ -199,7 +202,7 @@ public class Battle : IResettable
                     if (Math.Abs(self.CurrentPlayingContext.PlayerDodgeT) < 0.01)
                     {
                         self.CurrentPlayingContext.PlayerDodgeT = 0;
-                        return PlayerStateAutomaton.Result.Goto(PlayerState.Ready);
+                        return PlayerStateResult.Goto(PlayerState.Ready);
                     }
 
                     if (self.CurrentPlayingContext.PlayerDodgeT < 0)
@@ -208,7 +211,7 @@ public class Battle : IResettable
 
                         if (self.CurrentPlayingContext.PlayerDodgeT >= 0)
                         {
-                            return PlayerStateAutomaton.Result.Goto(PlayerState.Ready);
+                            return PlayerStateResult.Goto(PlayerState.Ready);
                         }
                     }
                     else if (self.CurrentPlayingContext.PlayerDodgeT > 0)
@@ -217,7 +220,7 @@ public class Battle : IResettable
 
                         if (self.CurrentPlayingContext.PlayerDodgeT <= 0)
                         {
-                            return PlayerStateAutomaton.Result.Goto(PlayerState.Ready);
+                            return PlayerStateResult.Goto(PlayerState.Ready);
                         }
                     }
 
@@ -225,7 +228,7 @@ public class Battle : IResettable
                 }
             }
 
-            return PlayerStateAutomaton.Result.Continue;
+            return PlayerStateResult.Continue;
         },
 
         ExitFunction = static (self, currentState) =>
@@ -239,7 +242,7 @@ public class Battle : IResettable
                 }
             }
 
-            return PlayerStateAutomaton.Result.Continue;
+            return PlayerStateResult.Continue;
         },
     };
 
@@ -272,7 +275,7 @@ public class Battle : IResettable
                 }
             }
 
-            return CrosshairStateAutomaton.Result.Continue;
+            return CrosshairStateResult.Continue;
         },
 
         UpdateFunction = static (self, currentState) =>
@@ -285,7 +288,7 @@ public class Battle : IResettable
 
                     if (self.CurrentPlayingContext.CrosshairTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return CrosshairStateAutomaton.Result.Goto(CrosshairState.Aiming);
+                        return CrosshairStateResult.Goto(CrosshairState.Aiming);
                     }
 
                     break;
@@ -316,14 +319,14 @@ public class Battle : IResettable
                             self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Smack);
                         }
 
-                        return CrosshairStateAutomaton.Result.Stop;
+                        return CrosshairStateResult.Stop;
                     }
 
                     break;
                 }
             }
 
-            return CrosshairStateAutomaton.Result.Continue;
+            return CrosshairStateResult.Continue;
         },
 
         ExitFunction = static (self, currentState) =>
@@ -333,7 +336,7 @@ public class Battle : IResettable
                 self.CurrentPlayingContext.CrosshairIsVisible = false;
             }
 
-            return CrosshairStateAutomaton.Result.Continue;
+            return CrosshairStateResult.Continue;
         },
     };
 
