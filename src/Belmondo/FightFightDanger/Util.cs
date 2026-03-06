@@ -1,9 +1,14 @@
+using System.Numerics;
+
 namespace Belmondo.FightFightDanger;
 
 public static class Util
 {
     public static readonly int SnackTypeCount = Enum.GetNames<SnackType>().Length;
     public static readonly int CharmTypeCount = Enum.GetNames<CharmType>().Length;
+
+    public static bool SpheresAreColliding(Vector3 p1, float radius1, Vector3 p2, float radius2)
+        => Vector3.Distance(p1, p2) < radius1 + radius2;
 }
 
 public static class Direction

@@ -5,10 +5,6 @@ public class Exploration
     public event Action? BattleRequested;
     public event Action? MainMenuRequested;
 
-    public void Enter()
-    {
-    }
-
     public void Update(in GameContext gameContext, World world)
     {
         var triedToOpenMenu = gameContext.InputService.ActionWasJustPressed(InputAction.Cancel);

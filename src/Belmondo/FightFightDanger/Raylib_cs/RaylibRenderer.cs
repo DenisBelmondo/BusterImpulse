@@ -541,8 +541,10 @@ public class RaylibRenderer
 
             if (battle.CurrentFoe is not null)
             {
-                foreach (var bullet in battle.CurrentFoe.Bullets)
+                foreach (var element in battle.CurrentFoe.Bullets)
                 {
+                    Foe.Bullet bullet = element.Value;
+
                     DrawCubeV(
                         bullet.RenderThing.Transform.Translation,
                         (Vector3.One + Vector3.UnitZ * 2) / 60f,

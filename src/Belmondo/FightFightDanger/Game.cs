@@ -321,8 +321,10 @@ public class Game : IThinker
 
                     if (battle.CurrentFoe is Foe foe)
                     {
-                        foreach (var bullet in foe.Bullets)
+                        foreach (var element in foe.Bullets)
                         {
+                            Foe.Bullet bullet = element.Value;
+
                             if (bullet.Closeness >= 0.9 && bullet.Closeness < 0.95)
                             {
                                 var shouldHurtPlayer = bullet.HorizontalDirection == -MathF.Sign(battle.CurrentPlayingContext.PlayerDodgeT);

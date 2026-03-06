@@ -47,7 +47,7 @@ public partial class Foe
     public event Action? Defeated;
 
     private readonly GameContext _gameContext;
-    public readonly List<Bullet> Bullets = [];
+    public readonly SparseSet<Bullet> Bullets = new();
 
     public readonly FoeStateAutomaton StateAutomaton = new()
     {
@@ -131,13 +131,14 @@ public partial class Foe
                     switch (self.Type)
                     {
                         case FoeType.Turret:
-                            foreach (ref var bullet in CollectionsMarshal.AsSpan(self.Bullets))
+                            foreach (ref var element in self.Bullets.Span)
                             {
-                                var bulletOriginalOffset = Vector3.UnitZ * 2;
-                                var bulletOffset = -Vector3.UnitY / 10f;
-                                var bulletDestination = Vector3.Zero;
+                                Bullet bullet = element.Value;
+                                Vector3 bulletOriginalOffset = Vector3.UnitZ * 2;
+                                Vector3 bulletOffset = -Vector3.UnitY / 10f;
+                                Vector3 bulletDestination = Vector3.Zero;
 
-                                var bulletPosition = Vector3.Lerp(
+                                Vector3 bulletPosition = Vector3.Lerp(
                                     bulletOriginalOffset + bulletOffset,
                                     bulletDestination + bulletOffset,
                                     bullet.Closeness);
@@ -151,6 +152,7 @@ public partial class Foe
                                 }
 
                                 bullet.Closeness += (float)self._gameContext.TimeContext.Delta;
+                                element.Value = bullet;
                             }
 
                             self._shootInterval += self._gameContext.TimeContext.Delta;
@@ -176,8 +178,9 @@ public partial class Foe
                             break;
 
                         case FoeType.Goon:
-                            foreach (ref var bullet in CollectionsMarshal.AsSpan(self.Bullets))
+                            foreach (ref var element in self.Bullets.Span)
                             {
+                                Bullet bullet = element.Value;
                                 var bulletOriginalOffset = Vector3.UnitZ * 2;
                                 var bulletOffset = -Vector3.UnitY / 10f;
                                 var bulletDestination = Vector3.Zero + Vector3.UnitX * bullet.HorizontalDirection / 10f;
@@ -196,6 +199,7 @@ public partial class Foe
                                 }
 
                                 bullet.Closeness += (float)self._gameContext.TimeContext.Delta;
+                                element.Value = bullet;
                             }
 
                             self._shootInterval += self._gameContext.TimeContext.Delta;
