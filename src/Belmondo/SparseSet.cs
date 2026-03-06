@@ -139,6 +139,8 @@ public partial class SparseSet<T> : IReadOnlyCollection<SparseSet<T>.DenseElemen
         {
             // to prevent out of range exceptions if iterating while collection
             // was modified
+            // [FIXME]: you shouldn't have to do this if you just queue
+            // deletions instead of deleting while iterating at the callsite.
             if (i >= _dense.Count)
             {
                 break;
