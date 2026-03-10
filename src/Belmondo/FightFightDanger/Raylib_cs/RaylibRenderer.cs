@@ -501,22 +501,16 @@ public class RaylibRenderer
             Rlgl.EnableDepthTest();
             Rlgl.EnableBackfaceCulling();
 
-            if (battle.CurrentFoe is not null)
+            if (battle.CurrentFoe is Foe foe)
             {
-                Foe foe = battle.CurrentFoe;
                 Matrix4x4 foeTransform = battle.CurrentFoe.RenderThing.Transform;
-                Texture2D? foeAtlas = null;
 
-                switch (foe.RenderThing.ShapeType)
+                Texture2D? foeAtlas = foe.RenderThing.ShapeType switch
                 {
-                    case ShapeType.Turret:
-                        foeAtlas = RaylibResources.TurretAtlas;
-                        break;
-
-                    case ShapeType.Goon:
-                        foeAtlas = RaylibResources.GoonAtlas;
-                        break;
-                }
+                    ShapeType.Turret => RaylibResources.TurretAtlas,
+                    ShapeType.Goon => RaylibResources.GoonAtlas,
+                    _ => default,
+                };
 
                 foeTransform.Translation += Vector3.UnitX * battle.CurrentFoe.CurrentAnimationContext.ShakeOffset.X;
                 foeTransform.Translation += Vector3.UnitY * battle.CurrentFoe.CurrentAnimationContext.ShakeOffset.Y;
@@ -537,11 +531,8 @@ public class RaylibRenderer
                         Vector2.One,
                         Color.White);
                 }
-            }
 
-            if (battle.CurrentFoe is not null)
-            {
-                foreach (var element in battle.CurrentFoe.Bullets)
+                foreach (var element in foe.Bullets)
                 {
                     Foe.Bullet bullet = element.Value;
 
