@@ -276,3 +276,8 @@ public interface IProgressTracker
 {
     double GetProgress();
 }
+
+public interface IFoe
+{
+    void DoAttackSequence();
+}

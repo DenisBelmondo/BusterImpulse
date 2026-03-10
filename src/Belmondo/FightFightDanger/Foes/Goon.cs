@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public class Goon
+public class Goon : IFoe
 {
     public enum State
     {
@@ -13,6 +13,5 @@ public class Goon
 
     public void DoAttackSequence()
     {
-
     }
 }

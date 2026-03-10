@@ -1,5 +1,4 @@
 using System.Numerics;
-using System.Runtime.InteropServices;
 
 namespace Belmondo.FightFightDanger;
 
@@ -7,11 +6,6 @@ using FoeStateAutomaton = StateAutomaton<Foe, FoeState>;
 using FoeStateResult = StateFlowResult<FoeState>;
 using ShakeStateAutomaton = StateAutomaton<Foe, BinaryState>;
 using ShakeStateResult = StateFlowResult<BinaryState>;
-
-public interface IFoe
-{
-    void DoAttackSequence();
-}
 
 public partial class Foe
 {
