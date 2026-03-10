@@ -9,7 +9,7 @@ using BattleVictoryScreenStateResult = StateFlowResult<UIState.BattleVictoryScre
 using MugshotStateAutomaton = StateAutomaton<UIState.MugshotStateContext, UIState.MugshotState>;
 using MugshotStateResult = StateFlowResult<UIState.MugshotState>;
 
-public class UIState(GameContext gameContext) : IThinker
+public class UIState(GameContext gameContext)
 {
     public enum PopUpState
     {
@@ -30,7 +30,7 @@ public class UIState(GameContext gameContext) : IThinker
         Shaking,
     }
 
-    public class MugshotStateContext(TimeContext timeContext) : IThinker
+    public class MugshotStateContext(TimeContext timeContext)
     {
         private readonly TimeContext _timeContext = timeContext;
         public readonly Timer ShakeTimer = new();

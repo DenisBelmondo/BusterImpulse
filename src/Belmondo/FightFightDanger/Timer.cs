@@ -1,6 +1,6 @@
 namespace Belmondo.FightFightDanger;
 
-public class Timer : IProgressTracker, IThinker<TimeContext>, IResettable
+public class Timer : IProgressTracker, IResettable
 {
     public enum Status
     {

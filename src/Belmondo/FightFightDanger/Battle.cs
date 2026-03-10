@@ -7,7 +7,7 @@ using CrosshairStateResult = StateFlowResult<Battle.CrosshairState>;
 using PlayerStateAutomaton = StateAutomaton<Battle, Battle.PlayerState>;
 using PlayerStateResult = StateFlowResult<Battle.PlayerState>;
 
-public class Battle : IResettable, IThinker
+public class Battle : IResettable
 {
     public enum State
     {

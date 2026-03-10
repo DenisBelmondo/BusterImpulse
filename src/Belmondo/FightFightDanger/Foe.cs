@@ -24,7 +24,7 @@ public partial class Foe
         public readonly RenderThing GetRenderThing() => RenderThing;
     }
 
-    public struct AnimationContext() : IThinker<TimeContext>, IResettable
+    public struct AnimationContext() : IResettable
     {
         public Timer AnimationTimer = new();
         public Timer FlyOffscreenTimer = new();
@@ -343,7 +343,7 @@ public partial class Foe
     }
 }
 
-public partial class Foe : IThinker<TimeContext>
+public partial class Foe
 {
     public void Update(TimeContext timeContext)
     {

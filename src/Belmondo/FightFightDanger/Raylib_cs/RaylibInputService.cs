@@ -3,7 +3,7 @@ using static Raylib_cs.BleedingEdge.Raylib;
 
 namespace Belmondo.FightFightDanger.Raylib_cs;
 
-public sealed class RaylibInputService : IInputService, IThinker
+public sealed class RaylibInputService : IInputService
 {
     public struct InputState
     {

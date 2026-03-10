@@ -86,16 +86,6 @@ public enum ItemType
     Charm,
 }
 
-public interface IThinker
-{
-    public void Update();
-}
-
-public interface IThinker<TArg>
-{
-    public void Update(TArg arg);
-}
-
 public struct Map
 {
     [StructLayout(LayoutKind.Sequential, Pack = 0)]

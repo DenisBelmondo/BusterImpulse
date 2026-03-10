@@ -7,7 +7,7 @@ using GameStateResult = StateFlowResult<Game.State>;
 using TransitionStateAutomaton = StateAutomaton<Game.TransitionContext, Game.TransitionContext.State>;
 using TransitionStateResult = StateFlowResult<Game.TransitionContext.State>;
 
-public class Game : IThinker
+public class Game
 {
     public enum State
     {
@@ -23,7 +23,7 @@ public class Game : IThinker
         Battling,
     }
 
-    public class TransitionContext : IThinker<TimeContext>, IResettable
+    public class TransitionContext : IResettable
     {
         public enum State
         {
