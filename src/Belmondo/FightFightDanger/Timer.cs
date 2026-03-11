@@ -8,7 +8,7 @@ public class Timer : IProgressTracker, IResettable
         Running,
     }
 
-    public event Action? TimedOut;
+    public static event Action<Timer>? TimedOut;
 
     public Status CurrentStatus;
     public double DurationSeconds;
@@ -74,7 +74,7 @@ public class Timer : IProgressTracker, IResettable
             SecondsRemaining = 0;
             CurrentStatus = Status.Stopped;
             JustTimedOut = true;
-            TimedOut?.Invoke();
+            TimedOut?.Invoke(this);
         }
 
         JustStarted = false;

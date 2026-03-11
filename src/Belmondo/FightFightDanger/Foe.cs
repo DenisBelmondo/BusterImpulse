@@ -2,10 +2,14 @@ using System.Numerics;
 
 namespace Belmondo.FightFightDanger;
 
-using FoeStateAutomaton = StateAutomaton<Foe, FoeState>;
-using FoeStateResult = StateFlowResult<FoeState>;
+using FoeStateAutomaton = StateAutomaton<Foe, FoeStateFlag>;
+using FoeStateResult = StateFlowResult<FoeStateFlag>;
 using ShakeStateAutomaton = StateAutomaton<Foe, BinaryState>;
 using ShakeStateResult = StateFlowResult<BinaryState>;
+
+public struct FoeState
+{
+}
 
 public partial class Foe
 {
@@ -40,7 +44,7 @@ public partial class Foe
         }
     }
 
-    public event Action? Defeated;
+    public static event Action<Foe>? Defeated;
 
     private readonly GameContext _gameContext;
     public readonly SparseSet<Bullet> Bullets = [];
@@ -54,16 +58,16 @@ public partial class Foe
                 case FoeType.Turret:
                     switch (currentState)
                     {
-                        case FoeState.Idle:
+                        case FoeStateFlag.Idle:
                             self.RenderThing.SubFrame = 0;
                             break;
 
-                        case FoeState.BeginAttacking:
+                        case FoeStateFlag.BeginAttacking:
                             self.RenderThing.SubFrame = 1;
                             self.CurrentAnimationContext.AnimationTimer.Start(1);
                             break;
 
-                        case FoeState.Attacking:
+                        case FoeStateFlag.Attacking:
                             self.RenderThing.SubFrame = 1;
                             self.CurrentAnimationContext.AnimationTimer.Start(5);
                             break;
@@ -73,33 +77,33 @@ public partial class Foe
                 case FoeType.Goon:
                     switch (currentState)
                     {
-                        case FoeState.Idle:
+                        case FoeStateFlag.Idle:
                             self.RenderThing.SubFrame = 0;
                             break;
 
-                        case FoeState.BeginAttacking:
+                        case FoeStateFlag.BeginAttacking:
                             self.RenderThing.SubFrame = 0;
                             self.CurrentAnimationContext.AnimationTimer.Start(1);
                             break;
 
-                        case FoeState.Attacking:
+                        case FoeStateFlag.Attacking:
                             self.RenderThing.SubFrame = 1;
                             self.CurrentAnimationContext.AnimationTimer.Start(5);
                             break;
 
-                        case FoeState.Hurt:
+                        case FoeStateFlag.Hurt:
                             self.RenderThing.SubFrame = 2;
                             self.CurrentAnimationContext.AnimationTimer.Start(1);
                             self.Bullets.Clear();
                             self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Hough);
                             break;
 
-                        case FoeState.Dying:
+                        case FoeStateFlag.Dying:
                             self.RenderThing.SubFrame = 2;
                             self.CurrentAnimationContext.AnimationTimer.Start(1);
                             break;
 
-                        case FoeState.FlyingOffscreen:
+                        case FoeStateFlag.FlyingOffscreen:
                             self.RenderThing.SubFrame = 3;
                             self.CurrentAnimationContext.FlyOffscreenTimer.Start(2f);
                             self._gameContext.AudioService.PlaySoundEffect(SoundEffect.Die);
@@ -115,15 +119,15 @@ public partial class Foe
         {
             switch (currentState)
             {
-                case FoeState.BeginAttacking:
+                case FoeStateFlag.BeginAttacking:
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return FoeStateResult.Goto(FoeState.Attacking);
+                        return FoeStateResult.Goto(FoeStateFlag.Attacking);
                     }
 
                     break;
 
-                case FoeState.Attacking:
+                case FoeStateFlag.Attacking:
                     switch (self.Type)
                     {
                         case FoeType.Turret:
@@ -169,7 +173,7 @@ public partial class Foe
 
                             if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                             {
-                                return FoeStateResult.Goto(FoeState.Idle);
+                                return FoeStateResult.Goto(FoeStateFlag.Idle);
                             }
                             break;
 
@@ -216,33 +220,33 @@ public partial class Foe
 
                             if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                             {
-                                return FoeStateResult.Goto(FoeState.Idle);
+                                return FoeStateResult.Goto(FoeStateFlag.Idle);
                             }
                             break;
                     }
 
                     break;
 
-                case FoeState.Hurt:
+                case FoeStateFlag.Hurt:
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return FoeStateResult.Goto(FoeState.Idle);
+                        return FoeStateResult.Goto(FoeStateFlag.Idle);
                     }
 
                     break;
 
-                case FoeState.Dying:
+                case FoeStateFlag.Dying:
                     if (self.CurrentAnimationContext.AnimationTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        return FoeStateResult.Goto(FoeState.FlyingOffscreen);
+                        return FoeStateResult.Goto(FoeStateFlag.FlyingOffscreen);
                     }
 
                     break;
 
-                case FoeState.FlyingOffscreen:
+                case FoeStateFlag.FlyingOffscreen:
                     if (self.CurrentAnimationContext.FlyOffscreenTimer.CurrentStatus == Timer.Status.Stopped)
                     {
-                        self.Defeated?.Invoke();
+                        Foe.Defeated?.Invoke(self);
                         return FoeStateResult.Stop;
                     }
 
@@ -254,7 +258,7 @@ public partial class Foe
 
         ExitFunction = static (self, currentState) =>
         {
-            if (currentState == FoeState.Attacking)
+            if (currentState == FoeStateFlag.Attacking)
             {
                 self.Bullets.Clear();
             }
@@ -325,12 +329,11 @@ public partial class Foe
     public void Damage(float amount)
     {
         Health -= amount;
-
-        StateAutomaton.ChangeState(FoeState.Hurt);
+        StateAutomaton.ChangeState(FoeStateFlag.Hurt);
 
         if (Health <= 0)
         {
-            StateAutomaton.ChangeState(FoeState.Dying);
+            StateAutomaton.ChangeState(FoeStateFlag.Dying);
         }
 
         ShakeStateAutomaton.ChangeState(BinaryState.On);

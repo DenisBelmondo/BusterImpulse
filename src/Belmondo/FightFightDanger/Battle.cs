@@ -7,6 +7,17 @@ using CrosshairStateResult = StateFlowResult<Battle.CrosshairState>;
 using PlayerStateAutomaton = StateAutomaton<Battle, Battle.PlayerState>;
 using PlayerStateResult = StateFlowResult<Battle.PlayerState>;
 
+public struct BattleState
+{
+    public Timer CrosshairTimer;
+    public double PlayerInvulnerabilityT;
+    public float PlayerDodgeT;
+    public float CrosshairT;
+    public bool CrosshairIsVisible;
+
+    public readonly bool CrosshairIsInRange(float minT, float maxT) => CrosshairT > minT && CrosshairT < maxT;
+}
+
 public class Battle : IResettable
 {
     public enum State
@@ -56,7 +67,7 @@ public class Battle : IResettable
             {
                 case State.Playing:
                 {
-                    self.CurrentFoe?.StateAutomaton.ChangeState(FoeState.BeginAttacking);
+                    self.CurrentFoe?.StateAutomaton.ChangeState(FoeStateFlag.BeginAttacking);
                     self.PlayerStateAutomaton.ChangeState(PlayerState.Ready);
                     self.CrosshairStateAutomaton.ChangeState(CrosshairState.CountingDown);
 
@@ -98,7 +109,7 @@ public class Battle : IResettable
                 {
                     if (self.CurrentFoe is Foe foe)
                     {
-                        if (foe.StateAutomaton.IsProcessingState(FoeState.Idle))
+                        if (foe.StateAutomaton.IsProcessingState(FoeStateFlag.Idle))
                         {
                             return BattleStateResult.Goto(State.Choosing);
                         }
@@ -357,11 +368,11 @@ public class Battle : IResettable
     {
         if (CurrentFoe is not null)
         {
-            CurrentFoe.Defeated -= OnFoeDefeated;
+            Foe.Defeated -= OnFoeDefeated;
         }
 
         CurrentFoe = foe;
-        CurrentFoe.Defeated += OnFoeDefeated;
+        Foe.Defeated += OnFoeDefeated;
 
         foe.RenderThing.ShapeType = foe.Type switch
         {
@@ -392,7 +403,7 @@ public class Battle : IResettable
         VictoryExitTimer.Update(_gameContext.TimeContext);
     }
 
-    public void OnFoeDefeated()
+    public void OnFoeDefeated(Foe foe)
     {
         _gameContext.AudioService.ChangeMusic(MusicTrack.Victory);
         PlayerWon?.Invoke();

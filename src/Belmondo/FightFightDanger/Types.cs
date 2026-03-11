@@ -235,7 +235,7 @@ public interface IResettable<TArg>
     public void Reset(TArg arg);
 }
 
-public enum FoeState
+public enum FoeStateFlag
 {
     Idle,
     BeginAttacking,
