@@ -43,7 +43,7 @@ public partial class Foe
     public event Action? Defeated;
 
     private readonly GameContext _gameContext;
-    public readonly SparseSet<Bullet> Bullets = new();
+    public readonly SparseSet<Bullet> Bullets = [];
 
     public readonly FoeStateAutomaton StateAutomaton = new()
     {

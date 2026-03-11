@@ -6,13 +6,13 @@ namespace Belmondo;
 
 public class SparseSetBuilder
 {
-    public static SparseSet<T> Create<T>(ReadOnlySpan<T> values)
+    public static SparseSet<T> Create<T>(ReadOnlySpan<SparseSet<T>.DenseElement> elements)
     {
         var sparseSet = new SparseSet<T>();
 
-        foreach (T value in values)
+        foreach (SparseSet<T>.DenseElement denseElement in elements)
         {
-            sparseSet.Add(value);
+            sparseSet.Add(denseElement.Value);
         }
 
         return sparseSet;
